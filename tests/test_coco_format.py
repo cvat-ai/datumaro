@@ -343,7 +343,6 @@ class CocoImporterTest(TestCase):
                             group=1,
                             attributes={"is_crowd": False},
                         ),
-                        Bbox(2, 2, 3, 1, label=1, id=1, group=1, attributes={"is_crowd": False}),
                     ],
                 ),
                 DatasetItem(
@@ -441,7 +440,6 @@ class CocoImporterTest(TestCase):
                             group=1,
                             attributes={"is_crowd": False},
                         ),
-                        Bbox(2, 2, 3, 1, label=1, id=1, group=1, attributes={"is_crowd": False}),
                     ],
                 ),
             ],
@@ -483,7 +481,6 @@ class CocoImporterTest(TestCase):
                             group=1,
                             attributes={"is_crowd": False},
                         ),
-                        Bbox(2, 2, 3, 1, label=2, id=1, group=1, attributes={"is_crowd": False}),
                     ],
                 ),
             ],
@@ -1703,7 +1700,6 @@ class CocoConverterTest(TestCase):
                         Polygon([0, 0, 4, 0, 4, 4], label=3, group=1, id=1),
                         # Full instance annotations: bbox + keypoints
                         Points([1, 2, 3, 4, 2, 3], group=2, id=2),
-                        Bbox(1, 2, 2, 2, group=2, id=2),
                         # Solitary keypoints
                         Points([1, 2, 0, 2, 4, 1], label=5, id=3),
                         # Some other solitary annotations (bug #1387)
@@ -1744,7 +1740,6 @@ class CocoConverterTest(TestCase):
                             attributes={"is_crowd": False},
                         ),
                         Points([1, 2, 3, 4, 2, 3], group=2, id=2, attributes={"is_crowd": False}),
-                        Bbox(1, 2, 2, 2, group=2, id=2, attributes={"is_crowd": False}),
                         Points(
                             [1, 2, 0, 2, 4, 1],
                             label=5,
@@ -1752,7 +1747,6 @@ class CocoConverterTest(TestCase):
                             id=3,
                             attributes={"is_crowd": False},
                         ),
-                        Bbox(0, 1, 4, 1, label=5, group=3, id=3, attributes={"is_crowd": False}),
                         Points(
                             [0, 0, 1, 2, 3, 4],
                             [0, 1, 2],
@@ -1760,7 +1754,6 @@ class CocoConverterTest(TestCase):
                             id=5,
                             attributes={"is_crowd": False},
                         ),
-                        Bbox(1, 2, 2, 2, group=5, id=5, attributes={"is_crowd": False}),
                     ],
                     attributes={"id": 1},
                 ),

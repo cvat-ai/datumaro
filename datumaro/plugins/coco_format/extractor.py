@@ -412,7 +412,7 @@ class _CocoExtractor(SourceExtractor):
                             rle=rle, label=label_id, id=ann_id, attributes=attributes, group=group
                         )
                     )
-            else:
+            elif self._task is not CocoTask.person_keypoints:
                 bbox = self._parse_field(ann, "bbox", list)
                 if len(bbox) != 4:
                     raise InvalidAnnotationError(

@@ -200,9 +200,10 @@ class _InstancesConverter(_TaskConverter):
     def find_instance_parts(self, group, img_width, img_height):
         boxes = [a for a in group if a.type == AnnotationType.bbox]
         polygons = [a for a in group if a.type == AnnotationType.polygon]
+        points = [a for a in group if a.type == AnnotationType.points]
         masks = [a for a in group if a.type == AnnotationType.mask]
 
-        anns = boxes + polygons + masks
+        anns = boxes + polygons + points + masks
         leader = anno_tools.find_group_leader(anns)
         bbox = anno_tools.max_bbox(anns)
         mask = None
@@ -247,7 +248,7 @@ class _InstancesConverter(_TaskConverter):
         return [
             a
             for a in annotations
-            if a.type in {AnnotationType.bbox, AnnotationType.polygon, AnnotationType.mask}
+            if a.type in {AnnotationType.bbox, AnnotationType.points, AnnotationType.polygon, AnnotationType.mask}
         ]
 
     @classmethod

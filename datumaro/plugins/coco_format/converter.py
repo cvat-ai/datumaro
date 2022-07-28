@@ -248,7 +248,13 @@ class _InstancesConverter(_TaskConverter):
         return [
             a
             for a in annotations
-            if a.type in {AnnotationType.bbox, AnnotationType.points, AnnotationType.polygon, AnnotationType.mask}
+            if a.type
+            in {
+                AnnotationType.bbox,
+                AnnotationType.points,
+                AnnotationType.polygon,
+                AnnotationType.mask,
+            }
         ]
 
     @classmethod

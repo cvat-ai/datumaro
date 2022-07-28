@@ -56,7 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/openvinotoolkit/datumaro/pull/539>)
 
 ### Removed
-- TBD
+- Bounding boxes saving when processing keypoints in COCO
+  (<https://github.com/cvat-ai/datumaro/pull/1>)
 
 ### Fixed
 - Detection for LFW format

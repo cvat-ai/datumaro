@@ -1,4 +1,5 @@
 # Copyright (C) 2019-2022 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -12,7 +13,7 @@ import unittest.mock
 import warnings
 from enum import Enum, auto
 from glob import glob
-from typing import Collection, Optional, Union
+from typing import Any, Collection, Optional, Union
 
 from typing_extensions import Literal
 
@@ -307,10 +308,15 @@ def compare_dirs(test, expected: str, actual: str):
             test.assertEqual(a_file.read(), b_file.read(), rel_path)
 
 
-def run_datum(test, *args, expected_code=0):
+def run_datum(test: Union[unittest.TestCase, Any], *args, expected_code: int = 0) -> None:
     from datumaro.cli.__main__ import main
 
-    test.assertEqual(expected_code, main(args), str(args))
+    if isinstance(test, unittest.TestCase):
+        # Unittest
+        test.assertEqual(expected_code, main(args), str(args))
+    else:
+        # Pytest case
+        assert expected_code == main(args)
 
 
 @contextlib.contextmanager

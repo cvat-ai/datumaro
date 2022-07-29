@@ -1,4 +1,5 @@
 # Copyright (C) 2019-2022 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -29,6 +30,7 @@ from typing import (
 
 import networkx as nx
 import ruamel.yaml as yaml
+from genericpath import isfile
 
 from datumaro.components.config import Config
 from datumaro.components.config_model import (
@@ -1583,7 +1585,7 @@ class Project:
 
     @staticmethod
     @scoped
-    def migrate_from_v1_to_v2(src_dir: str, dst_dir: str, skip_import_errors=False):
+    def migrate_from_v1_to_v2(src_dir: str, dst_dir: str, skip_import_errors: bool = False) -> None:
         if not osp.isdir(src_dir):
             raise FileNotFoundError("Source project is not found")
 
@@ -2613,7 +2615,8 @@ class Project:
         """
         Compares 2 revision trees.
 
-        Returns: { target_name: status } for changed targets
+        Returns:
+            A dictionary { target_name: status } for changed project targets
         """
 
         if rev_a == rev_b:
@@ -2657,6 +2660,16 @@ class Project:
         return osp.join(self._aux_dir, ProjectLayout.models_dir, name)
 
     def make_model(self, name: str) -> Launcher:
+        """
+        Creates an executable model.
+
+        Parameters:
+            name: model name
+
+        Returns:
+            model: a runnable model instance
+        """
+
         model = self._config.models[name]
         model_dir = self.model_data_dir(name)
         if not osp.isdir(model_dir):
@@ -2664,6 +2677,20 @@ class Project:
         return self._env.make_launcher(model.launcher, **model.options, model_dir=model_dir)
 
     def add_model(self, name: str, launcher: str, options: Dict[str, Any] = None) -> Model:
+        """
+        Adds a model into project.
+
+        Parameters:
+            name: model name
+
+            launcher: model launcher plugin name. Must be registered first.
+
+            options: optional parameters for launcher to run this model (default: -)
+
+        Returns:
+            model: a model config for the created model
+        """
+
         if self.readonly:
             raise ReadonlyProjectError()
 
@@ -2678,11 +2705,18 @@ class Project:
 
         return self._config.models.set(name, {"launcher": launcher, "options": options or {}})
 
-    def remove_model(self, name: str):
+    def remove_model(self, name: str) -> None:
+        """
+        Removes model from project and cleans its data directory.
+
+        Parameters:
+            name: model name
+        """
+
         if self.readonly:
             raise ReadonlyProjectError()
 
-        if name in self.models:
+        if name not in self.models:
             raise KeyError("Unknown model '%s'" % name)
 
         MediaManager.get_instance().clear()
@@ -2690,3 +2724,37 @@ class Project:
         data_dir = self.model_data_dir(name)
         if osp.isdir(data_dir):
             rmtree(data_dir)
+
+    def add_plugin(self, name: str, source: str):
+        """
+        Adds a new plugin into project
+
+        Parameters:
+            name: plugin name. Plugins must have unique names.
+
+            source: source file or directory (must be a valid Python package)
+        """
+
+        if not osp.exists(source):
+            raise FileNotFoundError(f"Can't find file {source}")
+
+        # validate plugin name (name)
+
+        plugin_dir = self.plugin_data_dir(name)
+        # if self.env.has_plugin(name):
+        #     raise PluginExistsError(f"Plugin {name} of type {kind.name} already exists")
+
+        # validate source path (source)
+
+        if osp.isfile(source):
+            os.makedirs(plugin_dir, exist_ok=True)
+            shutil.copy(source, osp.join(plugin_dir, "__init__.py"))
+        elif osp.isdir(source):
+            if not osp.isfile(osp.join(source, "__init__.py")):
+                raise FileNotFoundError("Can't find '__init__.py' file in the plugin directory")
+            shutil.copytree(source, plugin_dir)
+
+        self.env.load_plugins(osp.join(self._aux_dir, ProjectLayout.plugins_dir))
+
+    def plugin_data_dir(self, plugin_name: str) -> str:
+        return osp.join(self._aux_dir, ProjectLayout.plugins_dir, plugin_name)

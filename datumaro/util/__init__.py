@@ -5,7 +5,7 @@
 from functools import wraps
 from inspect import isclass
 from itertools import islice
-from typing import Any, Iterable, Optional, Tuple, Union
+from typing import Any, Iterable, Tuple, Union
 
 import attrs
 import orjson

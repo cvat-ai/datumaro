@@ -1,22 +1,25 @@
 # Copyright (C) 2019-2020 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
 # pylint: disable=unused-variable
 
 from math import ceil
+from typing import Iterable, Optional, Sequence, Tuple
 
 import numpy as np
 
-from datumaro.components.annotation import AnnotationType
+from datumaro.components.annotation import Annotation, AnnotationType, Bbox, Label
+from datumaro.components.launcher import Launcher
 from datumaro.util.annotation_util import nms
 
 
-def flatmatvec(mat):
+def flatmatvec(mat: np.ndarray) -> np.ndarray:
     return np.reshape(mat, (len(mat), -1))
 
 
-def expand(array, axis=None):
+def expand(array: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
     if axis is None:
         axis = len(array.shape)
     return np.expand_dims(array, axis=axis)
@@ -31,15 +34,15 @@ class RISE:
 
     def __init__(
         self,
-        model,
-        max_samples=None,
-        mask_width=7,
-        mask_height=7,
-        prob=0.5,
-        iou_thresh=0.9,
-        nms_thresh=0.0,
-        det_conf_thresh=0.0,
-        batch_size=1,
+        model: Launcher,
+        max_samples: Optional[int] = None,
+        mask_width: int = 7,
+        mask_height: int = 7,
+        prob: float = 0.5,
+        iou_thresh: float = 0.9,
+        nms_thresh: float = 0.0,
+        det_conf_thresh: float = 0.0,
+        batch_size: int = 1,
     ):
         self.model = model
         self.max_samples = max_samples
@@ -52,7 +55,7 @@ class RISE:
         self.batch_size = batch_size
 
     @staticmethod
-    def split_outputs(annotations):
+    def split_outputs(annotations: Sequence[Annotation]) -> Tuple[Sequence[Label], Sequence[Bbox]]:
         labels = []
         bboxes = []
         for r in annotations:
@@ -62,7 +65,7 @@ class RISE:
                 bboxes.append(r)
         return labels, bboxes
 
-    def normalize_hmaps(self, heatmaps, counts):
+    def normalize_hmaps(self, heatmaps: np.ndarray, counts: np.ndarray):
         eps = np.finfo(heatmaps.dtype).eps
         mhmaps = flatmatvec(heatmaps)
         mhmaps /= expand(counts * self.prob + eps)
@@ -70,7 +73,7 @@ class RISE:
         mhmaps /= expand(np.max(mhmaps, axis=1) + eps)
         return np.reshape(mhmaps, heatmaps.shape)
 
-    def apply(self, image, progressive=False):
+    def apply(self, image: np.ndarray, progressive: bool = False) -> Iterable[np.ndarray]:
         import cv2
 
         assert len(image.shape) in [2, 3], "Expected an input image in (H, W, C) format"

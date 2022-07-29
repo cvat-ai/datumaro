@@ -10,7 +10,7 @@ from functools import partial
 from inspect import isclass
 from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, Type, TypeVar
 
-from datumaro.components.cli_plugin import CliPlugin, plugin_types
+from datumaro.components.cli_plugin import CliPlugin, plugin_bases
 from datumaro.components.format_detection import RejectionReason, detect_dataset_format
 from datumaro.util.os_util import import_foreign_module, split_path
 
@@ -170,7 +170,7 @@ class Environment:
 
     @classmethod
     def _load_plugins(cls, module_names, *, importer, types=None):
-        types = tuple(types or plugin_types())
+        types = tuple(types or plugin_bases())
 
         all_exports = []
         for module_name in module_names:

@@ -1,4 +1,5 @@
 # Copyright (C) 2019-2021 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -187,7 +188,7 @@ def explain_command(args):
 
     project = scope_add(load_project(args.project_dir))
 
-    model = project.working_tree.models.make_executable_model(args.model)
+    model = project.make_model(args.model)
 
     if str(args.algorithm).lower() != "rise":
         raise NotImplementedError()

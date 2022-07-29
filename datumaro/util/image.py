@@ -1,4 +1,5 @@
 # Copyright (C) 2019-2021 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -56,7 +57,7 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
-def load_image(path: str, dtype: DTypeLike = np.float32):
+def load_image(path: str, dtype: DTypeLike = np.float32) -> np.ndarray:
     """
     Reads an image in the HWC Grayscale/BGR(A) float [0; 255] format.
     """

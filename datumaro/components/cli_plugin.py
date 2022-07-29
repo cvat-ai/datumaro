@@ -1,4 +1,5 @@
 # Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -9,43 +10,46 @@ from typing import List, Type
 from datumaro.cli.util import MultilineFormatter
 from datumaro.util import to_snake_case
 
-_plugin_types = None
+_plugin_bases = None
 
 
-def plugin_types() -> List[Type["CliPlugin"]]:
-    global _plugin_types
-    if _plugin_types is None:
+def plugin_bases() -> List[Type["CliPlugin"]]:
+    global _plugin_bases
+    if _plugin_bases is None:
         from datumaro.components.converter import Converter
         from datumaro.components.extractor import Extractor, Importer, Transform
         from datumaro.components.launcher import Launcher
         from datumaro.components.validator import Validator
 
-        _plugin_types = [Launcher, Extractor, Transform, Importer, Converter, Validator]
+        _plugin_bases = [Launcher, Extractor, Transform, Importer, Converter, Validator]
 
-    return _plugin_types
-
-
-def remove_plugin_type(s):
-    for t in {"transform", "extractor", "converter", "launcher", "importer", "validator"}:
-        s = s.replace("_" + t, "")
-    return s
+    return _plugin_bases
 
 
-class _PluginNameDescriptor:
+class PluginNameBuilder:
+    @staticmethod
+    def _remove_plugin_type(name: str) -> str:
+        for t in {"transform", "extractor", "converter", "launcher", "importer", "validator"}:
+            name = name.replace("_" + t, "")
+        return name
+
+    def _sanitize_plugin_name(cls, name: str) -> str:
+        return cls._remove_plugin_type(to_snake_case(name))
+
     def __get__(self, obj, objtype=None):
         if not objtype:
             objtype = type(obj)
-        return remove_plugin_type(to_snake_case(objtype.__name__))
+        return self._sanitize_plugin_name(objtype.__name__)
 
 
 class CliPlugin:
-    NAME = _PluginNameDescriptor()
+    NAME = PluginNameBuilder()
 
     @staticmethod
     def _get_doc(cls):
         doc = getattr(cls, "__doc__", "")
         if doc:
-            if any(getattr(t, "__doc__", "") == doc for t in plugin_types()):
+            if any(getattr(t, "__doc__", "") == doc for t in plugin_bases()):
                 doc = ""
         return doc
 

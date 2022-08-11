@@ -1,11 +1,16 @@
 # Copyright (C) 2019-2021 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
 import argparse
+from re import L
+from typing import Type, Union
 
+from datumaro.components.dataset import Dataset, IDataset
 from datumaro.components.errors import DatasetMergeError, MissingObjectError, ProjectNotFoundError
 from datumaro.components.extractor import AnnotationType
+from datumaro.components.media import Image, MediaElement, MultiframeImage, PointCloud, Video
 from datumaro.util.scope import scope_add, scoped
 
 from ..util import MultilineFormatter
@@ -93,7 +98,23 @@ def info_command(args):
     except MissingObjectError as e:
         dataset_problem = str(e)
 
-    def print_dataset_info(dataset, indent=""):
+    def render_media_type(t: Type[MediaElement]) -> str:
+        mapping = {
+            Image: "image",
+            Video: "video",
+            PointCloud: "point_cloud",
+            MultiframeImage: "multiframe_image",
+        }
+        for k, v in mapping.items():
+            if issubclass(t, k):
+                return v
+        return "unknown"
+
+    def print_dataset_info(dataset: Union[Dataset, IDataset], indent: str = ""):
+        if isinstance(dataset, Dataset):
+            print("%sformat:" % indent, dataset.format or "unknown")
+
+        print("%smedia type:" % indent, render_media_type(dataset.media_type()))
         print("%slength:" % indent, len(dataset))
 
         categories = dataset.categories()

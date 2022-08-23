@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
-from re import L
 from typing import Type, Union
 
 from datumaro.components.dataset import Dataset, IDataset

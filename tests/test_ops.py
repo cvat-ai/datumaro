@@ -15,6 +15,7 @@ from datumaro.components.annotation import (
     PointsCategories,
     Polygon,
     PolyLine,
+    Skeleton,
 )
 from datumaro.components.dataset import Dataset
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem
@@ -1007,3 +1008,147 @@ class TestMultimerge(TestCase):
         merged = merger([source0, source1])
 
         compare_datasets(self, expected, merged)
+
+    def test_can_match_skeletons(self):
+        source0 = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    1,
+                    annotations=[
+                        # unique
+                        Skeleton([
+                            Points([1, 1], label=5),
+                            Points([2, 2], label=6)
+                        ], label=4),
+                        # common
+                        Skeleton([
+                            Points([2, 2], label=1),
+                            Points([5, 5], label=2),
+                            Points([8, 2], label=3)
+                        ], label=0)
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        ["s1"],
+                        ["s1_1", "s1"],
+                        ["s1_2", "s1"],
+                        ["s1_3", "s1"],
+                        ["s2"],
+                        ["s2_1", "s2"],
+                        ["s2_2", "s2"],
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [(0, ["s1_1", "s1_2", "s1_3"], [[2, 1], [0, 2]]),
+                    (4, ["s2_1", "s2_2"], [[0, 1]])]
+                ),
+            },
+        )
+
+        source1 = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    1,
+                    annotations=[
+                        # unique
+                        Skeleton([
+                            Points([6, 6], label=1),
+                            Points([7, 7], label=2)
+                        ], label=0),
+                        # common
+                        Skeleton([
+                            Points([2, 2], label=4),
+                            Points([5, 5], label=5),
+                            Points([8, 2], label=6)
+                        ], label=3)
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        ["s3"],
+                        ["s3_1", "s3"],
+                        ["s3_2", "s3"],
+                        ["s1"],
+                        ["s1_1", "s1"],
+                        ["s1_2", "s1"],
+                        ["s1_3", "s1"],
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [(0, ["s3_1", "s3_2"], [[0, 1]]),
+                    (3, ["s1_1", "s1_2", "s1_3"], [[2, 1], [0, 2]])]
+                ),
+            },
+        )
+
+        expected = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    1,
+                    annotations=[
+                        Skeleton([
+                            Points([2, 2], label=1),
+                            Points([5, 5], label=2),
+                            Points([8, 2], label=3)
+                        ], label=0),
+                         Skeleton([
+                            Points([1, 1], label=5),
+                            Points([2, 2], label=6)
+                        ], label=4),
+                        Skeleton([
+                            Points([6, 6], label=8),
+                            Points([7, 7], label=9)
+                        ], label=7),
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        ["s1"],
+                        ["s1_1", "s1"],
+                        ["s1_2", "s1"],
+                        ["s1_3", "s1"],
+                        ["s2"],
+                        ["s2_1", "s2"],
+                        ["s2_2", "s2"],
+                        ["s3"],
+                        ["s3_1", "s3"],
+                        ["s3_2", "s3"],
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [(0, ["s1_1", "s1_2", "s1_3"], [[2, 1], [0, 2]]),
+                    (4, ["s2_1", "s2_2"], [[0, 1]]),
+                    (7, ["s3_1", "s3_2"], [[0, 1]])]
+                ),
+            },
+        )
+
+        merger = IntersectMerge(conf={"quorum": 1, "pairwise_dist": 0.1})
+        merged = merger([source0, source1])
+
+        compare_datasets(self, expected, merged, ignored_attrs={"score"})
+        # self.assertEqual(
+        #     [
+        #         NoMatchingAnnError(
+        #             item_id=("1", DEFAULT_SUBSET_NAME),
+        #             sources={2},
+        #             ann=source0.get("1").annotations[5],
+        #         ),
+        #         NoMatchingAnnError(
+        #             item_id=("1", DEFAULT_SUBSET_NAME),
+        #             sources={1, 2},
+        #             ann=source0.get("1").annotations[0],
+        #         ),
+        #     ],
+        #     sorted(
+        #         (e for e in merger.errors if isinstance(e, NoMatchingAnnError)),
+        #         key=lambda e: len(e.sources),
+        #     ),
+        # )

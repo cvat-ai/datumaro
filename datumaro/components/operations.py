@@ -466,7 +466,12 @@ class IntersectMerge(MergingStrategy):
         self._ann_map = {}
         sources = []
         for item in items.values():
-            self._ann_map.update({id(a): (a, id(item)) for a in item.annotations})
+            for a in item.annotations:
+                self._ann_map.update({id(a): (a, id(item))})
+                if a.type == AnnotationType.skeleton:
+                    for element in a.elements:
+                        self._ann_map.update({id(element): (a, id(item))})
+            # self._ann_map.update({id(a): (a, id(item)) for a in item.annotations})
             sources.append(item.annotations)
         log.debug(
             "Merging item %s: source annotations %s" % (self._item_id, list(map(len, sources)))
@@ -703,7 +708,7 @@ class IntersectMerge(MergingStrategy):
             elif t is AnnotationType.depth_annotation:
                 return _make(ImageAnnotationMerger, **kwargs)
             elif t is AnnotationType.skeleton:
-                return _make(ImageAnnotationMerger, **kwargs)
+                return _make(SkeletonMerger, **kwargs)
             else:
                 raise NotImplementedError("Type %s is not supported" % t)
 
@@ -929,6 +934,14 @@ class _ShapeMatcher(AnnotationMatcher):
         if cluster_dist < 0:
             cluster_dist = pairwise_dist
 
+        # id_segm = {}
+        # for s in sources:
+        #     for a in s:
+        #         id_segm[id(a)] = (a, id(s))
+
+        #         if a.type == AnnotationType.skeleton:
+        #             for e in a.elements:
+        #                 id_segm[id(e)] = (e, id(a))
         id_segm = {id(a): (a, id(s)) for s in sources for a in s}
 
         def _is_close_enough(cluster, extra_id):
@@ -961,6 +974,21 @@ class _ShapeMatcher(AnnotationMatcher):
                     label_matcher=label_matcher,
                 )
                 for a, b in matches:
+                    # if a.type == AnnotationType.skeleton:
+                    #     element_matches, _, _, _ = match_segments(
+                    #         a.elements,
+                    #         b.elements,
+                    #         dist_thresh=pairwise_dist,
+                    #         distance=distance,
+                    #         label_matcher=label_matcher,
+                    #     )
+                    #     id_segm[id(a)][0].elements = []
+                    #     id_segm[id(b)][0].elements = []
+                    #     for el_a, el_b in element_matches:
+                    #         # adjacent[id(el_a)].append(id(el_b))
+                    #         id_segm[id(a)][0].elements.append(el_a)
+                    #         id_segm[id(b)][0].elements.append(el_b)
+
                     adjacent[id(a)].append(id(b))
 
         # join all segments into matching clusters
@@ -1028,6 +1056,22 @@ class PointsMatcher(_ShapeMatcher):
         bbox = mean_bbox([a_bbox, b_bbox])
         return OKS(a, b, sigma=self.sigma, bbox=bbox)
 
+
+@attrs
+class SkeletonMatcher(_ShapeMatcher):
+    pass
+    # def distance(self, a, b):
+    #     return segment_iou(a, b)
+
+    # def match_annotations(self, sources):
+    #     distance = self.distance
+    #     label_matcher = self.label_matcher
+    #     return [sum(sources, [])]
+
+    # def label_matcher(self, a, b):
+    #     a_label = self._context._get_any_label_name(a, a.label)
+    #     b_label = self._context._get_any_label_name(b, b.label)
+    #     return a_label == b_label
 
 @attrs
 class LineMatcher(_ShapeMatcher):
@@ -1178,6 +1222,16 @@ class _ShapeMerger(AnnotationMerger, _ShapeMatcher):
         shape.label = label
         shape.attributes["score"] = label_score * shape_score if label is not None else shape_score
 
+        if cluster[0].type == AnnotationType.skeleton:
+            elements = [[] for i in cluster[0].elements]
+            for ann in cluster:
+                for idx, element in enumerate(ann.elements):
+                    elements[idx].append(element)
+
+            shape.elements = []
+            for el in elements:
+                shape.elements.append(self.merge_cluster(el))
+
         return shape
 
 
@@ -1229,6 +1283,11 @@ class Cuboid3dMerger(_ShapeMerger, Cuboid3dMatcher):
         shape.attributes["score"] = label_score * shape_score if label is not None else shape_score
 
         return shape
+
+
+@attrs
+class SkeletonMerger(_ShapeMerger, SkeletonMatcher):
+    pass
 
 
 @attrs

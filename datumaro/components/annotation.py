@@ -510,7 +510,7 @@ class CompiledMask:
 class _Shape(Annotation):
     # Flattened list of point coordinates
     points: List[float] = field(
-        converter=lambda x: np.around(x, COORDINATE_ROUNDING_DIGITS).tolist(), default=[]
+        converter=lambda x: np.around(x, COORDINATE_ROUNDING_DIGITS).tolist(), factory=list
     )
 
     label: Optional[int] = field(
@@ -825,7 +825,7 @@ class Skeleton(Annotation):
 
     _type = AnnotationType.skeleton
 
-    elements: List[Points] = field(default=None)
+    elements: List[Points] = field(factory=list)
 
     label: Optional[int] = field(
         converter=attr.converters.optional(int), default=None, kw_only=True
@@ -857,3 +857,10 @@ class Skeleton(Annotation):
         y0 = min(ys, default=0)
         y1 = max(ys, default=0)
         return [x0, y0, x1 - x0, y1 - y0]
+
+    def get_points(self):
+        points = []
+        for element in self.elements:
+            points.extend(element.points)
+
+        return points

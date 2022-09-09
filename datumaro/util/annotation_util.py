@@ -8,7 +8,7 @@ from typing import Callable, Dict, Iterable, NewType, Optional, Sequence, Tuple,
 import numpy as np
 from typing_extensions import Literal
 
-from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, RleMask, _Shape
+from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, RleMask, _Shape, Skeleton
 from datumaro.util.mask_tools import mask_to_rle
 
 
@@ -34,7 +34,7 @@ SpatialAnnotation = Union[Shape, Mask]
 
 
 def _get_bbox(ann: Union[Sequence, SpatialAnnotation]) -> BboxCoords:
-    if isinstance(ann, (_Shape, Mask)):
+    if isinstance(ann, (_Shape, Mask, Skeleton)):
         return ann.get_bbox()
     elif hasattr(ann, "__len__") and len(ann) == 4:
         return ann
@@ -137,7 +137,9 @@ def segment_iou(a, b):
     a_bbox = list(a.get_bbox())
     b_bbox = list(b.get_bbox())
 
-    is_bbox = AnnotationType.bbox in [a.type, b.type]
+    is_bbox = AnnotationType.bbox in [a.type, b.type] or \
+        AnnotationType.skeleton in [a.type, b.type] and (len(a.get_points()) <= 4 or len(b.get_points()) <= 4) or \
+        AnnotationType.points in [a.type, b.type] and (len(a.points) <= 4 or len(b.points) <= 4)
     if is_bbox:
         a = [a_bbox]
         b = [b_bbox]
@@ -148,6 +150,8 @@ def segment_iou(a, b):
         def _to_rle(ann):
             if ann.type == AnnotationType.polygon:
                 return mask_utils.frPyObjects([ann.points], h, w)
+            elif ann.type == AnnotationType.skeleton:
+                return mask_utils.frPyObjects([ann.get_points()], h, w)
             elif isinstance(ann, RleMask):
                 return [ann.rle]
             elif ann.type == AnnotationType.mask:

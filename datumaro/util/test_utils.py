@@ -122,6 +122,17 @@ def _compare_annotations(expected, actual, ignored_attrs=None):
     a_attr = expected.attributes
     b_attr = actual.attributes
 
+    if expected.type == AnnotationType.skeleton:
+        a_elements_attr = []
+        for element in expected.elements:
+            a_elements_attr.append(element.attributes)
+            element.attributes = filter_dict(element.attributes, exclude_keys=ignored_attrs)
+    if actual.type == AnnotationType.skeleton:
+        b_elements_attr = []
+        for element in actual.elements:
+            b_elements_attr.append(element.attributes)
+            element.attributes = filter_dict(element.attributes, exclude_keys=ignored_attrs)
+
     if ignored_attrs != IGNORE_ALL:
         expected.attributes = filter_dict(a_attr, exclude_keys=ignored_attrs)
         actual.attributes = filter_dict(b_attr, exclude_keys=ignored_attrs)
@@ -133,6 +144,13 @@ def _compare_annotations(expected, actual, ignored_attrs=None):
 
     expected.attributes = a_attr
     actual.attributes = b_attr
+
+    if expected.type == AnnotationType.skeleton:
+        for i, element in enumerate(expected.elements):
+            element.attributes = a_elements_attr[i]
+    if actual.type == AnnotationType.skeleton:
+        for i, element in enumerate(actual.elements):
+            element.attributes = b_elements_attr[i]
 
     return r
 

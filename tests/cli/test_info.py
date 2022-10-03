@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from datumaro.util import parse_json
 from datumaro.util.test_utils import run_datum
 
 from ..requirements import Requirements, mark_requirement
@@ -51,3 +52,12 @@ class InfoTest:
         assert "format: coco" in stdout
         assert "media type: image" in stdout
         assert "subsets" in stdout
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_print_info_for_dataset_in_json_format(self):
+        stdout = self.run("info", "--json", DUMMY_DATASET_DIR)
+
+        result = parse_json(stdout)
+        assert result["format"] == "coco"
+        assert result["media type"] == "image"
+        assert len(result["subsets"]) == 2

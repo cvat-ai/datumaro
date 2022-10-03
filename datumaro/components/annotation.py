@@ -1,4 +1,5 @@
 # Copyright (C) 2021-2022 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -29,6 +30,7 @@ class AnnotationType(Enum):
     cuboid_3d = auto()
     super_resolution_annotation = auto()
     depth_annotation = auto()
+    skeleton = auto()
 
 
 COORDINATE_ROUNDING_DIGITS = 2
@@ -147,23 +149,24 @@ class LabelCategories(Categories):
     def _reindex(self):
         indices = {}
         for index, item in enumerate(self.items):
-            assert item.name not in self._indices
-            indices[item.name] = index
+            assert (item.parent + item.name) not in self._indices
+            indices[item.parent + item.name] = index
         self._indices = indices
 
     def add(
-        self, name: str, parent: Optional[str] = None, attributes: Optional[Set[str]] = None
+        self, name: str, parent: Optional[str] = "", attributes: Optional[Set[str]] = None
     ) -> int:
         assert name
-        assert name not in self._indices, name
+        key = (parent or "") + name
+        assert key not in self._indices
 
         index = len(self.items)
         self.items.append(self.Category(name, parent, attributes))
-        self._indices[name] = index
+        self._indices[key] = index
         return index
 
-    def find(self, name: str) -> Tuple[Optional[int], Optional[Category]]:
-        index = self._indices.get(name)
+    def find(self, name: str, parent: str = "") -> Tuple[Optional[int], Optional[Category]]:
+        index = self._indices.get(parent + name)
         if index is not None:
             return index, self.items[index]
         return index, None
@@ -514,7 +517,7 @@ class CompiledMask:
 class _Shape(Annotation):
     # Flattened list of point coordinates
     points: List[float] = field(
-        converter=lambda x: np.around(x, COORDINATE_ROUNDING_DIGITS).tolist()
+        converter=lambda x: np.around(x, COORDINATE_ROUNDING_DIGITS).tolist(), factory=list
     )
 
     label: Optional[int] = field(
@@ -819,3 +822,45 @@ class DepthAnnotation(_ImageAnnotation):
     """
 
     _type = AnnotationType.depth_annotation
+
+
+@attrs(slots=True, order=False)
+class Skeleton(Annotation):
+    """
+    Represents a skeleton.
+    """
+
+    _type = AnnotationType.skeleton
+
+    elements: List[Points] = field(factory=list)
+
+    label: Optional[int] = field(
+        converter=attr.converters.optional(int), default=None, kw_only=True
+    )
+
+    z_order: int = field(default=0, validator=default_if_none(int), kw_only=True)
+
+    def __attrs_post_init__(self):
+        pass
+
+    def get_area(self):
+        return 0
+
+    def get_bbox(self):
+        xs = []
+        ys = []
+        for element in self.elements:
+            if (
+                element.type is not AnnotationType.points
+                or element.type is AnnotationType.points
+                and [v for v in element.visibility if v != element.Visibility.absent]
+            ):
+                bbox = element.get_bbox()
+                xs.extend([bbox[0], bbox[2] + bbox[0]])
+                ys.extend([bbox[1], bbox[3] + bbox[1]])
+
+        x0 = min(xs, default=0)
+        x1 = max(xs, default=0)
+        y0 = min(ys, default=0)
+        y1 = max(ys, default=0)
+        return [x0, y0, x1 - x0, y1 - y0]

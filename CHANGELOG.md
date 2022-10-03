@@ -33,8 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/openvinotoolkit/datumaro/pull/706>)
 - NYU Depth Dataset V2 format (import-only)
   (<https://github.com/openvinotoolkit/datumaro/pull/712>)
-- `format` and `media type` fields in the `info` command output
-  (<https://github.com/cvat-ai/datumaro/pull/5>)
+- Skeleton annotation type
+  (<https://github.com/cvat-ai/datumaro/pull/6>)
+- Storing labels with the same name but with a different parent
+  (<https://github.com/cvat-ai/datumaro/pull/8>)
 
 ### Changed
 - `env.detect_dataset()` now returns a list of detected formats at all recursion levels
@@ -49,7 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - YOLO format now supports almost any subset names, except `backup`, `names` and `classes`
   (instead of just `train` and `valid`). The reserved names now raise an error on exporting.
   (<https://github.com/openvinotoolkit/datumaro/pull/688>)
-- \[CLI\] Removed the `--all` flag in `datum info`, added the `--json` flag
+- \[CLI\] Removed the `--all` flag in `datum info`, added the `--json` flag,
+  added `format` and `media type` fields in the `info` command output
   (<https://github.com/cvat-ai/datumaro/pull/5>)
 
 ### Deprecated

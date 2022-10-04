@@ -390,7 +390,8 @@ class VocConverter(Converter):
 
         if masks and VocTask.segmentation in self._tasks:
             compiled_mask = CompiledMask.from_instance_masks(
-                masks, instance_labels=[self._label_id_mapping(m.label) for m in masks]
+                masks, instance_labels=[self._label_id_mapping(m.label) for m in masks],
+                background_label_id=self._label_id_mapping(None),
             )
 
             self.save_segm(
@@ -645,6 +646,7 @@ class VocConverter(Converter):
             label_desc[0] = color
 
         self._label_map = label_map
+        self._bg_label = bg_label[0]
         self._label_id_mapping = self._make_label_id_map()
 
     def _is_label(self, s):
@@ -666,9 +668,11 @@ class VocConverter(Converter):
         return label_desc[2]
 
     def _make_label_id_map(self):
+        src_cat: LabelCategories = self._extractor.categories().get(AnnotationType.label)
+        dst_cat: LabelCategories = self._categories[AnnotationType.label]
+        bg_label_id = dst_cat.find(self._bg_label)[0]
         map_id, id_mapping, src_labels, dst_labels = make_label_id_mapping(
-            self._extractor.categories().get(AnnotationType.label),
-            self._categories[AnnotationType.label],
+            src_cat, dst_cat, fallback=bg_label_id,
         )
 
         void_labels = [
@@ -695,9 +699,6 @@ class VocConverter(Converter):
         )
 
         return map_id
-
-    def _remap_mask(self, mask):
-        return remap_mask(mask, self._label_id_mapping)
 
     @classmethod
     def patch(cls, dataset, patch, save_dir, **kwargs):

@@ -31,7 +31,7 @@ from datumaro.components.media import Image
 from datumaro.util import find, str_to_bool
 from datumaro.util.annotation_util import make_label_id_mapping
 from datumaro.util.image import save_image
-from datumaro.util.mask_tools import paint_mask, remap_mask
+from datumaro.util.mask_tools import paint_mask
 from datumaro.util.meta_file_util import has_meta_file
 
 from .format import (
@@ -111,7 +111,7 @@ class VocConverter(Converter):
             "--apply-colormap",
             type=str_to_bool,
             default=True,
-            help="Use colormap for class and instance masks " "(default: %(default)s)",
+            help="Use colormap for class and instance masks (default: %(default)s)",
         )
         parser.add_argument(
             "--label-map",
@@ -129,7 +129,7 @@ class VocConverter(Converter):
             "--keep-empty",
             type=str_to_bool,
             default=False,
-            help="Write subset lists even if they are empty " "(default: %(default)s)",
+            help="Write subset lists even if they are empty (default: %(default)s)",
         )
         parser.add_argument(
             "--tasks",
@@ -390,7 +390,8 @@ class VocConverter(Converter):
 
         if masks and VocTask.segmentation in self._tasks:
             compiled_mask = CompiledMask.from_instance_masks(
-                masks, instance_labels=[self._label_id_mapping(m.label) for m in masks],
+                masks,
+                instance_labels=[self._label_id_mapping(m.label) for m in masks],
                 background_label_id=self._label_id_mapping(None),
             )
 
@@ -672,7 +673,9 @@ class VocConverter(Converter):
         dst_cat: LabelCategories = self._categories[AnnotationType.label]
         bg_label_id = dst_cat.find(self._bg_label)[0]
         map_id, id_mapping, src_labels, dst_labels = make_label_id_mapping(
-            src_cat, dst_cat, fallback=bg_label_id,
+            src_cat,
+            dst_cat,
+            fallback=bg_label_id,
         )
 
         void_labels = [

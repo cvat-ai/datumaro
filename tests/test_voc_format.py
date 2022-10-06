@@ -1667,6 +1667,34 @@ class VocConverterTest(TestCase):
             self.assertTrue(np.array_equal([0, 1], np.unique(inst_mask)))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_export_masks_with_non_0_background_color(self):
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    1,
+                    media=Image(data=np.zeros((4, 1, 1))),
+                    annotations=[
+                        Mask([[1, 1, 0, 0]], label=0, attributes={"z_order": 1}),
+                    ],
+                )
+            ],
+            categories=["fg"],
+        )
+
+        label_map = OrderedDict(
+            fg=[(20, 20, 20), [], []],
+            background=[(0, 0, 0), [], []],
+        )
+
+        with TestDir() as test_dir:
+            VocConverter.convert(dataset, test_dir, apply_colormap=False, label_map=label_map)
+
+            cls_mask = load_mask(osp.join(test_dir, "SegmentationClass", "1.png"))
+            inst_mask = load_mask(osp.join(test_dir, "SegmentationObject", "1.png"))
+            self.assertTrue(np.array_equal([[1, 1, 0, 0]], cls_mask))
+            self.assertTrue(np.array_equal([[1, 1, 0, 0]], inst_mask))
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_image_info(self):
         class TestExtractor(TestExtractorBase):
             def __iter__(self):

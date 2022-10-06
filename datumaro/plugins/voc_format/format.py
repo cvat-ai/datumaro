@@ -9,7 +9,7 @@ import os.path as osp
 from collections import OrderedDict
 from enum import Enum, auto
 from itertools import chain
-from typing import Optional, Set
+from typing import Dict, Optional, Set, Union
 
 import numpy as np
 from attr import define, field
@@ -371,7 +371,7 @@ class VocLabelMap(OrderedDict[str, VocLabelInfo]):
         dump_json_file(get_meta_file(output_dir), dataset_meta)
 
 
-def make_voc_categories(label_map: Optional[VocLabelMap] = None) -> CategoriesInfo:
+def make_voc_categories(label_map: Optional[Union[VocLabelMap, Dict]] = None) -> CategoriesInfo:
     if label_map is None:
         label_map = VocLabelMap.make_default()
     elif isinstance(label_map, dict) and not isinstance(label_map, VocLabelMap):

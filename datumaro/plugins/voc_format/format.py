@@ -25,7 +25,6 @@ from datumaro.components.annotation import (
 from datumaro.components.errors import InvalidAnnotationError
 from datumaro.components.extractor import CategoriesInfo
 from datumaro.util import dump_json_file, find, parse_json_file
-from datumaro.util.attrs_util import default_if_none
 from datumaro.util.meta_file_util import get_meta_file
 
 

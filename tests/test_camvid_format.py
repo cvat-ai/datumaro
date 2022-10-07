@@ -13,7 +13,6 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem, Extractor
 from datumaro.components.media import Image
 from datumaro.plugins.camvid_format import CamvidConverter, CamvidImporter
-from datumaro.util.mask_tools import load_mask
 from datumaro.util.meta_file_util import parse_meta_file
 from datumaro.util.test_utils import TestDir, check_save_and_load, compare_datasets
 

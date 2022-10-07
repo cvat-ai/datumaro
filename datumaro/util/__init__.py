@@ -16,11 +16,12 @@ NOTSET = object()
 str_to_bool = attrs.converters.to_bool
 
 T = TypeVar("T")
+U = TypeVar("U")
 
 
 def find(
-    iterable: Iterable[T], pred: Callable[[T], bool] = lambda x: True, *, default: T = None
-) -> T:
+    iterable: Iterable[T], pred: Callable[[T], bool] = lambda x: True, *, default: U = None
+) -> Union[T, U]:
     return next((x for x in iterable if pred(x)), default)
 
 

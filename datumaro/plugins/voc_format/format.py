@@ -142,6 +142,7 @@ if sys.version_info.minor < 9:
 else:
     _voc_label_map_base = OrderedDict[str, VocLabelInfo]
 
+
 class VocLabelMap(_voc_label_map_base):
     """
     Provides VOC-specific info about labels.

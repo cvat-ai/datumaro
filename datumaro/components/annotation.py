@@ -430,7 +430,7 @@ class CompiledMask:
         instance_map = [0]
         class_map = [background_label_id]
         for m, idx, instance_id, class_id in it:
-            if class_id == [background_label_id, None]:
+            if class_id in [background_label_id, None]:
                 # Optimization A: map all background masks to the same idx 0
                 idx = 0
 

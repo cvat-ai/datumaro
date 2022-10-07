@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os.path as osp
+import sys
 from collections import OrderedDict
 from enum import Enum, auto
 from itertools import chain
@@ -136,9 +137,15 @@ class VocLabelInfo:
     actions: Set[str] = field(factory=set, converter=set)
 
 
-class VocLabelMap(OrderedDict[str, VocLabelInfo]):
+if sys.version_info.minor < 9:
+    _voc_label_map_base = OrderedDict
+else:
+    _voc_label_map_base = OrderedDict[str, VocLabelInfo]
+
+class VocLabelMap(_voc_label_map_base):
     """
-    Provides VOC-specific info about labels
+    Provides VOC-specific info about labels.
+    A mapping of type: str -> VocLabelInfo
     """
 
     DEFAULT_BACKGROUND_LABEL = "background"

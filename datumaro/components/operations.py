@@ -1,4 +1,5 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -558,7 +559,7 @@ class IntersectMerge(MergingStrategy):
                 continue
 
             for src_label in src_cat.items:
-                dst_label = dst_cat.find(src_label.name)[1]
+                dst_label = dst_cat.find(src_label.name, src_label.parent)[1]
                 if dst_label is not None:
                     if dst_label != src_label:
                         if (
@@ -592,7 +593,8 @@ class IntersectMerge(MergingStrategy):
 
             for src_label_id, src_cat in src_point_cat.items.items():
                 src_label = src_label_cat.items[src_label_id].name
-                dst_label_id = label_cat.find(src_label)[0]
+                src_parent_label = src_label_cat.items[src_label_id].parent
+                dst_label_id = label_cat.find(src_label, src_parent_label)[0]
                 dst_cat = dst_point_cat.items.get(dst_label_id)
                 if dst_cat is not None:
                     if dst_cat != src_cat:
@@ -622,7 +624,8 @@ class IntersectMerge(MergingStrategy):
 
             for src_label_id, src_cat in src_mask_cat.colormap.items():
                 src_label = src_label_cat.items[src_label_id].name
-                dst_label_id = label_cat.find(src_label)[0]
+                src_parent_label = src_label_cat.items[src_label_id].parent
+                dst_label_id = label_cat.find(src_label, src_parent_label)[0]
                 dst_cat = dst_mask_cat.colormap.get(dst_label_id)
                 if dst_cat is not None:
                     if dst_cat != src_cat:
@@ -700,6 +703,9 @@ class IntersectMerge(MergingStrategy):
             elif t is AnnotationType.super_resolution_annotation:
                 return _make(ImageAnnotationMerger, **kwargs)
             elif t is AnnotationType.depth_annotation:
+                return _make(ImageAnnotationMerger, **kwargs)
+            elif t is AnnotationType.skeleton:
+                # to do: add skeletons merge
                 return _make(ImageAnnotationMerger, **kwargs)
             else:
                 raise NotImplementedError("Type %s is not supported" % t)
@@ -861,8 +867,10 @@ class IntersectMerge(MergingStrategy):
             return None
         return self._categories[AnnotationType.label].items[label_id].name
 
-    def _get_label_id(self, label):
-        return self._categories[AnnotationType.label].find(label)[0]
+    def _get_label_id(self, label, parent=""):
+        if label is not None:
+            return self._categories[AnnotationType.label].find(label, parent)[0]
+        return None
 
     def _get_src_label_name(self, ann, label_id):
         if label_id is None:

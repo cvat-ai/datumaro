@@ -311,12 +311,14 @@ def compare_dirs(test, expected: str, actual: str):
 def run_datum(test: Union[unittest.TestCase, Any], *args, expected_code: int = 0) -> None:
     from datumaro.cli.__main__ import main
 
+    status = main(args)
+
     if isinstance(test, unittest.TestCase):
         # Unittest
-        test.assertEqual(expected_code, main(args), str(args))
+        test.assertEqual(expected_code, status, str(args))
     else:
         # Pytest case
-        assert expected_code == main(args)
+        assert status == expected_code
 
 
 @contextlib.contextmanager

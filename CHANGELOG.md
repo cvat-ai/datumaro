@@ -58,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - \[API\] `image`, `point_cloud` and `related_images` of `DatasetItem` are
   replaced with `media` and `media_as(type)` members and c-tor parameters
   (<https://github.com/openvinotoolkit/datumaro/pull/539>)
+- `datumaro.version` is now deprecated in favor of `importlib.metadata.version`
+  (<https://github.com/cvat-ai/datumaro/pull/12>)
 
 ### Removed
 - TBD

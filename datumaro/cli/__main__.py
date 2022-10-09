@@ -8,6 +8,7 @@ import os.path as osp
 import sys
 import warnings
 
+from .. import __version__ as VERSION
 from ..util.telemetry_utils import (
     close_telemetry_session,
     init_telemetry_session,
@@ -15,7 +16,6 @@ from ..util.telemetry_utils import (
     send_command_failure_info,
     send_command_success_info,
 )
-from ..version import VERSION
 from . import commands, contexts
 from .util import add_subparser
 from .util.errors import CliException

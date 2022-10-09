@@ -3,36 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 import os
-import os.path as osp
-import re
 from distutils.util import strtobool
 
 import setuptools
-
-# Snyk scan integration
-here = None
-
-
-def find_version(project_dir=None):
-    if not project_dir:
-        project_dir = osp.dirname(osp.abspath(__file__))
-
-    file_path = osp.join(project_dir, "datumaro", "version.py")
-
-    with open(file_path, "r") as version_file:
-        version_text = version_file.read()
-
-    # PEP440:
-    # https://www.python.org/dev/peps/pep-0440/#appendix-b-parsing-version-strings-with-regular-expressions
-    pep_regex = r"([1-9]\d*!)?(0|[1-9]\d*)(\.(0|[1-9]\d*))*((a|b|rc)(0|[1-9]\d*))?(\.post(0|[1-9]\d*))?(\.dev(0|[1-9]\d*))?"
-    version_regex = r"VERSION\s*=\s*.(" + pep_regex + ")."
-    match = re.match(version_regex, version_text)
-    if not match:
-        raise RuntimeError("Failed to find version string in '%s'" % file_path)
-
-    version = version_text[match.start(1) : match.end(1)]
-    return version
-
 
 CORE_REQUIREMENTS_FILE = "requirements-core.txt"
 DEFAULT_REQUIREMENTS_FILE = "requirements-default.txt"
@@ -56,7 +29,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="datumaro",
-    version=find_version(here),
+    version="0.3",
     author="Intel",
     author_email="maxim.zhiltsov@intel.com",
     description="Dataset Management Framework (Datumaro)",

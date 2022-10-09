@@ -3,6 +3,24 @@
 #
 # SPDX-License-Identifier: MIT
 
+# Borrowed from https://gist.github.com/benkehoe/066a73903e84576a8d6d911cfedc2df6
+# With importlib.metadata the version can be obtained with just importlib.metadata.version
+# This variable now just serves for backward compatibility and established practices.
+try:
+    # importlib.metadata is present in Python 3.8 and later
+    import importlib.metadata as importlib_metadata
+except ImportError:
+    # use the shim package importlib-metadata pre-3.8
+    import importlib_metadata as importlib_metadata
+
+try:
+    # __package__ allows for the case where __name__ is "__main__"
+    __version__ = importlib_metadata.version(__package__ or __name__)
+except importlib_metadata.PackageNotFoundError:
+    __version__ = "0.0.0"
+version = __version__
+
+
 from . import errors as errors
 from . import ops as ops
 from . import project as project
@@ -68,4 +86,3 @@ from .components.media import ByteImage, Image, MediaElement, Video, VideoFrame
 from .components.media_manager import MediaManager
 from .components.progress_reporting import NullProgressReporter, ProgressReporter
 from .components.validator import Validator
-from .version import VERSION

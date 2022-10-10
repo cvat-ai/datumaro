@@ -205,9 +205,8 @@ class VocLabelMap(_voc_label_map_base):
 
         if bg_label is None:
             bg_label = name
-            if bg_label not in self:
-                color = color if self.has_colors() else None
-                self[bg_label] = VocLabelInfo(color)
+            color = color if self.has_colors() else None
+            self[bg_label] = VocLabelInfo(color)
             self.move_to_end(bg_label, last=False)
 
         return bg_label

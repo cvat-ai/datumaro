@@ -136,7 +136,7 @@ class VocLabelInfo:
     actions: Set[str] = field(factory=set, converter=set)
 
 
-if sys.version_info.minor < 9:
+if sys.version_info < (3, 9):
     _voc_label_map_base = OrderedDict
 else:
     _voc_label_map_base = OrderedDict[str, VocLabelInfo]
@@ -187,13 +187,12 @@ class VocLabelMap(_voc_label_map_base):
     ) -> Optional[str]:
         bg_label = find(self.items(), lambda x: x[1].color == color)
         if bg_label is not None:
-            bg_label = bg_label[0]
-        else:
-            bg_label = name
-            if bg_label not in self:
-                bg_label = None
+            return bg_label[0]
 
-        return bg_label
+        if name in self:
+            return name
+
+        return None
 
     def find_or_create_background_label(
         self,

@@ -152,7 +152,7 @@ class VocLabelMap(_voc_label_map_base):
     DEFAULT_BACKGROUND_COLOR: RgbColor = (0, 0, 0)
 
     def __init__(self, *args, **kwargs) -> None:
-        d = OrderedDict(*args, **kwargs)  # backward compatibility
+        d = OrderedDict(*args, **kwargs)
 
         super().__init__(
             (k, v if isinstance(v, VocLabelInfo) else VocLabelInfo(*v)) for k, v in d.items()
@@ -379,8 +379,8 @@ class VocLabelMap(_voc_label_map_base):
 def make_voc_categories(label_map: Optional[Union[VocLabelMap, Dict]] = None) -> CategoriesInfo:
     if label_map is None:
         label_map = VocLabelMap.make_default()
-    elif isinstance(label_map, dict) and not isinstance(label_map, VocLabelMap):
-        label_map = VocLabelMap(label_map)  # backward compatibility
+    elif not isinstance(label_map, VocLabelMap):
+        label_map = VocLabelMap(label_map)
 
     categories = {}
 

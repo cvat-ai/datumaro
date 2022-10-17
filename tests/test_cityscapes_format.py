@@ -641,6 +641,7 @@ class CityscapesConverterTest(TestCase):
             categories=Cityscapes.make_cityscapes_categories(
                 OrderedDict(
                     [
+                        ("background", (0, 0, 0)),
                         ("a", src_mask_cat.colormap[0]),
                         ("b", src_mask_cat.colormap[1]),
                     ]

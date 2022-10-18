@@ -1717,13 +1717,17 @@ class CocoConverterTest(TestCase):
                         # Full instance annotations: bbox + keypoints
                         Skeleton([Points([1, 2]), Points([3, 4]), Points([2, 3])], group=2, id=2),
                         Bbox(1, 2, 2, 2, group=2, id=2),
-                        # Solitary keypoints
+                        # Solitary keypoints without group
                         Skeleton([Points([1, 2]), Points([0, 2]), Points([4, 1])], label=5, id=3),
+                        # Solitary keypoints with group
+                        Skeleton(
+                            [Points([1, 2]), Points([2, 1]), Points([3, 4])], label=4, group=3, id=4
+                        ),
                         # Some other solitary annotations (bug #1387)
-                        Polygon([0, 0, 4, 0, 4, 4], label=3, id=4),
+                        Polygon([0, 0, 4, 0, 4, 4], label=3, id=5),
                         # Solitary keypoints with no label
                         Skeleton(
-                            [Points([0, 0], [0]), Points([1, 2], [1]), Points([3, 4], [2])], id=5
+                            [Points([0, 0], [0]), Points([1, 2], [1]), Points([3, 4], [2])], id=6
                         ),
                     ],
                 ),
@@ -1773,12 +1777,20 @@ class CocoConverterTest(TestCase):
                         ),
                         Bbox(0, 1, 4, 1, label=5, group=3, id=3, attributes={"is_crowd": False}),
                         Skeleton(
-                            [Points([0, 0], [0]), Points([1, 2], [1]), Points([3, 4], [2])],
-                            group=5,
-                            id=5,
+                            [Points([1, 2]), Points([2, 1]), Points([3, 4])],
+                            label=4,
+                            group=4,
+                            id=4,
                             attributes={"is_crowd": False},
                         ),
-                        Bbox(1, 2, 2, 2, group=5, id=5, attributes={"is_crowd": False}),
+                        Bbox(1, 1, 2, 3, label=4, group=4, id=4, attributes={"is_crowd": False}),
+                        Skeleton(
+                            [Points([0, 0], [0]), Points([1, 2], [1]), Points([3, 4], [2])],
+                            group=6,
+                            id=6,
+                            attributes={"is_crowd": False},
+                        ),
+                        Bbox(1, 2, 2, 2, group=6, id=6, attributes={"is_crowd": False}),
                     ],
                     attributes={"id": 1},
                 ),
@@ -1787,6 +1799,100 @@ class CocoConverterTest(TestCase):
                 AnnotationType.label: LabelCategories.from_iterable(str(i) for i in range(10)),
                 AnnotationType.points: PointsCategories.from_iterable(
                     (i, None, [[0, 1], [1, 2]]) for i in range(10)
+                ),
+            },
+        )
+
+        with TestDir() as test_dir:
+            self._test_save_and_load(
+                source_dataset,
+                CocoPersonKeypointsConverter.convert,
+                test_dir,
+                target_dataset=target_dataset,
+            )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_keypoints_in_skeleton_order(self):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.zeros((5, 5, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([0, 0], [0], label=3),
+                                Points([0, 2], [1], label=2),
+                                Points([4, 1], [2], label=4),
+                                Points([2, 3], [2], label=1),
+                            ],
+                            label=0,
+                            group=1,
+                            id=1,
+                        ),
+                        Bbox(0, 1, 4, 2, label=0, group=1, id=1),
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "obj",
+                        ("alpha", "obj"),
+                        ("beta", "obj"),
+                        ("gamma", "obj"),
+                        ("delta", "obj"),
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (0, ["alpha", "beta", "gamma", "delta"], [[0, 1], [1, 2], [2, 3]]),
+                    ]
+                ),
+            },
+        )
+
+        target_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.zeros((5, 5, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                # The points will be reordered to skeleton order,
+                                # since the format doesn't preserve the original order.
+                                Points([2, 3], [2], label=1),
+                                Points([0, 2], [1], label=2),
+                                Points([0, 0], [0], label=3),
+                                Points([4, 1], [2], label=4),
+                            ],
+                            label=0,
+                            group=1,
+                            id=1,
+                            attributes={"is_crowd": False},
+                        ),
+                        Bbox(0, 1, 4, 2, label=0, group=1, id=1, attributes={"is_crowd": False}),
+                    ],
+                    attributes={"id": 1},
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "obj",
+                        ("alpha", "obj"),
+                        ("beta", "obj"),
+                        ("gamma", "obj"),
+                        ("delta", "obj"),
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (0, ["alpha", "beta", "gamma", "delta"], [[0, 1], [1, 2], [2, 3]]),
+                    ]
                 ),
             },
         )

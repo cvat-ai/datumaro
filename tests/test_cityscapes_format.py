@@ -706,7 +706,7 @@ class CityscapesConverterTest(TestCase):
 
             def categories(self):
                 label_map = OrderedDict()
-                label_map["background"] = (1, 2, 3) # must be moved to the idx 0
+                label_map["background"] = (1, 2, 3)  # must be moved to the idx 0
                 label_map["label_1"] = (4, 5, 6)
                 label_map["label_2"] = (2, 5, 7)
                 return Cityscapes.make_cityscapes_categories(label_map)
@@ -777,7 +777,7 @@ class CityscapesConverterTest(TestCase):
 
             def categories(self):
                 label_map = OrderedDict()
-                label_map["background"] = (1, 2, 3) # must be moved to the idx 0
+                label_map["background"] = (1, 2, 3)  # must be moved to the idx 0
                 label_map["a"] = (4, 5, 6)
                 label_map["label_2"] = (2, 5, 7)
                 return Cityscapes.make_cityscapes_categories(label_map)

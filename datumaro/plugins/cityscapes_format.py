@@ -447,7 +447,7 @@ class CityscapesConverter(Converter):
                         for i, m in enumerate(masks)
                     ],
                     instance_labels=[self._label_id_mapping(m.label) for m in masks],
-                    background_label_id=0
+                    background_label_id=0,
                 )
 
                 mask_dir = osp.join(self._save_dir, CityscapesPath.GT_FINE_DIR, subset_name)

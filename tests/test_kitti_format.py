@@ -718,6 +718,218 @@ class KittiConverterTest(TestCase):
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_dataset_with_custom_labelmap_without_bg_color(self):
+        class SrcExtractor(TestExtractorBase):
+            def __iter__(self):
+                yield DatasetItem(
+                    id=1,
+                    media=Image(data=np.ones((1, 5, 3))),
+                    annotations=[
+                        Mask(
+                            image=np.array([[1, 0, 0, 1, 1]]),
+                            label=1,
+                            id=1,
+                            attributes={"is_crowd": False},
+                        ),
+                        Mask(
+                            image=np.array([[0, 1, 1, 0, 0]]),
+                            label=2,
+                            id=2,
+                            attributes={"is_crowd": False},
+                        ),
+                    ],
+                )
+
+            def categories(self):
+                label_map = OrderedDict()
+                label_map["background"] = (0, 0, 0)
+                label_map["label_1"] = (1, 2, 3)
+                label_map["label_2"] = (3, 2, 1)
+                return make_kitti_categories(label_map)
+
+        output_label_map = OrderedDict()
+        output_label_map["label_1"] = (1, 1, 1)
+        output_label_map["label_2"] = (2, 2, 2)
+
+        class DstExtractor(TestExtractorBase):
+            def __iter__(self):
+                yield DatasetItem(
+                    id=1,
+                    media=Image(data=np.ones((1, 5, 3))),
+                    annotations=[
+                        Mask(
+                            image=np.array([[1, 0, 0, 1, 1]]),
+                            attributes={"is_crowd": False},
+                            id=1,
+                            label=self._label("label_1"),
+                        ),
+                        Mask(
+                            image=np.array([[0, 1, 1, 0, 0]]),
+                            attributes={"is_crowd": False},
+                            id=2,
+                            label=self._label("label_2"),
+                        ),
+                    ],
+                )
+
+            def categories(self):
+                label_map = OrderedDict()
+                label_map["background"] = (0, 0, 0)
+                label_map["label_1"] = (1, 1, 1)
+                label_map["label_2"] = (2, 2, 2)
+                return make_kitti_categories(label_map)
+
+        with TestDir() as test_dir:
+            self._test_save_and_load(
+                SrcExtractor(),
+                partial(KittiConverter.convert, label_map=output_label_map, save_media=True),
+                test_dir,
+                target_dataset=DstExtractor(),
+            )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_dataset_with_custom_labelmap_with_custom_bg_color(self):
+        class SrcExtractor(TestExtractorBase):
+            def __iter__(self):
+                yield DatasetItem(
+                    id=1,
+                    media=Image(data=np.ones((1, 5, 3))),
+                    annotations=[
+                        Mask(
+                            image=np.array([[1, 0, 0, 1, 1]]),
+                            label=1,
+                            id=1,
+                            attributes={"is_crowd": False},
+                        ),
+                        Mask(
+                            image=np.array([[0, 1, 1, 0, 0]]),
+                            label=2,
+                            id=2,
+                            attributes={"is_crowd": False},
+                        ),
+                    ],
+                )
+
+            def categories(self):
+                label_map = OrderedDict()
+                label_map["background"] = (0, 0, 0)
+                label_map["label_1"] = (1, 2, 3)
+                label_map["label_2"] = (3, 2, 1)
+                return make_kitti_categories(label_map)
+
+        output_label_map = OrderedDict()
+        output_label_map["background"] = (3, 4, 5)
+        output_label_map["label_1"] = (1, 1, 1)
+        output_label_map["label_2"] = (2, 2, 2)
+
+        class DstExtractor(TestExtractorBase):
+            def __iter__(self):
+                yield DatasetItem(
+                    id=1,
+                    media=Image(data=np.ones((1, 5, 3))),
+                    annotations=[
+                        Mask(
+                            image=np.array([[1, 0, 0, 1, 1]]),
+                            attributes={"is_crowd": False},
+                            id=1,
+                            label=self._label("label_1"),
+                        ),
+                        Mask(
+                            image=np.array([[0, 1, 1, 0, 0]]),
+                            attributes={"is_crowd": False},
+                            id=2,
+                            label=self._label("label_2"),
+                        ),
+                    ],
+                )
+
+            def categories(self):
+                label_map = OrderedDict()
+                label_map["background"] = (3, 4, 5)
+                label_map["label_1"] = (1, 1, 1)
+                label_map["label_2"] = (2, 2, 2)
+                return make_kitti_categories(label_map)
+
+        with TestDir() as test_dir:
+            self._test_save_and_load(
+                SrcExtractor(),
+                partial(KittiConverter.convert, label_map=output_label_map, save_media=True),
+                test_dir,
+                target_dataset=DstExtractor(),
+            )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_dataset_with_custom_labelmap_with_custom_bg_color_at_idx_non_zero(self):
+        class SrcExtractor(TestExtractorBase):
+            def __iter__(self):
+                yield DatasetItem(
+                    id=1,
+                    media=Image(data=np.ones((1, 5, 3))),
+                    annotations=[
+                        Mask(
+                            image=np.array([[1, 0, 0, 1, 1]]),
+                            label=1,
+                            id=1,
+                            attributes={"is_crowd": False},
+                        ),
+                        Mask(
+                            image=np.array([[0, 1, 1, 0, 0]]),
+                            label=2,
+                            id=2,
+                            attributes={"is_crowd": False},
+                        ),
+                    ],
+                )
+
+            def categories(self):
+                label_map = OrderedDict()
+                label_map["background"] = (0, 0, 0)
+                label_map["a"] = (1, 2, 3)
+                label_map["label_2"] = (3, 2, 1)
+                return make_kitti_categories(label_map)
+
+        output_label_map = OrderedDict()
+        output_label_map["a"] = (1, 1, 1)
+        output_label_map["background"] = (3, 4, 5)
+        output_label_map["label_2"] = (2, 2, 2)
+
+        class DstExtractor(TestExtractorBase):
+            def __iter__(self):
+                yield DatasetItem(
+                    id=1,
+                    media=Image(data=np.ones((1, 5, 3))),
+                    annotations=[
+                        Mask(
+                            image=np.array([[1, 0, 0, 1, 1]]),
+                            attributes={"is_crowd": False},
+                            id=1,
+                            label=self._label("a"),
+                        ),
+                        Mask(
+                            image=np.array([[0, 1, 1, 0, 0]]),
+                            attributes={"is_crowd": False},
+                            id=2,
+                            label=self._label("label_2"),
+                        ),
+                    ],
+                )
+
+            def categories(self):
+                label_map = OrderedDict()
+                label_map["background"] = (3, 4, 5)  # must be moved to the idx 0
+                label_map["a"] = (1, 1, 1)
+                label_map["label_2"] = (2, 2, 2)
+                return make_kitti_categories(label_map)
+
+        with TestDir() as test_dir:
+            self._test_save_and_load(
+                SrcExtractor(),
+                partial(KittiConverter.convert, label_map=output_label_map, save_media=True),
+                test_dir,
+                target_dataset=DstExtractor(),
+            )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_image_with_arbitrary_extension(self):
         class TestExtractor(TestExtractorBase):
             def __iter__(self):

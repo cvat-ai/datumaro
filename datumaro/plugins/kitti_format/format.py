@@ -7,6 +7,7 @@ from enum import Enum, auto
 from typing import Optional
 
 from datumaro.components.annotation import AnnotationType, LabelCategories, MaskCategories, RgbColor
+from datumaro.components.extractor import CategoriesInfo
 from datumaro.util import find
 from datumaro.util.mask_tools import generate_colormap
 
@@ -77,12 +78,12 @@ DEFAULT_BACKGROUND_LABEL = "background"
 DEFAULT_BACKGROUND_COLOR = (0, 0, 0)
 
 
-def has_colors(self) -> bool:
-    return any(v is not None for v in self.values())
+def has_colors(label_map: OrderedDict) -> bool:
+    return any(v is not None for v in label_map.values())
 
 
 def find_background_label(
-    label_map,
+    label_map: OrderedDict,
     *,
     name: str = DEFAULT_BACKGROUND_LABEL,
     color: RgbColor = DEFAULT_BACKGROUND_COLOR,
@@ -117,7 +118,7 @@ def find_or_create_background_label(
     return bg_label
 
 
-def make_kitti_categories(label_map=None):
+def make_kitti_categories(label_map: Optional[OrderedDict] = None) -> CategoriesInfo:
     if label_map is None:
         label_map = KittiLabelMap
 

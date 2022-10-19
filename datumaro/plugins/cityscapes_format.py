@@ -23,7 +23,7 @@ from datumaro.components.annotation import (
 from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
 from datumaro.components.errors import MediaTypeError
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.extractor import CategoriesInfo, DatasetItem, Importer, SourceExtractor
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util import find
@@ -121,12 +121,12 @@ DEFAULT_BACKGROUND_LABEL = "background"
 DEFAULT_BACKGROUND_COLOR = (0, 0, 0)
 
 
-def has_colors(self) -> bool:
-    return any(v is not None for v in self.values())
+def has_colors(label_map: OrderedDict) -> bool:
+    return any(v is not None for v in label_map.values())
 
 
 def find_background_label(
-    label_map,
+    label_map: OrderedDict,
     *,
     name: str = DEFAULT_BACKGROUND_LABEL,
     color: RgbColor = DEFAULT_BACKGROUND_COLOR,
@@ -161,7 +161,7 @@ def find_or_create_background_label(
     return bg_label
 
 
-def make_cityscapes_categories(label_map=None):
+def make_cityscapes_categories(label_map: Optional[OrderedDict] = None) -> CategoriesInfo:
     if label_map is None:
         label_map = CITYSCAPES_LABEL_MAP
 

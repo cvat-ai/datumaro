@@ -579,7 +579,7 @@ class CityscapesConverterTest(TestCase):
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_dataset_with_specific_labelmap_without_bg_class(self):
+    def test_dataset_with_specific_labelmap_without_bg_class_can_add_default_bg_class(self):
         class SrcExtractor(TestExtractorBase):
             def __iter__(self):
                 yield DatasetItem(
@@ -649,7 +649,7 @@ class CityscapesConverterTest(TestCase):
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_dataset_with_specific_labelmap_with_bg_class(self):
+    def test_dataset_with_specific_labelmap_with_nondefault_bg_class_color(self):
         class SrcExtractor(TestExtractorBase):
             def __iter__(self):
                 yield DatasetItem(
@@ -706,7 +706,7 @@ class CityscapesConverterTest(TestCase):
 
             def categories(self):
                 label_map = OrderedDict()
-                label_map["background"] = (1, 2, 3)  # must be moved to the idx 0
+                label_map["background"] = (1, 2, 3)  # must be moved to the idx 0, no extra bg class
                 label_map["label_1"] = (4, 5, 6)
                 label_map["label_2"] = (2, 5, 7)
                 return Cityscapes.make_cityscapes_categories(label_map)
@@ -720,7 +720,7 @@ class CityscapesConverterTest(TestCase):
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_dataset_with_specific_labelmap_with_nonzero_bg_class(self):
+    def test_dataset_with_specific_labelmap_with_bg_class_not_at_idx_0_can_be_sorted(self):
         class SrcExtractor(TestExtractorBase):
             def __iter__(self):
                 yield DatasetItem(
@@ -746,13 +746,17 @@ class CityscapesConverterTest(TestCase):
                 label_map = OrderedDict()
                 label_map["background"] = (0, 0, 0)
                 label_map["a"] = (1, 2, 3)
-                label_map["label_2"] = (3, 2, 1)
+                label_map["c"] = (3, 2, 1)
                 return Cityscapes.make_cityscapes_categories(label_map)
 
+        # In this case we check the background label can be moved to the idx 0 after
+        # label sorting. The labels have such names that sorting produces
+        # an invalid order: a, background, c. We expect that the background class
+        # will be moved to the index 0, as the format supposes.
         output_label_map = OrderedDict()
+        output_label_map["c"] = (2, 5, 7)
         output_label_map["a"] = (4, 5, 6)
         output_label_map["background"] = (1, 2, 3)
-        output_label_map["label_2"] = (2, 5, 7)
 
         class DstExtractor(TestExtractorBase):
             def __iter__(self):
@@ -770,7 +774,7 @@ class CityscapesConverterTest(TestCase):
                             np.array([[0, 1, 1, 0, 0]]),
                             attributes={"is_crowd": False},
                             id=2,
-                            label=self._label("label_2"),
+                            label=self._label("c"),
                         ),
                     ],
                 )
@@ -779,7 +783,7 @@ class CityscapesConverterTest(TestCase):
                 label_map = OrderedDict()
                 label_map["background"] = (1, 2, 3)  # must be moved to the idx 0
                 label_map["a"] = (4, 5, 6)
-                label_map["label_2"] = (2, 5, 7)
+                label_map["c"] = (2, 5, 7)
                 return Cityscapes.make_cityscapes_categories(label_map)
 
         with TestDir() as test_dir:

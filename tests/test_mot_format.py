@@ -35,7 +35,7 @@ class MotConverterTest(TestCase):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id=1,
+                    id="000001",
                     subset="train",
                     media=Image(data=np.ones((16, 16, 3))),
                     annotations=[
@@ -63,7 +63,7 @@ class MotConverterTest(TestCase):
                     ],
                 ),
                 DatasetItem(
-                    id=2,
+                    id="000002",
                     subset="val",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
@@ -71,7 +71,7 @@ class MotConverterTest(TestCase):
                     ],
                 ),
                 DatasetItem(
-                    id=3,
+                    id="000003",
                     subset="test",
                     media=Image(data=np.ones((5, 4, 3)) * 3),
                 ),
@@ -86,7 +86,7 @@ class MotConverterTest(TestCase):
         target_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id=1,
+                    id="000001",
                     media=Image(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
@@ -127,7 +127,7 @@ class MotConverterTest(TestCase):
                     ],
                 ),
                 DatasetItem(
-                    id=2,
+                    id="000002",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(
@@ -145,7 +145,7 @@ class MotConverterTest(TestCase):
                     ],
                 ),
                 DatasetItem(
-                    id=3,
+                    id="000003",
                     media=Image(data=np.ones((5, 4, 3)) * 3),
                 ),
             ],
@@ -170,7 +170,7 @@ class MotConverterTest(TestCase):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id=1,
+                    id="000001",
                     media=Image(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
@@ -188,7 +188,7 @@ class MotConverterTest(TestCase):
                     ],
                 ),
                 DatasetItem(
-                    id=2,
+                    id="000002",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(
@@ -257,7 +257,7 @@ class MotConverterTest(TestCase):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id=1,
+                    id="000001",
                     media=Image(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
@@ -275,7 +275,7 @@ class MotConverterTest(TestCase):
                     ],
                 ),
                 DatasetItem(
-                    id=2,
+                    id="000002",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(
@@ -317,7 +317,7 @@ class MotImporterTest(TestCase):
         expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id=1,
+                    id="000001",
                     media=Image(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(

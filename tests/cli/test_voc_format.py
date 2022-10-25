@@ -257,7 +257,11 @@ class VocIntegrationScenarios(TestCase):
         )
 
         mot_dir = osp.join(
-            __file__[: __file__.rfind(osp.join("tests", ""))], "tests", "assets", "mot_dataset", "mot_seq"
+            __file__[: __file__.rfind(osp.join("tests", ""))],
+            "tests",
+            "assets",
+            "mot_dataset",
+            "mot_seq",
         )
         with TestDir() as test_dir:
             voc_dir = osp.join(test_dir, "voc")

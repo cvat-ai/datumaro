@@ -131,7 +131,7 @@ class MotSeqExtractor(SourceExtractor):
         if self._seq_info:
             for frame_id in range(1, self._seq_info["seqlength"] + 1):  # base-1 frame ids
                 items[frame_id] = DatasetItem(
-                    id="%06d%s" % (frame_id, self._seq_info["imext"]),
+                    id=frame_id,
                     subset=self._subset,
                     media=Image(
                         path=osp.join(
@@ -151,10 +151,10 @@ class MotSeqExtractor(SourceExtractor):
             # - all extra fields go to a separate field
             # - all unmet fields have None values
             for row in csv.DictReader(csv_file, fieldnames=MotPath.FIELDS):
-                frame_id = row["frame_id"]
+                frame_id = int(row["frame_id"])
                 item = items.get(frame_id)
                 if item is None:
-                    frame_id = "%06d" % int(frame_id)
+                    frame_id = "%06d" % frame_id
                     item = items.get(frame_id)
                 if item is None:
                     frame_id = row["frame_id"]

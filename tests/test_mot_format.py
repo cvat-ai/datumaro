@@ -170,7 +170,7 @@ class MotConverterTest(TestCase):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="000001",
+                    id=1,
                     media=Image(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
@@ -188,7 +188,7 @@ class MotConverterTest(TestCase):
                     ],
                 ),
                 DatasetItem(
-                    id="000002",
+                    id=2,
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(
@@ -313,7 +313,13 @@ DUMMY_SEQINFO_DATASET_DIR = osp.join(
 
 
 class MotImporterTest(TestCase):
-    def _define_expected_dataset(self):
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_detect(self):
+        detected_formats = Environment().detect_dataset(DUMMY_DATASET_DIR)
+        self.assertEqual([MotSeqImporter.NAME], detected_formats)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import(self):
         expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -338,24 +344,35 @@ class MotImporterTest(TestCase):
             categories=["label_" + str(label) for label in range(10)],
         )
 
-        return expected_dataset
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_detect(self):
-        detected_formats = Environment().detect_dataset(DUMMY_DATASET_DIR)
-        self.assertEqual([MotSeqImporter.NAME], detected_formats)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import(self):
-        expected_dataset = self._define_expected_dataset()
-
         dataset = Dataset.import_from(DUMMY_DATASET_DIR, "mot_seq")
 
         compare_datasets(self, expected_dataset, dataset)
 
     @mark_requirement(Requirements.DATUM_BUG_560)
     def test_can_import_seqinfo(self):
-        expected_dataset = self._define_expected_dataset()
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    media=Image(data=np.ones((16, 16, 3))),
+                    annotations=[
+                        Bbox(
+                            0,
+                            4,
+                            4,
+                            8,
+                            label=2,
+                            attributes={
+                                "occluded": False,
+                                "visibility": 1.0,
+                                "ignored": False,
+                            },
+                        ),
+                    ],
+                ),
+            ],
+            categories=["label_" + str(label) for label in range(10)],
+        )
 
         dataset = Dataset.import_from(DUMMY_SEQINFO_DATASET_DIR, "mot_seq")
 

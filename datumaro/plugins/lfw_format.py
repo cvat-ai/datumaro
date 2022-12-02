@@ -115,7 +115,7 @@ class LfwExtractor(SourceExtractor):
                         items[id1] = DatasetItem(
                             id=id1,
                             subset=self._subset,
-                            media=image.get(image1),
+                            media=images.get(image1),
                             annotations=[Label(label)],
                         )
 
@@ -158,7 +158,7 @@ class LfwExtractor(SourceExtractor):
                         items[id2] = DatasetItem(
                             id=id2,
                             subset=self._subset,
-                            media=image.get(image2),
+                            media=images.get(image2),
                             annotations=annotations,
                         )
 

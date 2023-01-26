@@ -123,8 +123,8 @@ class SuperviselyPointCloudExtractor(SourceExtractor):
 
                 attributes = {}
                 # format customization for CVAT
+                attributes["track_id"] = obj["id"]
                 if "keyframe" in figure:
-                    attributes["track_id"] = obj["id"]
                     attributes["keyframe"] = figure["keyframe"]
 
                 for tag in obj.get("tags", []):

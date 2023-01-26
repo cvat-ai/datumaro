@@ -270,6 +270,11 @@ class _SuperviselyPointCloudDumper:
                     **ann_user_info,
                 }
             )
+
+            # format customization for CVAT
+            if 'keyframe' in ann.attributes:
+                item_ann_data["figures"][-1]['keyframe'] = ann.attributes['keyframe']
+
             figure_id = ann.id
             if self._context._reindex or figure_id is None:
                 figure_id = len(key_id_data["figures"]) + 1

@@ -121,7 +121,11 @@ class SuperviselyPointCloudExtractor(SourceExtractor):
                 label = categories[AnnotationType.label].find(obj["classTitle"])[0]
 
                 attributes = {}
-                attributes["track_id"] = obj["id"]
+                # format customization for CVAT
+                if "keyframe" in figure:
+                    attributes["track_id"] = obj["id"]
+                    attributes["keyframe"] = figure["keyframe"]
+
                 for tag in obj.get("tags", []):
                     attributes[tag["name"]] = _parse_tag(tag)
                 for attr in _get_label_attrs(label):

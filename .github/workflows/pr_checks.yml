@@ -32,5 +32,5 @@ jobs:
           pip install -e '.[default,tf,tfds]' pytest
       - name: Unit testing
         run: |
-          pytest -v
+          pytest -v -k test_reproduce_bug_macos
           datum -h

@@ -15,10 +15,16 @@ download_files = [
 
 def download_model(files):
     for url in files:
-        with open(osp.basename(url), 'wb') as f:
+        filename = osp.basename(url)
+        if osp.isfile(filename):
+            continue
+
+        with open(filename, 'wb') as f:
             f.write(requests.get(url).content)
 
 def test_macos_bug():
+    download_model()
+
     proto = prototxt_file_name
     model = caffemodel_file_name
     npy = hull_file_name

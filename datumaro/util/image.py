@@ -81,7 +81,6 @@ def load_image(path: str, dtype: DTypeLike = np.float32, **kwargs):
         if kwargs.get("keep_exif"):
             image = ImageOps.exif_transpose(image)
 
-        image = ImageOps.exif_transpose(image)
         image = np.asarray(image, dtype=dtype)
         if len(image.shape) == 3 and image.shape[2] in {3, 4}:
             image[:, :, :3] = image[:, :, 2::-1]  # RGB to BGR

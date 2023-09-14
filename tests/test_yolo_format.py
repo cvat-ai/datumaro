@@ -3,9 +3,9 @@ import os.path as osp
 import pickle  # nosec - disable B403:import_pickle check
 import shutil
 from unittest import TestCase
-from PIL import Image as PILImage
 
 import numpy as np
+from PIL import Image as PILImage
 
 from datumaro.components.annotation import Bbox
 from datumaro.components.dataset import Dataset
@@ -384,9 +384,7 @@ class YoloImporterTest(TestCase):
             categories=["label_" + str(i) for i in range(10)],
         )
 
-
         with TestDir() as test_dir:
-
             dataset_path = osp.join(test_dir, "dataset")
             shutil.copytree(DUMMY_DATASET_DIR, dataset_path)
 

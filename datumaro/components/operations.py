@@ -1266,7 +1266,7 @@ def match_segments(
     distance: Callable[[_AT1, _AT2], float] = segment_iou,
     dist_thresh: float = 1.0,
     label_matcher: Callable[[_AT1, _AT2], bool] = lambda a, b: a.label == b.label,
-) -> tuple[list[tuple[_AT1, _AT2]], list[tuple[_AT1, _AT2]], list[_AT1], list[_AT2],]:
+) -> Tuple[List[Tuple[_AT1, _AT2]], List[Tuple[_AT1, _AT2]], List[_AT1], List[_AT2]]:
     """
     Finds the best matching annotations using the provided distance function.
     If the annotations match by distance, but have different labels,

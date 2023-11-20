@@ -12,7 +12,7 @@ from ..requirements import Requirements, mark_requirement
 
 
 # TODO: update links
-@pytest.mark.skip("Model is not available")
+@pytest.mark.xfail(reason="Cannot download the model file from the source")
 class ImageGeneratorTest(TestCase):
     def check_images_shape(self, img_dir, expected_shape):
         exp_h, exp_w, exp_c = expected_shape

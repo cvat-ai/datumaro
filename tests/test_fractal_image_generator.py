@@ -13,7 +13,7 @@ from .requirements import Requirements, mark_requirement
 
 
 # TODO: update links
-@pytest.mark.skip("Model is not available")
+@pytest.mark.xfail(reason="Cannot download the model file from the source")
 class FractalImageGeneratorTest(TestCase):
     @mark_requirement(Requirements.DATUM_677)
     def test_save_image_can_create_dir(self):

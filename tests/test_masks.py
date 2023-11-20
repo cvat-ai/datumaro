@@ -11,6 +11,7 @@ from .requirements import Requirements, mark_requirement
 def _compare_polygons(a, b) -> bool:
     return len(a) == len(b) and frozenset(map(frozenset, a)) == frozenset(map(frozenset, b))
 
+
 class PolygonConversionsTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_mask_can_be_converted_to_polygon(self):
@@ -50,19 +51,23 @@ class PolygonConversionsTest(TestCase):
                     ]
                 )
             ),  # compressed RLE
-            mask_tools.to_uncompressed_rle(mask_tools.mask_to_rle(
-                np.array(
-                    [
-                        [0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 1, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0],
-                    ]
-                )
-            ), width=image_size[1], height=image_size[0]),  # uncompressed RLE
+            mask_tools.to_uncompressed_rle(
+                mask_tools.mask_to_rle(
+                    np.array(
+                        [
+                            [0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 1, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0],
+                        ]
+                    )
+                ),
+                width=image_size[1],
+                height=image_size[0],
+            ),  # uncompressed RLE
             [1, 1, 6, 6, 1, 6],  # lower-left triangle polygon
         ]
         expected = [

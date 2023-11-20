@@ -10,17 +10,16 @@ import numpy as np
 
 from datumaro.util.image import lazy_image, load_image
 
-
-UncompressedRle = NewType('UncompressedRle', dict)
-CompressedRle = NewType('CompressedRle', dict)
+UncompressedRle = NewType("UncompressedRle", dict)
+CompressedRle = NewType("CompressedRle", dict)
 Rle = Union[CompressedRle, UncompressedRle]
 Polygon = List[List[int]]
-BboxCoords = NamedTuple('BboxCoords', [('x', int), ('y', int), ('w', int), ('h', int)])
+BboxCoords = NamedTuple("BboxCoords", [("x", int), ("y", int), ("w", int), ("h", int)])
 Segment = Union[Polygon, Rle]
 
-BinaryMask = NewType('BinaryMask', np.ndarray)
-IndexMask = NewType('IndexMask', np.ndarray)
-ColorMask = NewType('ColorMask', np.ndarray)
+BinaryMask = NewType("BinaryMask", np.ndarray)
+IndexMask = NewType("IndexMask", np.ndarray)
+ColorMask = NewType("ColorMask", np.ndarray)
 
 
 def generate_colormap(length=256, *, include_background=True):
@@ -221,20 +220,27 @@ def mask_to_polygons(mask: BinaryMask, area_threshold=1) -> List[Polygon]:
             polygons.append(contour)
     return polygons
 
-def _is_uncompressed_rle(obj: Segment) -> bool:
-    return isinstance(obj, dict) and isinstance(obj.get('counts'), bytes)
 
-def _is_polygon(obj: Segment) -> bool:
-    return isinstance(obj, list) and isinstance(obj[0], list) and (
-        len(obj[0]) == 0 or isinstance(obj[0][0], int)
+def is_uncompressed_rle(obj: Segment) -> bool:
+    return isinstance(obj, dict) and isinstance(obj.get("counts"), bytes)
+
+
+def is_polygon(obj: Segment) -> bool:
+    return (
+        isinstance(obj, list)
+        and isinstance(obj[0], list)
+        and (len(obj[0]) == 0 or isinstance(obj[0][0], int))
     )
 
+
 def to_uncompressed_rle(rle: Rle, *, width: int, height: int) -> UncompressedRle:
-    if _is_uncompressed_rle(rle):
+    if is_uncompressed_rle(rle):
         return rle
 
     from pycocotools import mask as mask_utils
+
     return mask_utils.frPyObjects(rle, height, width)
+
 
 def crop_covered_segments(
     segments: Sequence[Segment],
@@ -277,7 +283,7 @@ def crop_covered_segments(
     # Convert to uncompressed RLEs
     wrapped_segments = [[s] for s in segments]
     input_rles = [
-        mask_utils.frPyObjects(s, height, width) if not _is_uncompressed_rle(s[0]) else s
+        mask_utils.frPyObjects(s, height, width) if not is_uncompressed_rle(s[0]) else s
         for s in wrapped_segments
     ]
 
@@ -305,7 +311,7 @@ def crop_covered_segments(
 
             rles_top += rle_top
 
-        if not rles_top and _is_polygon(wrapped_segments[i]) and not return_masks:
+        if not rles_top and is_polygon(wrapped_segments[i]) and not return_masks:
             output_segments.append(wrapped_segments[i])
             continue
 
@@ -319,7 +325,7 @@ def crop_covered_segments(
             bottom_mask -= top_mask
             bottom_mask[bottom_mask != 1] = 0
 
-        if not return_masks and _is_polygon(wrapped_segments[i]):
+        if not return_masks and is_polygon(wrapped_segments[i]):
             output_segments.append(mask_to_polygons(bottom_mask, area_threshold=area_threshold))
         else:
             if np.sum(bottom_mask) < area_threshold:
@@ -327,6 +333,7 @@ def crop_covered_segments(
             output_segments.append(bottom_mask)
 
     return output_segments
+
 
 def rles_to_mask(rles: Sequence[Union[CompressedRle, Polygon]], width, height) -> BinaryMask:
     from pycocotools import mask as mask_utils
@@ -346,8 +353,7 @@ def find_mask_bbox(mask: BinaryMask) -> BboxCoords:
 
 
 def merge_masks(
-    masks: Sequence[Union[IndexMask, Tuple[BinaryMask, int]]],
-    start: Optional[BinaryMask] = None
+    masks: Sequence[Union[IndexMask, Tuple[BinaryMask, int]]], start: Optional[BinaryMask] = None
 ) -> IndexMask:
     """
     Merges masks into one, mask order is responsible for z order.

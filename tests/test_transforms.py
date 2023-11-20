@@ -5,7 +5,6 @@ from unittest import TestCase
 
 import numpy as np
 import pytest
-from datumaro.components.errors import DatumaroError
 
 import datumaro.plugins.transforms as transforms
 import datumaro.util.mask_tools as mask_tools
@@ -22,6 +21,7 @@ from datumaro.components.annotation import (
     PolyLine,
 )
 from datumaro.components.dataset import Dataset
+from datumaro.components.errors import DatumaroError
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.util.test_utils import compare_datasets

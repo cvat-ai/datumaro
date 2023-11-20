@@ -62,8 +62,10 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
         parser = super().build_cmdline_parser(**kwargs)
-        parser.add_argument(cls.ALLOW_REMOVAL_ARG, action="store_true",
-            help="Allow automatic removal of completely covered segments (default: %(default)s)"
+        parser.add_argument(
+            cls.ALLOW_REMOVAL_ARG,
+            action="store_true",
+            help="Allow automatic removal of completely covered segments (default: %(default)s)",
         )
         return parser
 
@@ -92,10 +94,8 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
         return self.wrap_item(item, annotations=annotations)
 
     @classmethod
-    def crop_segments(cls,
-        segment_anns, img_width, img_height,
-        *,
-        item: DatasetItem, allow_removal: bool = False
+    def crop_segments(
+        cls, segment_anns, img_width, img_height, *, item: DatasetItem, allow_removal: bool = False
     ):
         segment_anns = sorted(segment_anns, key=lambda x: x.z_order)
 
@@ -115,12 +115,11 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
         new_anns = []
         for ann, new_segment in zip(segment_anns, segments):
             if new_segment is None or isinstance(new_segment, list) and not new_segment:
-                message = (
-                    "completely covered object removed "
-                    "(allow with '%s')" % (cls.ALLOW_REMOVAL_ARG, )
+                message = "completely covered object removed " "(allow with '%s')" % (
+                    cls.ALLOW_REMOVAL_ARG,
                 )
                 if not allow_removal:
-                    raise DatumaroError(("Item %s: " + message) % (item.id, ))
+                    raise DatumaroError(("Item %s: " + message) % (item.id,))
                 else:
                     log.debug("[%s]: item %s: " + message, cls.NAME, item.id)
 

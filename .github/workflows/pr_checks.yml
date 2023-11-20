@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['macos-11', 'ubuntu-20.04', 'windows-2019']
+        os: ['macos-12', 'ubuntu-22.04', 'windows-2022']
         python-version: ['3.8', '3.9', '3.10', '3.11']
     name: build and test (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}

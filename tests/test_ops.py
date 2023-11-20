@@ -116,8 +116,8 @@ class TestOperations(TestCase):
                 "repeated images": [],
             },
         )
-        self.assertEqual('n/a', actual["subsets"]["default"]["image mean"])
-        self.assertEqual('n/a', actual["subsets"]["default"]["image std"])
+        self.assertEqual("n/a", actual["subsets"]["default"]["image mean"])
+        self.assertEqual("n/a", actual["subsets"]["default"]["image std"])
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_stats(self):

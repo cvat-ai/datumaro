@@ -4,14 +4,23 @@
 
 from functools import partial
 from itertools import chain
-from typing import List, NamedTuple, NewType, Optional, Sequence, Tuple, Union
+from typing import List, NamedTuple, NewType, Optional, Sequence, Tuple, TypedDict, Union
 
 import numpy as np
 
 from datumaro.util.image import lazy_image, load_image
 
-UncompressedRle = NewType("UncompressedRle", dict)
-CompressedRle = NewType("CompressedRle", dict)
+
+class UncompressedRle(TypedDict):
+    size: Sequence[int]
+    counts: bytes
+
+
+class CompressedRle(TypedDict):
+    size: Sequence[int]
+    counts: Sequence[int]
+
+
 Rle = Union[CompressedRle, UncompressedRle]
 Polygon = List[List[int]]
 BboxCoords = NamedTuple("BboxCoords", [("x", int), ("y", int), ("w", int), ("h", int)])

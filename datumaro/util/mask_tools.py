@@ -314,9 +314,10 @@ def crop_covered_segments(
             area_top = sum(mask_utils.area(rle_top))
             area_ratio = area_top / area_bottom
 
-            # If a segment is already fully inside the top ones, stop accumulating the top
+            # If the top segment is (almost) fully inside the background one,
+            # we may need to skip it to avoid making a hole in the background object
             if abs(area_ratio - iou) < ratio_tolerance:
-                break
+                continue
 
             rles_top += rle_top
 

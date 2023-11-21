@@ -22,9 +22,10 @@ class CompressedRle(TypedDict):
 
 
 Rle = Union[CompressedRle, UncompressedRle]
-Polygon = List[List[int]]
+Polygon = List[int]
+PolygonGroup = List[Polygon]
 BboxCoords = NamedTuple("BboxCoords", [("x", int), ("y", int), ("w", int), ("h", int)])
-Segment = Union[Polygon, Rle]
+Segment = Union[PolygonGroup, Rle]
 
 BinaryMask = NewType("BinaryMask", np.ndarray)
 IndexMask = NewType("IndexMask", np.ndarray)
@@ -234,7 +235,7 @@ def is_uncompressed_rle(obj: Segment) -> bool:
     return isinstance(obj, dict) and isinstance(obj.get("counts"), bytes)
 
 
-def is_polygon(obj: Segment) -> bool:
+def is_polygon_group(obj: Segment) -> bool:
     return (
         isinstance(obj, list)
         and isinstance(obj[0], list)
@@ -259,7 +260,7 @@ def crop_covered_segments(
     ratio_tolerance: float = 0.001,
     area_threshold: int = 1,
     return_masks: bool = False,
-) -> List[Union[Optional[BinaryMask], Polygon]]:
+) -> List[Union[Optional[BinaryMask], List[Polygon]]]:
     """
     Find all segments occluded by others and crop them to the visible part only.
     Input segments are expected to be sorted from background to foreground.
@@ -321,7 +322,7 @@ def crop_covered_segments(
 
             rles_top += rle_top
 
-        if not rles_top and is_polygon(wrapped_segments[i]) and not return_masks:
+        if not rles_top and is_polygon_group(wrapped_segments[i]) and not return_masks:
             output_segments.append(wrapped_segments[i])
             continue
 
@@ -335,7 +336,7 @@ def crop_covered_segments(
             bottom_mask -= top_mask
             bottom_mask[bottom_mask != 1] = 0
 
-        if not return_masks and is_polygon(wrapped_segments[i]):
+        if not return_masks and is_polygon_group(wrapped_segments[i]):
             output_segments.append(mask_to_polygons(bottom_mask, area_threshold=area_threshold))
         else:
             if np.sum(bottom_mask) < area_threshold:

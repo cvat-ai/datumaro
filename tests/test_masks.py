@@ -137,7 +137,7 @@ class PolygonConversionsTest(TestCase):
         expected = [
             # no changes expected
             mask_tools.rles_to_mask([initial[0]], *image_size),
-            mask_tools.rles_to_mask([initial[1]], *image_size)
+            mask_tools.rles_to_mask([initial[1]], *image_size),
         ]
 
         computed = mask_tools.crop_covered_segments(

@@ -201,7 +201,7 @@ class DatumaroConverterTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_pcd_dataset(self):
-        dataset_path = "tests/assets/datumaro_dataset/with_pcd"
+        dataset_path = str(Path(__file__).parent / "assets" / "datumaro_dataset" / "with_pcd")
 
         label_categories = LabelCategories(attributes={"occluded"})
         label_categories.add("cat")

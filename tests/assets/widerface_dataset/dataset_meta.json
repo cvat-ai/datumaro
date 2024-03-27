@@ -1,3 +1,4 @@
 {
+"labels": ["face"],
 "label_map": {"0": "Parade", "1": "Handshaking"}
 }

@@ -84,6 +84,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/29>)
 - Incorrect writing of `media` field in the Datumaro format, when there are specific media fields
   (<https://github.com/cvat-ai/datumaro/pull/34>)
+- Added missing `PointCloud` media type in the datumaro module namespace
+  (<https://github.com/cvat-ai/datumaro/pull/34>)
 
 ### Security
 - TBD

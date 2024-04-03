@@ -278,8 +278,11 @@ def crop_covered_segments(
         iou_threshold: IoU threshold for objects to be counted as intersected
             By default is set to 0 to process any intersected objects
         ratio_tolerance: an IoU "handicap" value for a situation
-            when an object is (almost) fully covered by another one and we
-            don't want make a "hole" in the background object
+            when a foreground object is (almost) fully inside of another one,
+            and we don't want make a "hole" in the background object.
+            If the foreground object is fully or almost fully (iou - this ratio)
+            inside the background object, it will be kept.
+            The default is to keep tiny (0.1% of IoU) foreground objects.
         area_threshold: minimal area of included segments
 
     Returns:

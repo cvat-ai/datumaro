@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from datumaro.components.annotation import Bbox, Mask, Polygon
-from datumaro.util.annotation_util import BboxCoords, SpatialAnnotation, get_bbox, segment_iou
+from datumaro.util.annotation_util import SpatialAnnotation, get_bbox, segment_iou
 
 from .requirements import Requirements, mark_requirement
 

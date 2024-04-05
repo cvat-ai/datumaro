@@ -1,4 +1,5 @@
 # Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -8,11 +9,25 @@ from typing import Callable, Dict, Iterable, NewType, Optional, Sequence, Tuple,
 import numpy as np
 from typing_extensions import Literal
 
-from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, RleMask, _Shape
+from datumaro.components.annotation import (
+    Annotation,
+    AnnotationType,
+    LabelCategories,
+    Mask,
+    RleMask,
+    _Shape,
+)
 from datumaro.util.mask_tools import mask_to_rle
 
+BboxCoords = Tuple[float, float, float, float]
+"A tuple of bounding box coordinates, (x, y, w, h)"
 
-def find_instances(instance_anns):
+Shape = NewType("Shape", _Shape)
+
+SpatialAnnotation = Union[Shape, Mask]
+
+
+def find_instances(instance_anns: Sequence[Annotation]) -> Sequence[Sequence[Annotation]]:
     instance_anns = sorted(instance_anns, key=lambda a: a.group)
     ann_groups = []
     for g_id, group in groupby(instance_anns, lambda a: a.group):
@@ -24,7 +39,7 @@ def find_instances(instance_anns):
     return ann_groups
 
 
-def find_group_leader(group):
+def find_group_leader(group: Sequence[SpatialAnnotation]) -> SpatialAnnotation:
     return max(group, key=lambda x: x.get_area())
 
 
@@ -101,7 +116,10 @@ def nms(segments, iou_thresh=0.5):
     return predictions
 
 
-def bbox_iou(a, b) -> Union[Literal[-1], float]:
+def bbox_iou(
+    a: Union[SpatialAnnotation, BboxCoords],
+    b: Union[SpatialAnnotation, BboxCoords],
+) -> Union[Literal[-1], float]:
     """
     IoU computations for simple cases with bounding boxes
     """
@@ -127,23 +145,39 @@ def bbox_iou(a, b) -> Union[Literal[-1], float]:
     return intersection / union
 
 
-def segment_iou(a, b):
+def segment_iou(
+    gt_ann: SpatialAnnotation,
+    ds_ann: SpatialAnnotation,
+    *,
+    is_crowd: Union[bool, str] = False,
+) -> float:
     """
     Generic IoU computation with masks, polygons, and boxes.
-    Returns -1 if no intersection, [0; 1] otherwise
+
+    Parameters:
+        is_crowd - bool or GT annotation attribute name - if true, consider
+            the GT annotation a crowd, so that the DS annotation is excluded
+            from the denominator of the IoU formula, i.e. it becomes I / GT area.
+            This is useful if you want to check a specific object to be within a crowd,
+            where the crowd ob objects is annotated by a single GT mask.
+
+    Returns: -1 if no intersection, [0; 1] otherwise
     """
     from pycocotools import mask as mask_utils
 
-    a_bbox = list(a.get_bbox())
-    b_bbox = list(b.get_bbox())
+    gt_bbox = list(gt_ann.get_bbox())
+    ds_bbox = list(ds_ann.get_bbox())
 
-    is_bbox = AnnotationType.bbox in [a.type, b.type]
+    if isinstance(is_crowd, str):
+        is_crowd = gt_ann.attributes.get(is_crowd, False) is True
+
+    is_bbox = AnnotationType.bbox in [gt_ann.type, ds_ann.type]
     if is_bbox:
-        a = [a_bbox]
-        b = [b_bbox]
+        gt_ann = [gt_bbox]
+        ds_ann = [ds_bbox]
     else:
-        w = max(a_bbox[0] + a_bbox[2], b_bbox[0] + b_bbox[2])
-        h = max(a_bbox[1] + a_bbox[3], b_bbox[1] + b_bbox[3])
+        w = max(gt_bbox[0] + gt_bbox[2], ds_bbox[0] + ds_bbox[2])
+        h = max(gt_bbox[1] + gt_bbox[3], ds_bbox[1] + ds_bbox[3])
 
         def _to_rle(ann):
             if ann.type == AnnotationType.polygon:
@@ -153,11 +187,12 @@ def segment_iou(a, b):
             elif ann.type == AnnotationType.mask:
                 return mask_utils.frPyObjects([mask_to_rle(ann.image)], h, w)
             else:
-                raise TypeError("Unexpected arguments: %s, %s" % (a, b))
+                raise TypeError("Unexpected arguments: %s, %s" % (gt_ann, ds_ann))
 
-        a = _to_rle(a)
-        b = _to_rle(b)
-    return float(mask_utils.iou(a, b, [not is_bbox]).item())
+        gt_ann = _to_rle(gt_ann)
+        ds_ann = _to_rle(ds_ann)
+
+    return float(mask_utils.iou(gt_ann, ds_ann, [is_crowd]).item())
 
 
 def PDJ(a, b, eps=None, ratio=0.05, bbox=None):
@@ -270,7 +305,7 @@ def make_label_id_mapping(
     Returns:
 
     |   map_id (callable): src id -> dst id
-    |   id_mapping (dict): src id -> dst i
+    |   id_mapping (dict): src id -> dst id
     |   src_labels (dict): src id -> src label
     |   dst_labels (dict): dst id -> dst label
     """

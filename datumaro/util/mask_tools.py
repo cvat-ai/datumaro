@@ -368,9 +368,12 @@ def find_mask_bbox(mask: BinaryMask) -> BboxCoords:
     cols = np.any(mask, axis=0)
     rows = np.any(mask, axis=1)
     has_pixels = np.any(cols)
+    if not has_pixels:
+        return BboxCoords(0, 0, 0, 0)
+
     x0, x1 = np.where(cols)[0][[0, -1]]
     y0, y1 = np.where(rows)[0][[0, -1]]
-    return BboxCoords(x0, y0, x1 - x0 + has_pixels, y1 - y0 + has_pixels)
+    return BboxCoords(x0, y0, x1 - x0 + 1, y1 - y0 + 1)
 
 
 def merge_masks(

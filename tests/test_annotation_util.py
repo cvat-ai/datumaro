@@ -73,3 +73,6 @@ class SegmentIouTest:
         (Mask(np.array([[0, 1, 1], [0, 1, 1]])), (1, 0, 2, 2)),
     ],
 )
+@mark_requirement(Requirements.DATUM_GENERAL_REQ)
+def test_can_get_bbox(obj, expected_bbox):
+    assert expected_bbox == tuple(get_bbox(obj))

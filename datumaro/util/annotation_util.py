@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import warnings
 from itertools import groupby
 from typing import Callable, Dict, Iterable, NewType, Optional, Sequence, Tuple, Union
 
@@ -43,18 +44,18 @@ def find_group_leader(group: Sequence[SpatialAnnotation]) -> SpatialAnnotation:
     return max(group, key=lambda x: x.get_area())
 
 
-BboxCoords = Tuple[float, float, float, float]
-Shape = NewType("Shape", _Shape)
-SpatialAnnotation = Union[Shape, Mask]
+def get_bbox(ann: Union[Sequence, BboxCoords, SpatialAnnotation]) -> BboxCoords:
+    "An utility function to get a bbox of the bbox-like annotation"
 
-
-def _get_bbox(ann: Union[Sequence, SpatialAnnotation]) -> BboxCoords:
-    if isinstance(ann, (_Shape, Mask)):
+    if hasattr(ann, "get_bbox"):
         return ann.get_bbox()
     elif hasattr(ann, "__len__") and len(ann) == 4:
         return ann
     else:
-        raise ValueError("The value of type '%s' can't be treated as a " "bounding box" % type(ann))
+        raise ValueError("The value of type '%s' can't be treated as a bounding box" % type(ann))
+
+
+_deprecated_get_bbox = get_bbox  # backward compatibility
 
 
 def max_bbox(annotations: Iterable[Union[BboxCoords, SpatialAnnotation]]) -> BboxCoords:
@@ -65,7 +66,7 @@ def max_bbox(annotations: Iterable[Union[BboxCoords, SpatialAnnotation]]) -> Bbo
       bbox (tuple): (x, y, w, h)
     """
 
-    boxes = [_get_bbox(ann) for ann in annotations]
+    boxes = [get_bbox(ann) for ann in annotations]
     x0 = min((b[0] for b in boxes), default=0)
     y0 = min((b[1] for b in boxes), default=0)
     x1 = max((b[0] + b[2] for b in boxes), default=0)
@@ -82,7 +83,7 @@ def mean_bbox(annotations: Iterable[Union[BboxCoords, SpatialAnnotation]]) -> Bb
     """
 
     le = len(annotations)
-    boxes = [_get_bbox(ann) for ann in annotations]
+    boxes = [get_bbox(ann) for ann in annotations]
     mlb = sum(b[0] for b in boxes) / le
     mtb = sum(b[1] for b in boxes) / le
     mrb = sum(b[0] + b[2] for b in boxes) / le
@@ -123,8 +124,8 @@ def bbox_iou(
     """
     IoU computations for simple cases with bounding boxes
     """
-    bbox_a = _get_bbox(a)
-    bbox_b = _get_bbox(b)
+    bbox_a = get_bbox(a)
+    bbox_b = get_bbox(b)
 
     aX, aY, aW, aH = bbox_a
     bX, bY, bW, bH = bbox_b
@@ -321,3 +322,13 @@ def make_label_id_mapping(
         return id_mapping.get(src_id, fallback)
 
     return map_id, id_mapping, source_labels, target_labels
+
+
+def __getattr__(name: str):
+    if name is "_get_bbox":
+        warnings.warn(
+            "_get_bbox() is deprecated, please use get_bbox() instead", category=DeprecationWarning
+        )
+        return _deprecated_get_bbox
+
+    return globals().get(name)

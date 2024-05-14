@@ -12,6 +12,7 @@ from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, 
 
 from datumaro.components.cli_plugin import CliPlugin, plugin_types
 from datumaro.components.format_detection import RejectionReason, detect_dataset_format
+from datumaro.components.wrappers import wrap_importer
 from datumaro.util.os_util import import_foreign_module, split_path
 
 T = TypeVar("T")
@@ -225,6 +226,10 @@ class Environment:
         self.generators.batch_register(plugins)
         self.transforms.batch_register(plugins)
         self.validators.batch_register(plugins)
+
+        for key in self.importers:
+            importer = self.importers.get(key)
+            wrap_importer(importer)
 
     def make_extractor(self, name, *args, **kwargs):
         return self.extractors.get(name)(*args, **kwargs)

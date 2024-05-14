@@ -273,9 +273,11 @@ class AnnotationImportError(ItemImportError):
 @define(auto_exc=False)
 class DatasetNotFoundError(DatasetImportError):
     path = field()
+    ext = field(default="")
 
     def __str__(self):
-        return f"Failed to find dataset at '{self.path}'"
+        file_ext_info = f", file '{self.ext}' was not found" if self.ext else ''
+        return f"Failed to find dataset at '{self.path}' {file_ext_info}"
 
 
 @define(auto_exc=False)

@@ -433,13 +433,17 @@ class Importer(CliPlugin):
     def find_sources_with_params(cls, path, **extra_params) -> List[Dict]:
         return cls.find_sources(path)
 
+    @classmethod
+    def _generate_not_found_error(self, path):
+        return DatasetNotFoundError(path)
+
     def __call__(self, path, **extra_params):
         if not path or not osp.exists(path):
             raise DatasetNotFoundError(path)
 
         found_sources = self.find_sources_with_params(osp.normpath(path), **extra_params)
         if not found_sources:
-            raise DatasetNotFoundError(path)
+            raise self._generate_not_found_error(path)
 
         sources = []
         for desc in found_sources:

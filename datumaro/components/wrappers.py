@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-from unittest import mock
 from typing import Optional, Callable
+from unittest import mock
 
 from datumaro.components.errors import DatasetNotFoundError
 
@@ -20,8 +20,7 @@ def wrap_find_sources_recursive(importer):
         max_depth: int = 3,
     ):
         sources = super(importer, cls)._find_sources_recursive(
-            path, ext, extractor_name,
-            filename, dirname, file_filter, max_depth
+            path, ext, extractor_name, filename, dirname, file_filter, max_depth
         )
 
         if not sources:
@@ -43,6 +42,12 @@ def wrap_generate_not_found_error():
     return updated_generate_not_found_error
 
 def wrap_importer(importer):
-    mock.patch.object(importer, '_find_sources_recursive', new=wrap_find_sources_recursive(importer)).start()
-    mock.patch.object(importer, '_generate_not_found_error', new=wrap_generate_not_found_error()).start()
-    mock.patch.object(importer, '_not_found_error_data', new={"ext": "", "filename": ""}, create=True).start()
+    mock.patch.object(
+        importer, '_find_sources_recursive', new=wrap_find_sources_recursive(importer)
+    ).start()
+    mock.patch.object(
+        importer, '_generate_not_found_error', new=wrap_generate_not_found_error()
+    ).start()
+    mock.patch.object(
+        importer, '_not_found_error_data', new={"ext": "", "filename": ""}, create=True
+    ).start()

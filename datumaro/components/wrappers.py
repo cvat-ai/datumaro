@@ -23,12 +23,15 @@ def wrap_find_sources_recursive(importer):
             path, ext, extractor_name,
             filename, dirname, file_filter, max_depth
         )
+
         if not sources:
             cls._not_found_error_data = {"ext": ext}
 
+        return sources
+
     return updated_find_sources_recursive
 
-def wrap_generate_not_found_error(importer):
+def wrap_generate_not_found_error():
     @classmethod
     def updated_generate_not_found_error(cls, path):
         return DatasetNotFoundError(path, cls._not_found_error_data.get("ext"))
@@ -37,5 +40,5 @@ def wrap_generate_not_found_error(importer):
 
 def wrap_importer(importer):
     mock.patch.object(importer, '_find_sources_recursive', new=wrap_find_sources_recursive(importer)).start()
-    mock.patch.object(importer, '_generate_not_found_error', new=wrap_generate_not_found_error(importer)).start()
+    mock.patch.object(importer, '_generate_not_found_error', new=wrap_generate_not_found_error()).start()
     mock.patch.object(importer, '_not_found_error_data', new={"ext": ""}, create=True).start()

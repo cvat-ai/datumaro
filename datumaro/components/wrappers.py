@@ -7,6 +7,7 @@ from unittest import mock
 
 from datumaro.components.errors import DatasetNotFoundError
 
+
 def wrap_find_sources_recursive(importer):
     @classmethod
     def updated_find_sources_recursive(
@@ -30,6 +31,7 @@ def wrap_find_sources_recursive(importer):
 
     return updated_find_sources_recursive
 
+
 def wrap_generate_not_found_error():
     @classmethod
     def updated_generate_not_found_error(cls, path):
@@ -40,6 +42,7 @@ def wrap_generate_not_found_error():
         )
 
     return updated_generate_not_found_error
+
 
 def wrap_importer(importer):
     mock.patch.object(

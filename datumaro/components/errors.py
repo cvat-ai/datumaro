@@ -274,9 +274,10 @@ class AnnotationImportError(ItemImportError):
 class DatasetNotFoundError(DatasetImportError):
     path = field()
     ext = field(default="")
+    filename = field(default="")
 
     def __str__(self):
-        file_ext_info = f", file '{self.ext}' was not found" if self.ext else ''
+        file_ext_info = f", file '{self.filename}{self.ext}' was not found" if self.ext or self.filename else ''
         return f"Failed to find dataset at '{self.path}' {file_ext_info}"
 
 

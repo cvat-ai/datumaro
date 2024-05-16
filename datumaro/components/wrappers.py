@@ -9,7 +9,6 @@ from datumaro.components.errors import DatasetNotFoundError
 
 
 def wrap_find_sources_recursive(importer):
-    @classmethod
     def updated_find_sources_recursive(
         cls,
         path: str,
@@ -29,11 +28,10 @@ def wrap_find_sources_recursive(importer):
 
         return sources
 
-    return updated_find_sources_recursive
+    return classmethod(updated_find_sources_recursive)
 
 
 def wrap_generate_not_found_error():
-    @classmethod
     def updated_generate_not_found_error(cls, path):
         return DatasetNotFoundError(
             path,
@@ -41,7 +39,7 @@ def wrap_generate_not_found_error():
             cls._not_found_error_data.get("filename", ""),
         )
 
-    return updated_generate_not_found_error
+    return classmethod(updated_generate_not_found_error)
 
 
 def wrap_importer(importer):

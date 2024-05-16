@@ -421,6 +421,7 @@ class DatasetStorage(IDataset):
         )
         transform = None
 
+        old_ids = set()
         if self._transforms:
             transform = _StackedTransform(source, self._transforms)
             if transform.is_local:

@@ -252,15 +252,22 @@ class Environment:
         path: str,
         depth: int = 1,
         rejection_callback: Optional[Callable[[str, RejectionReason, str], None]] = None,
+        format: Optional[str] = None
     ) -> List[str]:
         ignore_dirs = {"__MSOSX", "__MACOSX"}
         matched_formats = set()
+        detectors = []
+        if not format:
+            detectors = (
+                (format_name, importer.detect)
+                for format_name, importer in self.importers.items.items()
+            )
+        elif self.is_format_known(format):
+            detectors = [(format, self.importers.get(format).detect)]
+
         for _ in range(depth + 1):
             detected_formats = detect_dataset_format(
-                (
-                    (format_name, importer.detect)
-                    for format_name, importer in self.importers.items.items()
-                ),
+                detectors,
                 path,
                 rejection_callback=rejection_callback,
             )

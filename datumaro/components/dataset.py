@@ -22,6 +22,7 @@ from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     CategoriesRedefinedError,
     ConflictingCategoriesError,
+    DatasetNotFoundError,
     MediaTypeError,
     MultipleFormatsMatchError,
     NoMatchingFormatsError,
@@ -1158,6 +1159,15 @@ class Dataset(IDataset):
 
         if not format:
             format = cls.detect(path, env=env)
+        else:
+            not_found_error_instance = DatasetNotFoundError(path)
+
+            def not_found_error(format_name, reason, human_message):
+                not_found_error_instance.reason = human_message
+
+            detected = env.detect_dataset(path, rejection_callback=not_found_error, depth=3, format=format)
+            if not detected:
+                raise not_found_error_instance
 
         # TODO: remove importers, put this logic into extractors
         if format in env.importers:
@@ -1227,7 +1237,14 @@ class Dataset(IDataset):
         return dataset
 
     @staticmethod
-    def detect(path: str, *, env: Optional[Environment] = None, depth: int = 2) -> str:
+    def detect(
+        path: str,
+        *,
+        env: Optional[Environment] = None,
+        depth: int = 2,
+        rejection_callback:Optional[Callable] = None,
+        format: Optional[str] = None,
+    ) -> str:
         """
         Attempts to detect dataset format of a given directory.
 
@@ -1247,7 +1264,7 @@ class Dataset(IDataset):
         if depth < 0:
             raise ValueError("Depth cannot be less than zero")
 
-        matches = env.detect_dataset(path, depth=depth)
+        matches = env.detect_dataset(path, depth=depth, rejection_callback=rejection_callback, format=format)
         if not matches:
             raise NoMatchingFormatsError()
         elif 1 < len(matches):

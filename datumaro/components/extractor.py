@@ -415,6 +415,17 @@ class SourceExtractor(Extractor):
 
 
 class Importer(CliPlugin):
+    def __init__(self):
+        self.__not_found_error_data = {"ext": "", "filename": ""}
+
+    @property
+    def _not_found_error_data(self):
+        return self.__not_found_error_data
+
+    @_not_found_error_data.setter
+    def _not_found_error_data_setter(self, val):
+        self.__not_found_error_data = val
+
     @classmethod
     def detect(
         cls,
@@ -433,17 +444,17 @@ class Importer(CliPlugin):
     def find_sources_with_params(cls, path, **extra_params) -> List[Dict]:
         return cls.find_sources(path)
 
-    @classmethod
-    def _generate_not_found_error(self, path):
-        return DatasetNotFoundError(path)
-
     def __call__(self, path, **extra_params):
         if not path or not osp.exists(path):
             raise DatasetNotFoundError(path)
 
         found_sources = self.find_sources_with_params(osp.normpath(path), **extra_params)
         if not found_sources:
-            raise self._generate_not_found_error(path)
+            raise DatasetNotFoundError(
+                path,
+                self._not_found_error_data.get("ext", ""),
+                self._not_found_error_data.get("filename", ""),
+            )
 
         sources = []
         for desc in found_sources:
@@ -508,6 +519,10 @@ class Importer(CliPlugin):
                 )
                 if sources:
                     break
+
+        if not sources:
+            cls._not_found_error_data = {"ext": ext, "filename": filename}
+
         return sources
 
 

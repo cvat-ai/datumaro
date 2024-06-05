@@ -419,8 +419,9 @@ class DatasetStorage(IDataset):
         source = self._source or DatasetItemStorageDatasetView(
             self._storage, categories=self._categories, media_type=media_type
         )
-        transform = None
 
+        transform = None
+        old_ids = None
         if self._transforms:
             transform = _StackedTransform(source, self._transforms)
             if transform.is_local:

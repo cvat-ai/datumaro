@@ -588,7 +588,7 @@ class DatasetStorage(IDataset):
 
         item = self._storage.get(id, subset)
         if item is None and not self.is_cache_initialized():
-            if self._source.get.__func__ == Extractor.get:
+            if self._source.get.__func__ == Extractor.get or self._transforms:
                 # can be improved if IDataset is ABC
                 self.init_cache()
                 item = self._storage.get(id, subset)

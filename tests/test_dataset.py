@@ -1293,6 +1293,8 @@ class DatasetTest(TestCase):
 
         self.assertEqual(iter_called, 0)
 
+        self.assertIsNone(dataset.get(1))
+        self.assertIsNone(dataset.get(2))
         self.assertIsNotNone(dataset.get(3))
         self.assertIsNotNone(dataset.get(4))
         self.assertIsNotNone(dataset.get(5))
@@ -1327,6 +1329,8 @@ class DatasetTest(TestCase):
 
         self.assertEqual(iter_called, 0)
 
+        self.assertIsNone(dataset.get(1))
+        self.assertIsNone(dataset.get(2))
         self.assertIsNotNone(dataset.get(3))
         self.assertIsNotNone(dataset.get(4))
         self.assertIsNotNone(dataset.get(5))

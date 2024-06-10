@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2022 Intel Corporation
+# Copyright (C) 2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -9,7 +9,7 @@ from collections import OrderedDict, defaultdict
 
 import yaml
 
-from datumaro.components.annotation import AnnotationType, Bbox
+from datumaro.components.annotation import AnnotationType, Bbox, Skeleton
 from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError, DatumaroError
@@ -17,8 +17,7 @@ from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExt
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
 
-from .format import Yolov8Path
-
+from .format import YoloPosePath
 
 def _make_yolo_bbox(img_size, box):
     # https://github.com/pjreddie/darknet/blob/master/scripts/voc_label.py
@@ -31,7 +30,7 @@ def _make_yolo_bbox(img_size, box):
     return x, y, w, h
 
 
-class Yolov8Converter(Converter):
+class YoloPoseConverter(Converter):
     DEFAULT_IMAGE_EXT = ".jpg"
 
     @classmethod
@@ -51,13 +50,8 @@ class Yolov8Converter(Converter):
         super().__init__(extractor, save_dir, **kwargs)
 
         self._prefix = "data" if add_path_prefix else ""
-
-        # NEEDED ? From DU
-        # if self._save_media is False:
-        #     log.warning(
-        #         "It is recommended to turn on `save_media=True` when export to `Yolov8` format. "
-        #         "If not, you will need to copy your image files and paste them into the appropriate directories."
-        #     )
+        self.len_kp = None
+        
 
     def _check_dataset(self):
         if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
@@ -66,13 +60,13 @@ class Yolov8Converter(Converter):
         subset_names = set(self._extractor.subsets().keys())
 
         for subset in subset_names:
-            if subset not in Yolov8Path.ALLOWED_SUBSET_NAMES:
+            if subset not in YoloPosePath.ALLOWED_SUBSET_NAMES:
                 raise DatasetExportError(
-                    f"The allowed subset name is in {Yolov8Path.ALLOWED_SUBSET_NAMES}, "
+                    f"The allowed subset name is in {YoloPosePath.ALLOWED_SUBSET_NAMES}, "
                     f'so that subset "{subset}" is not allowed.'
                 )
 
-        for must_name in Yolov8Path.MUST_SUBSET_NAMES:
+        for must_name in YoloPosePath.MUST_SUBSET_NAMES:
             if must_name not in subset_names:
                 raise DatasetExportError(
                     f'Subset "{must_name}" is not in {subset_names}, '
@@ -122,7 +116,7 @@ class Yolov8Converter(Converter):
         image_fpaths = defaultdict(list)
 
         for (subset_name, subset), pbar in zip(subsets.items(), pbars):
-            if subset_name in Yolov8Path.RESERVED_CONFIG_KEYS:
+            if subset_name in YoloPosePath.RESERVED_CONFIG_KEYS:
                 raise DatasetExportError(
                     f"Can't export '{subset_name}' subset in Yolov8 format, this word is reserved."
                 )
@@ -155,6 +149,8 @@ class Yolov8Converter(Converter):
                 )
             yaml_dict[subset_name] = subset_fname
 
+        yaml_dict["kpt_shape"] = self.save_kp_information()
+
         label_categories = extractor.categories()[AnnotationType.label]
         label_ids = {idx: label.name for idx, label in enumerate(label_categories.items)}
         yaml_dict["names"] = label_ids
@@ -162,28 +158,66 @@ class Yolov8Converter(Converter):
         with open(osp.join(save_dir, "data.yaml"), "w") as fp:
             yaml.safe_dump(yaml_dict, fp, sort_keys=False, allow_unicode=True)
 
-    def _export_item_annotation(self, item: DatasetItem, subset_dir: str):
+    def _export_item_annotation(self, item, subset_dir):
         try:
+
             height, width = item.media.size
 
             yolo_annotation = ""
 
-            for bbox in item.annotations:
+            for i in range(0, len(item.annotations), 2):
+                bbox = item.annotations[i]
+                skeleton = item.annotations[i + 1]
+
                 if not isinstance(bbox, Bbox) or bbox.label is None:
+                    continue
+                
+                if not isinstance(skeleton, Skeleton):
                     continue
 
                 yolo_bb = _make_yolo_bbox((width, height), bbox.points)
                 yolo_bb = " ".join("%.6f" % p for p in yolo_bb)
-                yolo_annotation += "%s %s\n" % (bbox.label, yolo_bb)
+                yolo_annotation += "%s %s " % (bbox.label, yolo_bb)
+
+                elements = skeleton.elements
+                points = []
+                visibility = []
+                keypoints = []
+
+                for element in elements:
+                    points.extend(element.points)
+                    visibility.extend(element.visibility)
+
+                if len(points) % 2 != 0:
+                    raise ValueError("Invalid number of points in skeleton")
+                
+                self.len_kp = len(points) // 2
+
+                for index in range(0, len(points), 2):
+                    kp = points[index : index + 2]
+                    kp = [kp[0] / width, kp[1] / height]
+                    state = visibility[index // 2].value
+                    keypoints.extend([*kp, state])
+
+                yolo_kp = " ".join("%.6f" % p for p in keypoints)
+                yolo_annotation += yolo_kp + "\n"
 
             annotation_path = osp.join(subset_dir, "%s.txt" % item.id)
             os.makedirs(osp.dirname(annotation_path), exist_ok=True)
 
             with open(annotation_path, "w", encoding="utf-8") as f:
                 f.write(yolo_annotation)
-        
+
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
+    
+
+    def save_kp_information(self):
+        if self.len_kp is None:
+            # just a check, this error should be better
+            raise ValueError("The number of keypoints is not defined")
+        
+        return [self.len_kp, 3]
 
     @classmethod
     def patch(cls, dataset, patch, save_dir, **kwargs):
@@ -201,7 +235,7 @@ class Yolov8Converter(Converter):
                 continue
 
             if subset == DEFAULT_SUBSET_NAME:
-                subset = Yolov8Path.DEFAULT_SUBSET_NAME
+                subset = YoloPosePath.DEFAULT_SUBSET_NAME
             subset_dir = osp.join(save_dir, "obj_%s_data" % subset)
 
             image_path = osp.join(subset_dir, conv._make_image_filename(item))

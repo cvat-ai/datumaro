@@ -1,5 +1,4 @@
-# Copyright (C) 2019-2022 Intel Corporation
-# Copyright (C) 2023 CVAT.ai Corporation
+# Copyright (C) 2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -12,7 +11,7 @@ import re
 from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple, Type, TypeVar, Union, Iterator
 
-from datumaro.components.annotation import Annotation, AnnotationType, Bbox, LabelCategories
+from datumaro.components.annotation import Annotation, AnnotationType, Bbox, LabelCategories, Skeleton, Points
 from datumaro.components.errors import (
     DatasetImportError,
     InvalidAnnotationError,
@@ -31,14 +30,14 @@ from datumaro.util.image import (
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
 from datumaro.util.os_util import split_path, extract_subset_name_from_parent, find_files
 
-from .format import Yolov8Path
+from .format import YoloPosePath
 
 T = TypeVar("T")
 
 
-class Yolov8Extractor(SourceExtractor):
+class YoloPoseExtractor(SourceExtractor):
     class Subset(Extractor):
-        def __init__(self, name: str, parent: Yolov8Extractor):
+        def __init__(self, name: str, parent: YoloPoseExtractor):
             super().__init__()
             self._name = name
             self._parent = parent
@@ -62,9 +61,10 @@ class Yolov8Extractor(SourceExtractor):
         image_info: Union[None, str, ImageMeta] = None,
         urls: Optional[List[str]] = None,
         *,
-        subset: Optional[str] = None
+        subset: Optional[str] = None,
+        ctx
     ) -> None:
-        META_FILE = Yolov8Path.META_FILE
+        META_FILE = YoloPosePath.META_FILE
 
         if not osp.isdir(config_path):
             raise DatasetImportError(f"{config_path} should be a directory.")
@@ -84,47 +84,16 @@ class Yolov8Extractor(SourceExtractor):
         self._path = rootpath
 
         self._image_info = self.parse_image_info(rootpath, image_info)
-
-        self._categories = {
-            AnnotationType.label: self._load_categories(
-                osp.join(self._path, self.META_FILE)
-            )
-        }
-        
         self._urls = urls
         self._img_files = self._load_img_files(rootpath)
+        self._ann_types = set()
+        
+        self._categories = {
+            AnnotationType.label: self._load_categories(
+                osp.join(self._path, META_FILE)
+            )
+        }
 
-        # config = Yolov8Path._parse_config(config_path)
-
-        # names_path = config.get("names")
-        # if not names_path:
-        #     raise InvalidAnnotationError(f"Failed to parse names file path from config")
-
-        # # The original format is like this:
-        # #
-        # # classes = 2
-        # # train  = data/train.txt
-        # # valid  = data/test.txt
-        # # names = data/obj.names
-        # # backup = backup/
-        # #
-        # # To support more subset names, we disallow subsets
-        # # called 'classes', 'names' and 'backup'.
-        # subsets = {k: v for k, v in config.items() if k not in Yolov8Path.RESERVED_CONFIG_KEYS}
-
-        # for subset_name, list_path in subsets.items():
-        #     list_path = osp.join(self._path, self.localize_path(list_path))
-        #     if not osp.isfile(list_path):
-        #         raise InvalidAnnotationError(f"Can't find '{subset_name}' subset list file")
-
-        #     subset = Yolov8Extractor.Subset(subset_name, self)
-        #     with open(list_path, "r", encoding="utf-8") as f:
-        #         subset.items = OrderedDict(
-        #             (self.name_from_path(p), self.localize_path(p)) for p in f if p.strip()
-        #         )
-        #     subsets[subset_name] = subset
-
-        # self._subsets: Dict[str, Yolov8Extractor.Subset] = subsets
 
     def __iter__(self) -> Iterator[DatasetItem]:
         label_categories = self._categories.get(AnnotationType.label)
@@ -135,11 +104,11 @@ class Yolov8Extractor(SourceExtractor):
         for url in pbar.iter(self._urls, desc=f"Importing '{self._subset}'"):
             try:
                 fname = self._get_fname(url)
-                img = Image.from_file(path=self._img_files[fname])
+                img = Image(path=self._img_files[fname])
                 anns = self._parse_annotations(
                     url,
                     img,
-                    label_categories=label_categories,
+                    item_id=(fname, self._subset)
                 )
                 yield DatasetItem(id=fname, subset=self._subset, media=img, annotations=anns)
 
@@ -230,6 +199,7 @@ class Yolov8Extractor(SourceExtractor):
     def get_subset(self, name):
         return self._subsets[name]
 
+    @staticmethod
     def parse_image_info(
         rootpath: str, image_info: Optional[Union[str, ImageMeta]] = None
     ) -> ImageMeta:
@@ -271,45 +241,75 @@ class Yolov8Extractor(SourceExtractor):
                 )
             image_height, image_width = image.size
 
-        for idx, line in enumerate(lines):
-            try:
-                parts = line.split()
-                if len(parts) != 5:
-                    raise InvalidAnnotationError(
-                        f"Unexpected field count {len(parts)} in the bbox description. "
-                        "Expected 5 fields (label, xc, yc, w, h)."
+            for idx, line in enumerate(lines):
+                try:
+                    parts = line.split()
+                    if len(parts) != 5 + self._number_of_keypoints * self._number_of_dims:
+                        raise InvalidAnnotationError(
+                            f"Unexpected field count {len(parts)} in the pose description. "
+                            f"Expected {5 + self._number_of_keypoints * self._number_of_dims} fields."
+                        )
+                    
+                    # first 5 entities of parts are bbox information
+                    label_id, xc, yc, w, h = parts[:5]
+
+                    label_id = self._parse_field(label_id, int, "bbox label id")
+                    if label_id not in self._categories[AnnotationType.label]:
+                        raise UndeclaredLabelError(str(label_id))
+
+                    w = self._parse_field(w, float, "bbox width")
+                    h = self._parse_field(h, float, "bbox height")
+                    x = self._parse_field(xc, float, "bbox center x") - w * 0.5
+                    y = self._parse_field(yc, float, "bbox center y") - h * 0.5
+
+                    annotations.append(
+                        Bbox(
+                            x * image_width,
+                            y * image_height,
+                            w * image_width,
+                            h * image_height,
+                            label=label_id,
+                            id=idx,
+                            group=idx,
+                        )
                     )
-                label_id, xc, yc, w, h = parts
 
-                label_id = self._parse_field(label_id, int, "bbox label id")
-                if label_id not in self._categories[AnnotationType.label]:
-                    raise UndeclaredLabelError(str(label_id))
-
-                w = self._parse_field(w, float, "bbox width")
-                h = self._parse_field(h, float, "bbox height")
-                x = self._parse_field(xc, float, "bbox center x") - w * 0.5
-                y = self._parse_field(yc, float, "bbox center y") - h * 0.5
-
-                annotations.append(
-                    Bbox(
-                        x * image_width,
-                        y * image_height,
-                        w * image_width,
-                        h * image_height,
-                        label=label_id,
-                        id=idx,
-                        group=idx,
+                    parts = parts[5:]
+                    keypoints = []
+                    i = 0
+                    while i < len(parts):
+                        if self._number_of_dims == 3:
+                            x = self._parse_field(parts[i], float, f"keypoint {i} x")
+                            y = self._parse_field(parts[i + 1], float, f"keypoint {i} y")
+                            visibility = self._parse_field(parts[i + 2], float, f"keypoint {i} visibility")
+                            i = i + 3
+                        elif self._number_of_dims == 2:
+                            x = self._parse_field(parts[i], float, f"keypoint {i} x")
+                            y = self._parse_field(parts[i + 1], float, f"keypoint {i} y")
+                            visibility = 0.0
+                            i = i + 2
+                        else:
+                            raise DatasetImportError(f"Invalid number of dimensions: {self._number_of_dims}")
+                                                
+                        keypoints.append(Points([x * image_width, y * image_height], [visibility]))
+                        
+                    annotations.append(
+                        Skeleton(
+                            keypoints,
+                            label=label_id,
+                            id=idx,
+                            group=idx,
+                        )
                     )
-                )
-            except Exception as e:
-                self._ctx.error_policy.report_annotation_error(e, item_id=item_id)
+                except Exception as e:
+                    self._ctx.error_policy.report_annotation_error(e, item_id=item_id)
 
         return annotations
 
     def _get_rootpath(self, config_path: str) -> str:
         return config_path
 
-    @staticmethod
+
     def _load_categories(self, names_path: str) -> LabelCategories:
         if has_meta_file(osp.dirname(names_path)):
             return LabelCategories.from_iterable(parse_meta_file(osp.dirname(names_path)).keys())
@@ -324,6 +324,11 @@ class Yolov8Extractor(SourceExtractor):
                 label_names = list(loaded["names"].values())
             else:
                 raise DatasetImportError(f"Can't read dataset category file '{names_path}'")
+            
+            if isinstance(loaded["kpt_shape"], list):
+                self._number_of_keypoints, self._number_of_dims = loaded["kpt_shape"]
+            else:
+                raise DatasetImportError(f"Can't read number of keypoints and dimensions '{names_path}'")
 
         for label_name in label_names:
             label_categories.add(label_name)

@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2021 Intel Corporation
+# Copyright (C) 2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -6,20 +6,11 @@ from enum import Enum, auto
 from typing import Dict
 import re
 
-# class Yolov8Task(Enum):
-#     instances = auto()
-#     person_keypoints = auto()
-#     captions = auto()
-#     labels = auto()  # extension, does not exist in the original Yolov8 format
-#     image_info = auto()
-#     panoptic = auto()
-#     stuff = auto()
 
-
-class Yolov8Path:
+class YoloOrientedboxPath:
     DEFAULT_SUBSET_NAME = "train"
-    MUST_SUBSET_NAMES = ["train", "valid"]
-    ALLOWED_SUBSET_NAMES = ["train", "valid", "test"]
+    MUST_SUBSET_NAMES = ["train"]
+    ALLOWED_SUBSET_NAMES = ["train", "valid", "test", "val"]
     RESERVED_CONFIG_KEYS = ["backup", "classes", "names"]
     META_FILE = "data.yaml"
 

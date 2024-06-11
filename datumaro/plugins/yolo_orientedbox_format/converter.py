@@ -17,6 +17,7 @@ from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExt
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
 import numpy as np
+import cv2
 
 from .format import YoloOrientedboxPath
 
@@ -25,33 +26,20 @@ def _make_yolo_obbox(img_size, box, angle):
     # https://github.com/pjreddie/darknet/blob/master/scripts/voc_label.py
     # <x> <y> <width> <height> - values relative to width and height of image
     # <x> <y> - are center of rectangle
-    x = (box[0] + box[2]) / 2 / img_size[0]
-    y = (box[1] + box[3]) / 2 / img_size[1]
-    w = (box[2] - box[0]) / img_size[0]
-    h = (box[3] - box[1]) / img_size[1]
+    x = (box[0] + box[2]) / 2 
+    y = (box[1] + box[3]) / 2 
+    w = (box[2] - box[0]) 
+    h = (box[3] - box[1]) 
 
-    cx, cy = x, y
-    center = (cx, cy)
-    angle_rad = np.deg2rad(angle)
-    
-    corners = np.array([
-        [cx - w, cy - h],
-        [cx + w, cy - h],
-        [cx + w, cy + h],
-        [cx - w, cy + h]
-    ])
-    
-    rotation_matrix = np.array([
-        [np.cos(angle_rad), -np.sin(angle_rad)],
-        [np.sin(angle_rad), np.cos(angle_rad)]
-    ])
-    
-    rotated_corners = np.dot(corners - center, rotation_matrix) + center
-    for point in rotated_corners:
-        point[0] = point[0] / img_size[0]
-        point[1] = point[1] / img_size[1]
+    rect = ((x, y), (w, h), angle)
+    box = cv2.boxPoints(rect)
 
-    rotated_corners = rotated_corners.flatten()
+    for corner in box:
+        corner[0] = corner[0] / img_size[0]
+        corner[1] = corner[1] / img_size[1]
+
+    rotated_corners = box.flatten()
+
     return rotated_corners
 
 

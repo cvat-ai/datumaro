@@ -273,10 +273,10 @@ class YoloOrientedboxExtractor(SourceExtractor):
 
                     annotations.append(
                         Bbox(
-                            x * image_width,
-                            y * image_height,
-                            w * image_width,
-                            h * image_height,
+                            x,
+                            y,
+                            w,
+                            h,
                             label=label_id,
                             id=idx,
                             group=idx,

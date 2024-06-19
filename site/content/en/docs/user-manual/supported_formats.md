@@ -161,6 +161,23 @@ List of supported formats:
   - [Format specification](https://github.com/AlexeyAB/darknet#how-to-train-pascal-voc-data)
   - [Dataset example](https://github.com/cvat-ai/datumaro/tree/develop/tests/assets/yolo_dataset)
   - [Format documentation](/docs/formats/yolo)
+- YOLO (`detection`, `segmentation`, `pose`, `oriented_box`)
+  - Detection
+    - [Format specification](https://docs.ultralytics.com/datasets/detect/)
+    - [Dataset example](https://docs.ultralytics.com/datasets/detect/coco8/)
+    - [Format documentation](/docs/formats/yolo_detection)
+  - Segmentation
+    - [Format specification](https://docs.ultralytics.com/datasets/segment/)
+    - [Dataset example](https://docs.ultralytics.com/datasets/segment/coco8-seg/)
+    - [Format documentation](/docs/formats/yolo_segmentation)
+  - Pose
+    - [Format specification](https://docs.ultralytics.com/datasets/pose/)
+    - [Dataset example](https://docs.ultralytics.com/datasets/pose/coco8-pose/)
+    - [Format documentation](/docs/formats/yolo_pose)
+  - Oriented box
+    - [Format specification](https://docs.ultralytics.com/datasets/obb/)
+    - [Dataset example](https://docs.ultralytics.com/datasets/obb/dota8/)
+    - [Format documentation](/docs/formats/yolo_orientedbox)
 
 <a id="annotation-types"></a>
 ### Supported annotation types

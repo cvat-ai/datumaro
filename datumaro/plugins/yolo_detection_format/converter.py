@@ -63,7 +63,7 @@ class YoloDetectionConverter(Converter):
             if subset not in YoloDetectionPath.ALLOWED_SUBSET_NAMES:
                 raise DatasetExportError(
                     f"The allowed subset name is in {YoloDetectionPath.ALLOWED_SUBSET_NAMES}, "
-                    f'so that subset "{subset}" is not allowed.'
+                    f"so that subset '{subset}' is not allowed."
                 )
 
         for must_name in YoloDetectionPath.MUST_SUBSET_NAMES:

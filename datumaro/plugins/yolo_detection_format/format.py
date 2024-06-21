@@ -5,7 +5,7 @@
 from enum import Enum, auto
 from typing import Dict
 import re
-
+import yaml
 
 class YoloDetectionPath:
     DEFAULT_SUBSET_NAME = "train"
@@ -16,18 +16,10 @@ class YoloDetectionPath:
 
     @staticmethod
     def _parse_config(path: str) -> Dict[str, str]:
-        with open(path, "r", encoding="utf-8") as f:
-            config_lines = f.readlines()
+        with open(path, "r") as fp:
+            loaded = yaml.safe_load(fp.read())
 
-        config = {}
-
-        for line in config_lines:
-            match = re.match(r"^\s*(\w+)\s*=\s*(.+)$", line)
-            if not match:
-                continue
-
-            key = match.group(1)
-            value = match.group(2)
-            config[key] = value
-
-        return config
+        if not isinstance(loaded, dict):
+            raise Exception("Invalid config format")
+        
+        return loaded

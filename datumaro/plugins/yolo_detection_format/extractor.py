@@ -7,6 +7,7 @@ from __future__ import annotations
 import yaml
 
 import os.path as osp
+import os
 import re
 from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple, Type, TypeVar, Union, Iterator
@@ -68,6 +69,9 @@ class YoloDetectionExtractor(SourceExtractor):
         if not osp.isdir(config_path):
             raise DatasetImportError(f"{config_path} should be a directory.")
         
+        if not osp.isfile(osp.join(config_path, META_FILE)):
+            raise DatasetImportError(f"Can't find {META_FILE} in {config_path}")
+        
         if not urls:
             raise DatasetImportError(
                 f"`urls` should be specified for {self.__class__.__name__}, "
@@ -86,7 +90,32 @@ class YoloDetectionExtractor(SourceExtractor):
         self._urls = urls
         self._img_files = self._load_img_files(rootpath)
         self._ann_types = set()
+
+        config = YoloDetectionPath._parse_config(osp.join(config_path, META_FILE))
         
+        subsets = {k: v for k, v in config.items() if k in YoloDetectionPath.ALLOWED_SUBSET_NAMES and v is not None}
+
+        for subset_name, list_path in subsets.items():
+            subset = YoloDetectionExtractor.Subset(subset_name, self)
+
+            if osp.isdir(osp.join(rootpath, list_path)):
+                list_path = osp.join(rootpath, list_path)
+                f = os.listdir(list_path)
+                subset.items = OrderedDict(
+                    (self.name_from_path(p), self.localize_path(p)) for p in f if p.strip()
+                )
+            elif osp.isfile(osp.join(rootpath, list_path)):
+                with open(osp.join(rootpath, list_path), "r", encoding="utf-8") as f:
+                    subset.items = OrderedDict(
+                        (self.name_from_path(p), self.localize_path(p)) for p in f if p.strip()
+                    )
+            else:
+                raise InvalidAnnotationError(f"Can't find '{subset_name}' subset list file")
+            
+            subsets[subset_name] = subset
+
+        self._subsets: Dict[str, YoloDetectionExtractor.Subset] = subsets
+
         self._categories = {
             AnnotationType.label: self._load_categories(
                 osp.join(self._path, META_FILE)
@@ -292,13 +321,11 @@ class YoloDetectionExtractor(SourceExtractor):
 
                 annotations.append(
                     Bbox(
-                        x * image_width,
-                        y * image_height,
-                        w * image_width,
-                        h * image_height,
+                        int(x * image_width),
+                        int(y * image_height),
+                        int(w * image_width),
+                        int(h * image_height),
                         label=label_id,
-                        id=idx,
-                        group=idx,
                     )
                 )
             except Exception as e:

@@ -53,7 +53,7 @@ class YoloDetectionImporter(Importer):
             fields = line.rstrip("\n").split(" ")
             if len(fields) != 5:
                 raise DatasetImportError(
-                    f"Yolo format txt file should have 5 fields for each line, "
+                    f"Yolo Detection format txt file should have 5 fields for each line, "
                     f"but the read line has {len(fields)} fields: fields={fields}."
                 )
 
@@ -68,19 +68,11 @@ class YoloDetectionImporter(Importer):
     
     @classmethod
     def _find_loose(cls, path: str, dirname: str) -> List[Dict[str, Any]]:
-        def _filter_ann_file(fpath: str):
-            try:
-                with open(fpath, "r") as fp:
-                    return cls._check_ann_file_impl(fp)
-            except DatasetImportError:
-                return False
-
         sources = cls._find_sources_recursive(
             path,
             ext=".txt",
             extractor_name="",
             dirname=dirname,
-            file_filter=_filter_ann_file,
             filename="**/*",
             max_depth=1
         )

@@ -920,11 +920,9 @@ class TransformsTest(TestCase):
             compare_datasets(self, expected, actual)
 
         params = dict(**absolute_params, **relative_params)
-        with (
-            self.subTest(params=params),
-            self.assertRaisesRegex(Exception, "cannot be used together"),
-        ):
-            transforms.ResizeTransform(input_dataset, **params)
+        with self.subTest(params=params):
+            with self.assertRaisesRegex(Exception, "cannot be used together"):
+                transforms.ResizeTransform(input_dataset, **params)
 
     @mark_bug(Requirements.DATUM_BUG_606)
     def test_can_keep_image_ext_on_resize(self):

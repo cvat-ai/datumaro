@@ -1024,6 +1024,8 @@ class ResizeTransform(ItemTransform):
             xscale = self._scale_x
             yscale = self._scale_y
             new_size = (round(h * self._scale_y), round(w * self._scale_x))
+        else:
+            assert False, "Unexpected scale configuration"
 
         new_size = tuple(map(int, new_size))
 

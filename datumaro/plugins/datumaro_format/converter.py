@@ -28,6 +28,7 @@ from datumaro.components.annotation import (
     Polygon,
     PolyLine,
     RleMask,
+    Skeleton,
     _Shape,
 )
 from datumaro.components.converter import Converter
@@ -143,6 +144,8 @@ class _SubsetWriter:
                 converted_ann = self._convert_caption_object(ann)
             elif isinstance(ann, Cuboid3d):
                 converted_ann = self._convert_cuboid_3d_object(ann)
+            elif isinstance(ann, Skeleton):
+                converted_ann = self._convert_skeleton_object(ann)
             else:
                 raise NotImplementedError()
             annotations.append(converted_ann)
@@ -262,6 +265,16 @@ class _SubsetWriter:
                 "position": [float(p) for p in obj.position],
                 "rotation": [float(p) for p in obj.rotation],
                 "scale": [float(p) for p in obj.scale],
+            }
+        )
+        return converted
+
+    def _convert_skeleton_object(self, obj: Skeleton):
+        converted = self._convert_annotation(obj)
+        converted.update(
+            {
+                "label_id": cast(obj.label, int),
+                "elements": [self._convert_points_object(el) for el in obj.elements],
             }
         )
         return converted

@@ -17,6 +17,7 @@ from datumaro.components.annotation import (
     Polygon,
     PolyLine,
     RleMask,
+    Skeleton,
 )
 from datumaro.components.errors import DatasetImportError
 from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
@@ -248,6 +249,18 @@ class DatumaroExtractor(SourceExtractor):
                         id=ann_id,
                         attributes=attributes,
                         group=group,
+                    )
+                )
+
+            elif ann_type == AnnotationType.skeleton:
+                loaded.append(
+                    Skeleton(
+                        elements=DatumaroExtractor._load_annotations({"annotations": ann.get("elements", tuple())}),
+                        label=label_id,
+                        id=ann_id,
+                        attributes=attributes,
+                        group=group,
+                        z_order=z_order,
                     )
                 )
 

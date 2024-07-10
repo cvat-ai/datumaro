@@ -255,7 +255,9 @@ class DatumaroExtractor(SourceExtractor):
             elif ann_type == AnnotationType.skeleton:
                 loaded.append(
                     Skeleton(
-                        elements=DatumaroExtractor._load_annotations({"annotations": ann.get("elements", tuple())}),
+                        elements=DatumaroExtractor._load_annotations(
+                            {"annotations": ann.get("elements", tuple())},
+                        ),
                         label=label_id,
                         id=ann_id,
                         attributes=attributes,

@@ -19,6 +19,7 @@ from datumaro.components.annotation import (
     PointsCategories,
     Polygon,
     PolyLine,
+    Skeleton,
 )
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
@@ -518,4 +519,63 @@ class DatumaroConverterTest(TestCase):
                 target_dataset,
                 compare=None,
                 dimension=Dimensions.dim_3d,
+            )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_with_skeleton(self):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="img1",
+                    subset="train",
+                    media=Image(data=np.ones((10, 10, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points(
+                                    [1, 1], label=1, attributes={"occluded": False, "outside": True}
+                                ),
+                                Points(
+                                    [2, 2],
+                                    label=2,
+                                    attributes={"occluded": False, "outside": False},
+                                ),
+                                Points(
+                                    [3, 3],
+                                    label=3,
+                                    attributes={"occluded": False, "outside": False},
+                                ),
+                                Points(
+                                    [4, 4],
+                                    label=4,
+                                    attributes={"occluded": False, "outside": False},
+                                ),
+                            ],
+                            label=2,
+                            attributes={"occluded": False},
+                        ),
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        ("skeleton",),
+                        ("1", "skeleton"),
+                        ("2", "skeleton"),
+                        ("3", "skeleton"),
+                        ("4", "skeleton"),
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (0, ["1", "2", "3", "4"], {(2, 1), (0, 3)}),
+                    ]
+                ),
+            },
+        )
+
+        with TestDir() as test_dir:
+            self._test_save_and_load(
+                source_dataset, partial(DatumaroConverter.convert, save_media=True), test_dir
             )

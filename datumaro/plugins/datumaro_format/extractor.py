@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import os.path as osp
+from typing import List, Union
 
 from datumaro.components.annotation import (
     AnnotationType,
@@ -269,8 +270,8 @@ class DatumaroExtractor(SourceExtractor):
         return loaded
 
     def _load_skeleton_elements_annotations(
-        self, ann: dict, label_id: int, points: list[float | int]
-    ) -> list[Points]:
+        self, ann: dict, label_id: int, points: List[Union[float, int]]
+    ) -> List[Points]:
         if len(points) % 3 != 0:
             raise InvalidAnnotationError(
                 f"Points have invalid value count {len(points)}, "

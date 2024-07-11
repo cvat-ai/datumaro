@@ -16,8 +16,10 @@ import pycocotools.mask as mask_utils
 
 from datumaro.components.annotation import (
     Annotation,
+    AnnotationType,
     Bbox,
     Caption,
+    Categories,
     Cuboid3d,
     Label,
     LabelCategories,
@@ -150,7 +152,7 @@ class _SubsetWriter:
                 raise NotImplementedError()
             annotations.append(converted_ann)
 
-    def add_categories(self, categories):
+    def add_categories(self, categories: dict[AnnotationType, Categories]):
         for ann_type, desc in categories.items():
             if isinstance(desc, LabelCategories):
                 converted_desc = self._convert_label_categories(desc)
@@ -165,7 +167,7 @@ class _SubsetWriter:
     def write(self, ann_file):
         dump_json_file(ann_file, self._data)
 
-    def _convert_annotation(self, obj):
+    def _convert_annotation(self, obj: Annotation) -> dict:
         assert isinstance(obj, Annotation)
 
         ann_json = {
@@ -269,15 +271,37 @@ class _SubsetWriter:
         )
         return converted
 
-    def _convert_skeleton_object(self, obj: Skeleton):
-        converted = self._convert_annotation(obj)
-        converted.update(
-            {
-                "label_id": cast(obj.label, int),
-                "elements": [self._convert_points_object(el) for el in obj.elements],
-            }
+    def _convert_skeleton_object(self, obj: Skeleton) -> dict:
+        label_ordering = [
+            item["labels"]
+            for item in self.categories[AnnotationType.points.name]["items"]
+            if item["label_id"] == obj.label
+        ][0]
+
+        def get_label_order(label_id):
+            return label_ordering.index(
+                self.categories[AnnotationType.label.name]["labels"][label_id]["name"]
+            )
+
+        points = []
+        points_attributes = []
+        for element in sorted(obj.elements, key=lambda e: get_label_order(e.label)):
+            for point_index in range(len(element.points) // 2):
+                points.extend(
+                    [
+                        element.points[point_index * 2],
+                        element.points[point_index * 2 + 1],
+                        element.visibility[point_index].value,
+                    ]
+                )
+                points_attributes.append(element.attributes)
+
+        return dict(
+            self._convert_annotation(obj),
+            label_id=cast(obj.label, int),
+            points=points,
+            points_attributes=points_attributes,
         )
-        return converted
 
     def _convert_attribute_categories(self, attributes):
         return sorted(attributes)

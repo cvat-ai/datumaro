@@ -533,12 +533,16 @@ class DatumaroConverterTest(TestCase):
                         Skeleton(
                             [
                                 Points(
-                                    [1, 1], label=1, attributes={"occluded": False, "outside": True}
+                                    [1, 1], label=0, attributes={"occluded": False, "outside": True}
                                 ),
                                 Points(
                                     [2, 2],
-                                    label=2,
-                                    attributes={"occluded": False, "outside": False},
+                                    label=1,
+                                    attributes={
+                                        "occluded": False,
+                                        "outside": False,
+                                        "custom": "value",
+                                    },
                                 ),
                                 Points(
                                     [3, 3],
@@ -560,16 +564,16 @@ class DatumaroConverterTest(TestCase):
             categories={
                 AnnotationType.label: LabelCategories.from_iterable(
                     [
+                        ("point2", "skeleton"),
+                        ("point1", "skeleton"),
                         ("skeleton",),
-                        ("1", "skeleton"),
-                        ("2", "skeleton"),
-                        ("3", "skeleton"),
-                        ("4", "skeleton"),
+                        ("point3", "skeleton"),
+                        ("point4", "skeleton"),
                     ]
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
                     [
-                        (0, ["1", "2", "3", "4"], {(2, 1), (0, 3)}),
+                        (2, ["point2", "point1", "point3", "point4"], {(2, 1), (0, 3)}),
                     ]
                 ),
             },
@@ -577,5 +581,8 @@ class DatumaroConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                source_dataset, partial(DatumaroConverter.convert, save_media=True), test_dir
+                source_dataset,
+                partial(DatumaroConverter.convert, save_media=True),
+                test_dir,
+                compare=compare_datasets_strict,
             )

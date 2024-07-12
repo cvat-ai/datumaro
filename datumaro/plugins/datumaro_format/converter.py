@@ -278,23 +278,22 @@ class _SubsetWriter:
             if item["label_id"] == obj.label
         ][0]
 
-        def get_label_order(label_id):
+        def get_label_position(label_id):
             return label_ordering.index(
                 self.categories[AnnotationType.label.name]["labels"][label_id]["name"]
             )
 
-        points = []
-        points_attributes = []
-        for element in sorted(obj.elements, key=lambda e: get_label_order(e.label)):
-            for point_index in range(len(element.points) // 2):
-                points.extend(
-                    [
-                        element.points[point_index * 2],
-                        element.points[point_index * 2 + 1],
-                        element.visibility[point_index].value,
-                    ]
-                )
-                points_attributes.append(element.attributes)
+        points = [0.0, 0.0, Points.Visibility.absent.value] * len(label_ordering)
+        points_attributes = [{}] * len(label_ordering)
+        for element in obj.elements:
+            assert len(element.points) == 2 and len(element.visibility) == 1
+            position = get_label_position(element.label)
+            points[position * 3 : position * 3 + 3] = [
+                element.points[0],
+                element.points[1],
+                element.visibility[0].value,
+            ]
+            points_attributes[position] = element.attributes
 
         return dict(
             self._convert_annotation(obj),

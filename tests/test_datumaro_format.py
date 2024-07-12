@@ -584,6 +584,31 @@ class DatumaroConverterTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_with_skeleton(self):
+        categories = {
+            AnnotationType.label: LabelCategories.from_iterable(
+                [
+                    ("point2", "skeleton"),
+                    ("point1", "skeleton"),
+                    ("skeleton",),
+                    ("point3", "skeleton"),
+                    ("point4", "skeleton"),
+                ]
+            ),
+            AnnotationType.points: PointsCategories.from_iterable(
+                [
+                    (2, ["point2", "point1", "point3", "point4"], {(2, 1), (0, 3)}),
+                ]
+            ),
+        }
+        source_elements = [
+            Points([1, 1], label=0, attributes={"occluded": False, "outside": True}),
+            Points(
+                [2, 2],
+                label=1,
+                attributes={"occluded": False, "outside": False, "custom": "value"},
+            ),
+            Points([4, 4], label=4, attributes={"occluded": False, "outside": False}),
+        ]
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -592,52 +617,37 @@ class DatumaroConverterTest(TestCase):
                     media=Image(data=np.ones((10, 10, 3))),
                     annotations=[
                         Skeleton(
-                            [
-                                Points(
-                                    [1, 1], label=0, attributes={"occluded": False, "outside": True}
-                                ),
-                                Points(
-                                    [2, 2],
-                                    label=1,
-                                    attributes={
-                                        "occluded": False,
-                                        "outside": False,
-                                        "custom": "value",
-                                    },
-                                ),
-                                Points(
-                                    [3, 3],
-                                    label=3,
-                                    attributes={"occluded": False, "outside": False},
-                                ),
-                                Points(
-                                    [4, 4],
-                                    label=4,
-                                    attributes={"occluded": False, "outside": False},
-                                ),
-                            ],
+                            source_elements,
                             label=2,
                             attributes={"occluded": False},
-                        ),
+                        )
                     ],
                 ),
             ],
-            categories={
-                AnnotationType.label: LabelCategories.from_iterable(
-                    [
-                        ("point2", "skeleton"),
-                        ("point1", "skeleton"),
-                        ("skeleton",),
-                        ("point3", "skeleton"),
-                        ("point4", "skeleton"),
-                    ]
+            categories=categories,
+        )
+        target_elements = [
+            source_elements[0],
+            source_elements[1],
+            Points([0, 0], label=3, visibility=[Points.Visibility.absent.value]),
+            source_elements[2],
+        ]
+        target_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="img1",
+                    subset="train",
+                    media=Image(data=np.ones((10, 10, 3))),
+                    annotations=[
+                        Skeleton(
+                            target_elements,
+                            label=2,
+                            attributes={"occluded": False},
+                        )
+                    ],
                 ),
-                AnnotationType.points: PointsCategories.from_iterable(
-                    [
-                        (2, ["point2", "point1", "point3", "point4"], {(2, 1), (0, 3)}),
-                    ]
-                ),
-            },
+            ],
+            categories=categories,
         )
 
         with TestDir() as test_dir:
@@ -645,5 +655,5 @@ class DatumaroConverterTest(TestCase):
                 source_dataset,
                 partial(DatumaroConverter.convert, save_media=True),
                 test_dir,
-                compare=compare_datasets_strict,
+                target_dataset=target_dataset,
             )

@@ -252,6 +252,67 @@ class DatumaroConverterTest(TestCase):
         compare_datasets_strict(self, expected, Dataset.load(dataset_path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_skeleton_dataset(self):
+        dataset_path = str(Path(__file__).parent / "assets" / "datumaro_dataset" / "with_skeleton")
+
+        label_categories = LabelCategories.from_iterable(
+            [
+                ("skeleton-label",),
+                ("point1-label", "skeleton-label"),
+                ("point3-label", "skeleton-label"),
+                ("point2-label", "skeleton-label"),
+            ]
+        )
+        label_categories.attributes = {
+            "point3-attribute-checkbox",
+            "occluded",
+            "point2-attribute-text",
+        }
+        points_categories = PointsCategories.from_iterable(
+            [
+                (0, ["point1-label", "point3-label", "point2-label"], {(2, 3), (1, 2)}),
+            ]
+        )
+
+        expected = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="100",
+                    subset="default",
+                    media=Image(data=np.ones((10, 6, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points(
+                                    [0.9, 3.53],
+                                    label=1,
+                                    attributes={},
+                                ),
+                                Points(
+                                    [2.45, 7.6],
+                                    label=2,
+                                    attributes={"point3-attribute-checkbox": True},
+                                ),
+                                Points(
+                                    [5.2, 2.5],
+                                    label=3,
+                                    attributes={"point2-attribute-text": "some text"},
+                                ),
+                            ],
+                            label=0,
+                            attributes={"occluded": False, "keyframe": False},
+                        ),
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: label_categories,
+                AnnotationType.points: points_categories,
+            },
+        )
+        compare_datasets_strict(self, expected, Dataset.load(dataset_path))
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_detect(self):
         with TestDir() as test_dir:
             DatumaroConverter.convert(self.test_dataset, save_dir=test_dir)

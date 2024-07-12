@@ -19,7 +19,6 @@ from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
     Caption,
-    Categories,
     Cuboid3d,
     Label,
     LabelCategories,
@@ -35,7 +34,7 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
-from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem
+from datumaro.components.extractor import DEFAULT_SUBSET_NAME, CategoriesInfo, DatasetItem
 from datumaro.components.media import Image, MediaElement, PointCloud
 from datumaro.util import cast, dump_json_file
 
@@ -152,7 +151,7 @@ class _SubsetWriter:
                 raise NotImplementedError()
             annotations.append(converted_ann)
 
-    def add_categories(self, categories: dict[AnnotationType, Categories]):
+    def add_categories(self, categories: CategoriesInfo):
         for ann_type, desc in categories.items():
             if isinstance(desc, LabelCategories):
                 converted_desc = self._convert_label_categories(desc)

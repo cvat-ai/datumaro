@@ -86,26 +86,14 @@ class YoloConverter(Converter):
             image_paths = OrderedDict()
             for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
                 try:
-                    if not item.media or not (item.media.has_data or item.media.has_size):
-                        raise Exception(
-                            "Failed to export item '%s': " "item has no image info" % item.id
-                        )
-
-                    image_name = self._make_image_filename(item)
-                    if self._save_media:
-                        if item.media:
-                            self._save_image(item, osp.join(subset_dir, image_name))
-                        else:
-                            log.warning("Item '%s' has no image" % item.id)
+                    image_fpath = self._export_media(item, subset_dir)
+                    image_name = osp.relpath(image_fpath, subset_dir)
                     image_paths[item.id] = osp.join(
                         self._prefix, osp.basename(subset_dir), image_name
                     )
 
-                    yolo_annotation = self._export_item_annotation(item)
-                    annotation_path = osp.join(subset_dir, "%s.txt" % item.id)
-                    os.makedirs(osp.dirname(annotation_path), exist_ok=True)
-                    with open(annotation_path, "w", encoding="utf-8") as f:
-                        f.write(yolo_annotation)
+                    self._export_item_annotation(item, subset_dir)
+
                 except Exception as e:
                     self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
@@ -132,20 +120,49 @@ class YoloConverter(Converter):
             f.write("names = %s\n" % osp.join(self._prefix, "obj.names"))
             f.write("backup = backup/\n")
 
-    def _export_item_annotation(self, item):
-        height, width = item.media.size
+    def _export_media(self, item: DatasetItem, subset_img_dir: str) -> str:
+        try:
+            if not item.media or not (item.media.has_data or item.media.has_size):
+                raise DatasetExportError(
+                    "Failed to export item '%s': " "item has no image info" % item.id
+                )
 
-        yolo_annotation = ""
+            image_name = self._make_image_filename(item)
+            image_fpath = osp.join(subset_img_dir, image_name)
 
-        for bbox in item.annotations:
-            if not isinstance(bbox, Bbox) or bbox.label is None:
-                continue
+            if self._save_media:
+                if item.media:
+                    self._save_image(item, image_fpath)
+                else:
+                    log.warning("Item '%s' has no image" % item.id)
 
-            yolo_bb = _make_yolo_bbox((width, height), bbox.points)
-            yolo_bb = " ".join("%.6f" % p for p in yolo_bb)
-            yolo_annotation += "%s %s\n" % (bbox.label, yolo_bb)
+            return image_fpath
 
-        return yolo_annotation
+        except Exception as e:
+            self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
+
+    def _export_item_annotation(self, item: DatasetItem, subset_dir: str) -> None:
+        try:
+            height, width = item.media.size
+
+            yolo_annotation = ""
+
+            for bbox in item.annotations:
+                if not isinstance(bbox, Bbox) or bbox.label is None:
+                    continue
+
+                yolo_bb = _make_yolo_bbox((width, height), bbox.points)
+                yolo_bb = " ".join("%.6f" % p for p in yolo_bb)
+                yolo_annotation += "%s %s\n" % (bbox.label, yolo_bb)
+
+            annotation_path = osp.join(subset_dir, "%s.txt" % item.id)
+            os.makedirs(osp.dirname(annotation_path), exist_ok=True)
+
+            with open(annotation_path, "w", encoding="utf-8") as f:
+                f.write(yolo_annotation)
+
+        except Exception as e:
+            self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
     @classmethod
     def patch(cls, dataset, patch, save_dir, **kwargs):

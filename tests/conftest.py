@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: MIT
 
 from .fixtures import *
+from .utils.test_utils import TestCaseHelper
 
 
 def pytest_configure(config):
@@ -19,3 +20,8 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "components(ids): link a test with a component")
     config.addinivalue_line("markers", "reqids(ids): link a test with a requirement")
     config.addinivalue_line("markers", "bugs(ids): link a test with a bug")
+
+
+@pytest.fixture(scope="class")
+def helper_tc():
+    return TestCaseHelper()

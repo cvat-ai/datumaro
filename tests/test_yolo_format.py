@@ -421,7 +421,7 @@ class YoloExtractorTest(TestCase):
             ],
             categories=["test"],
         )
-        dataset.export(path, "yolo", save_images=True)
+        dataset.export(path, "yolo", save_media=True)
 
         return dataset
 

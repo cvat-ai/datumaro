@@ -20,9 +20,20 @@ class _YoloImporter(Importer):
         return cls._find_sources_recursive(path, ".data", "yolo")
 
 
+class _Yolo8Importer(Importer):
+    @classmethod
+    def detect(cls, context: FormatDetectionContext) -> None:
+        context.require_file("data.yaml")
+
+    @classmethod
+    def find_sources(cls, path) -> List[Dict[str, Any]]:
+        return cls._find_sources_recursive(path, ".yaml", "yolo8")
+
+
 class YoloImporter(Importer):
     SUB_IMPORTERS: List[Importer] = [
         _YoloImporter,
+        _Yolo8Importer,
     ]
 
     @classmethod

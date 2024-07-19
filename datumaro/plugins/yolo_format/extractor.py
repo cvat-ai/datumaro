@@ -5,10 +5,13 @@
 
 from __future__ import annotations
 
+import os
 import os.path as osp
 import re
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+
+import yaml
 
 from datumaro.components.annotation import Annotation, AnnotationType, Bbox, LabelCategories
 from datumaro.components.errors import (
@@ -27,12 +30,14 @@ from datumaro.util.image import (
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
 from datumaro.util.os_util import split_path
 
-from .format import YoloPath
+from .format import Yolo8Path, YoloPath
 
 T = TypeVar("T")
 
 
 class YoloExtractor(SourceExtractor):
+    RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS
+
     class Subset(Extractor):
         def __init__(self, name: str, parent: YoloExtractor):
             super().__init__()
@@ -78,9 +83,7 @@ class YoloExtractor(SourceExtractor):
 
         config = self._parse_config(config_path)
 
-        names_path = config.get("names")
-        if not names_path:
-            raise InvalidAnnotationError(f"Failed to parse names file path from config")
+        self._categories = {AnnotationType.label: self._load_categories(config)}
 
         # The original format is like this:
         #
@@ -92,27 +95,25 @@ class YoloExtractor(SourceExtractor):
         #
         # To support more subset names, we disallow subsets
         # called 'classes', 'names' and 'backup'.
-        subsets = {k: v for k, v in config.items() if k not in YoloPath.RESERVED_CONFIG_KEYS}
+        subsets = {k: v for k, v in config.items() if k not in self.RESERVED_CONFIG_KEYS}
 
         for subset_name, list_path in subsets.items():
-            list_path = osp.join(self._path, self.localize_path(list_path))
-            if not osp.isfile(list_path):
-                raise InvalidAnnotationError(f"Can't find '{subset_name}' subset list file")
-
             subset = YoloExtractor.Subset(subset_name, self)
-            with open(list_path, "r", encoding="utf-8") as f:
-                subset.items = OrderedDict(
-                    (self.name_from_path(p), self.localize_path(p)) for p in f if p.strip()
-                )
+            subset.items = OrderedDict(
+                (self.name_from_path(p), self.localize_path(p))
+                for p in self._iterate_over_image_paths(subset_name, list_path)
+            )
             subsets[subset_name] = subset
 
         self._subsets: Dict[str, YoloExtractor.Subset] = subsets
 
-        self._categories = {
-            AnnotationType.label: self._load_categories(
-                osp.join(self._path, self.localize_path(names_path))
-            )
-        }
+    def _iterate_over_image_paths(self, subset_name: str, list_path: str):
+        list_path = osp.join(self._path, self.localize_path(list_path))
+        if not osp.isfile(list_path):
+            raise InvalidAnnotationError(f"Can't find '{subset_name}' subset list file")
+
+        with open(list_path, "r", encoding="utf-8") as f:
+            yield from (p for p in f if p.strip())
 
     @staticmethod
     def _parse_config(path: str) -> Dict[str, str]:
@@ -165,6 +166,9 @@ class YoloExtractor(SourceExtractor):
     def _image_loader(cls, *args, **kwargs):
         return load_image(*args, **kwargs, keep_exif=True)
 
+    def _get_labels_path_from_image_path(self, image_path: str) -> str:
+        return osp.splitext(image_path)[0] + YoloPath.LABELS_EXT
+
     def _get(self, item_id: str, subset_name: str) -> Optional[DatasetItem]:
         subset = self._subsets[subset_name]
         item = subset.items[item_id]
@@ -179,7 +183,7 @@ class YoloExtractor(SourceExtractor):
                 else:
                     image = Image(path=image_path, data=self._image_loader)
 
-                anno_path = osp.splitext(image.path)[0] + ".txt"
+                anno_path = self._get_labels_path_from_image_path(image.path)
                 annotations = self._parse_annotations(
                     anno_path, image, item_id=(item_id, subset_name)
                 )
@@ -257,8 +261,13 @@ class YoloExtractor(SourceExtractor):
 
         return annotations
 
-    @staticmethod
-    def _load_categories(names_path):
+    def _load_categories(self, config: Dict[str, str]):
+        names_path = config.get("names")
+        if not names_path:
+            raise InvalidAnnotationError(f"Failed to parse names file path from config")
+
+        names_path = osp.join(self._path, self.localize_path(names_path))
+
         if has_meta_file(osp.dirname(names_path)):
             return LabelCategories.from_iterable(parse_meta_file(osp.dirname(names_path)).keys())
 
@@ -287,4 +296,60 @@ class YoloExtractor(SourceExtractor):
 
 
 class Yolo8Extractor(YoloExtractor):
-    pass
+    RESERVED_CONFIG_KEYS = Yolo8Path.RESERVED_CONFIG_KEYS
+
+    @staticmethod
+    def _parse_config(path: str) -> Dict[str, Any]:
+        with open(path) as stream:
+            try:
+                return yaml.safe_load(stream)
+            except yaml.YAMLError:
+                raise InvalidAnnotationError("Failed to parse config file")
+
+    def _load_categories(self, config: Dict[str, str]) -> LabelCategories:
+        names = config.get("names")
+
+        if names:
+            if isinstance(names, dict):
+                return LabelCategories.from_iterable([names[i] for i in range(len(names))])
+
+        raise InvalidAnnotationError(f"Failed to parse names from config")
+
+    def _get_labels_path_from_image_path(self, image_path: str) -> str:
+        relative_image_path = osp.relpath(
+            image_path, osp.join(self._path, Yolo8Path.IMAGES_FOLDER_NAME)
+        )
+        relative_labels_path = osp.splitext(relative_image_path)[0] + Yolo8Path.LABELS_EXT
+        return osp.join(self._path, Yolo8Path.LABELS_FOLDER_NAME, relative_labels_path)
+
+    @classmethod
+    def name_from_path(cls, path: str) -> str:
+        """
+        Obtains <image name> from the path like [data/]images/<subset>/<image_name>.ext
+
+        <image name> can be <a/b/c/filename>, so it is
+        more involved than just calling "basename()".
+        """
+        path = cls.localize_path(path)
+
+        parts = split_path(path)
+        if 2 < len(parts) and not osp.isabs(path):
+            path = osp.join(*parts[2:])  # pylint: disable=no-value-for-parameter
+        return osp.splitext(path)[0]
+
+    def _iterate_over_image_paths(
+        self, subset_name: str, subset_images_source: Union[str, List[str]]
+    ):
+        if isinstance(subset_images_source, str):
+            path = osp.join(self._path, self.localize_path(subset_images_source))
+            if osp.isfile(path):
+                yield from super()._iterate_over_image_paths(subset_name, subset_images_source)
+            else:
+                yield from (
+                    osp.relpath(osp.join(root, file), self._path)
+                    for root, dirs, files in os.walk(path)
+                    for file in files
+                    if osp.isfile(osp.join(root, file))
+                )
+        else:
+            yield from subset_images_source

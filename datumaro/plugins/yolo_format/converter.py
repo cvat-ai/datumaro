@@ -155,7 +155,7 @@ class YoloConverter(Converter):
                 yolo_bb = " ".join("%.6f" % p for p in yolo_bb)
                 yolo_annotation += "%s %s\n" % (bbox.label, yolo_bb)
 
-            annotation_path = osp.join(subset_dir, "%s.txt" % item.id)
+            annotation_path = osp.join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             os.makedirs(osp.dirname(annotation_path), exist_ok=True)
 
             with open(annotation_path, "w", encoding="utf-8") as f:
@@ -181,13 +181,13 @@ class YoloConverter(Converter):
 
             if subset == DEFAULT_SUBSET_NAME:
                 subset = YoloPath.DEFAULT_SUBSET_NAME
-            subset_dir = osp.join(save_dir, "obj_%s_data" % subset)
+            subset_dir = osp.join(save_dir, f"obj_{subset}_data")
 
             image_path = osp.join(subset_dir, conv._make_image_filename(item))
             if osp.isfile(image_path):
                 os.remove(image_path)
 
-            ann_path = osp.join(subset_dir, "%s.txt" % item.id)
+            ann_path = osp.join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             if osp.isfile(ann_path):
                 os.remove(ann_path)
 

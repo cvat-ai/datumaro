@@ -190,3 +190,7 @@ class YoloConverter(Converter):
             ann_path = osp.join(subset_dir, "%s.txt" % item.id)
             if osp.isfile(ann_path):
                 os.remove(ann_path)
+
+
+class Yolo8Converter(YoloConverter):
+    pass

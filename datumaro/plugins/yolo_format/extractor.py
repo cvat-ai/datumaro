@@ -284,3 +284,7 @@ class YoloExtractor(SourceExtractor):
 
     def get_subset(self, name):
         return self._subsets[name]
+
+
+class Yolo8Extractor(YoloExtractor):
+    pass

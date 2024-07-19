@@ -20,19 +20,21 @@ from datumaro.components.errors import (
 )
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.yolo_format.converter import YoloConverter
-from datumaro.plugins.yolo_format.extractor import YoloExtractor
+from datumaro.plugins.yolo_format.converter import Yolo8Converter, YoloConverter
+from datumaro.plugins.yolo_format.extractor import Yolo8Extractor, YoloExtractor
 from datumaro.plugins.yolo_format.importer import YoloImporter
 from datumaro.util.image import save_image
-from datumaro.util.test_utils import TestDir, compare_datasets, compare_datasets_strict
+from datumaro.util.test_utils import compare_datasets, compare_datasets_strict
 
 from ...requirements import Requirements, mark_requirement
 from ...utils.assets import get_test_asset_path
 
 
 class YoloConverterTest:
+    CONVERTER = YoloConverter
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_and_load(self, helper_tc):
+    def test_can_save_and_load(self, helper_tc, test_dir):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -69,14 +71,13 @@ class YoloConverterTest:
             categories=["label_" + str(i) for i in range(10)],
         )
 
-        with TestDir() as test_dir:
-            YoloConverter.convert(source_dataset, test_dir, save_media=True)
-            parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
 
-            compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_dataset_with_image_info(self, helper_tc):
+    def test_can_save_dataset_with_image_info(self, helper_tc, test_dir):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -92,18 +93,17 @@ class YoloConverterTest:
             categories=["label_" + str(i) for i in range(10)],
         )
 
-        with TestDir() as test_dir:
-            YoloConverter.convert(source_dataset, test_dir)
+        self.CONVERTER.convert(source_dataset, test_dir)
 
-            save_image(
-                osp.join(test_dir, "obj_train_data", "1.jpg"), np.ones((10, 15, 3))
-            )  # put the image for dataset
-            parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        save_image(
+            osp.join(test_dir, "obj_train_data", "1.jpg"), np.ones((10, 15, 3))
+        )  # put the image for dataset
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
 
-            compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_load_dataset_with_exact_image_info(self, helper_tc):
+    def test_can_load_dataset_with_exact_image_info(self, helper_tc, test_dir):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -119,15 +119,12 @@ class YoloConverterTest:
             categories=["label_" + str(i) for i in range(10)],
         )
 
-        with TestDir() as test_dir:
-            YoloConverter.convert(source_dataset, test_dir)
-
-            parsed_dataset = Dataset.import_from(test_dir, "yolo", image_info={"1": (10, 15)})
-
-            compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.CONVERTER.convert(source_dataset, test_dir)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo", image_info={"1": (10, 15)})
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_dataset_with_cyrillic_and_spaces_in_filename(self, helper_tc):
+    def test_can_save_dataset_with_cyrillic_and_spaces_in_filename(self, helper_tc, test_dir):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -143,15 +140,13 @@ class YoloConverterTest:
             categories=["label_" + str(i) for i in range(10)],
         )
 
-        with TestDir() as test_dir:
-            YoloConverter.convert(source_dataset, test_dir, save_media=True)
-            parsed_dataset = Dataset.import_from(test_dir, "yolo")
-
-            compare_datasets(helper_tc, source_dataset, parsed_dataset, require_media=True)
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        compare_datasets(helper_tc, source_dataset, parsed_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     @pytest.mark.parametrize("save_media", [True, False])
-    def test_relative_paths(self, helper_tc, save_media):
+    def test_relative_paths(self, helper_tc, save_media, test_dir):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(id="1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
@@ -161,14 +156,12 @@ class YoloConverterTest:
             categories=[],
         )
 
-        with TestDir() as test_dir:
-            YoloConverter.convert(source_dataset, test_dir, save_media=save_media)
-            parsed_dataset = Dataset.import_from(test_dir, "yolo")
-
-            compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=save_media)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_and_load_image_with_arbitrary_extension(self, helper_tc):
+    def test_can_save_and_load_image_with_arbitrary_extension(self, helper_tc, test_dir):
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -183,14 +176,12 @@ class YoloConverterTest:
             categories=[],
         )
 
-        with TestDir() as test_dir:
-            YoloConverter.convert(dataset, test_dir, save_media=True)
-            parsed_dataset = Dataset.import_from(test_dir, "yolo")
-
-            compare_datasets(helper_tc, dataset, parsed_dataset, require_media=True)
+        self.CONVERTER.convert(dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        compare_datasets(helper_tc, dataset, parsed_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_inplace_save_writes_only_updated_data(self, helper_tc):
+    def test_inplace_save_writes_only_updated_data(self, helper_tc, test_dir):
         expected = Dataset.from_iterable(
             [
                 DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
@@ -199,34 +190,36 @@ class YoloConverterTest:
             categories=[],
         )
 
-        with TestDir() as path:
-            dataset = Dataset.from_iterable(
-                [
-                    DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
-                    DatasetItem(2, subset="train", media=Image(path="2.jpg", size=(3, 2))),
-                    DatasetItem(3, subset="valid", media=Image(data=np.ones((2, 2, 3)))),
-                ],
-                categories=[],
-            )
-            dataset.export(path, "yolo", save_media=True)
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
+                DatasetItem(2, subset="train", media=Image(path="2.jpg", size=(3, 2))),
+                DatasetItem(3, subset="valid", media=Image(data=np.ones((2, 2, 3)))),
+            ],
+            categories=[],
+        )
+        dataset.export(test_dir, "yolo", save_media=True)
 
-            dataset.put(DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))))
-            dataset.remove(3, "valid")
-            dataset.save(save_media=True)
+        dataset.put(DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))))
+        dataset.remove(3, "valid")
+        dataset.save(save_media=True)
 
-            assert set(os.listdir(osp.join(path, "obj_train_data"))) == {
-                "1.txt",
-                "2.txt",
-                "1.jpg",
-                "2.jpg",
-            }
-            assert set(os.listdir(osp.join(path, "obj_valid_data"))) == set()
-            compare_datasets(
-                helper_tc, expected, Dataset.import_from(path, "yolo"), require_media=True
-            )
+        assert set(os.listdir(osp.join(test_dir, "obj_train_data"))) == {
+            "1.txt",
+            "2.txt",
+            "1.jpg",
+            "2.jpg",
+        }
+        assert set(os.listdir(osp.join(test_dir, "obj_valid_data"))) == set()
+        compare_datasets(
+            helper_tc,
+            expected,
+            Dataset.import_from(test_dir, "yolo"),
+            require_media=True,
+        )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_and_load_with_meta_file(self, helper_tc):
+    def test_can_save_and_load_with_meta_file(self, helper_tc, test_dir):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -263,15 +256,14 @@ class YoloConverterTest:
             categories=["label_" + str(i) for i in range(10)],
         )
 
-        with TestDir() as test_dir:
-            YoloConverter.convert(source_dataset, test_dir, save_media=True, save_dataset_meta=True)
-            parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True, save_dataset_meta=True)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
 
-            assert osp.isfile(osp.join(test_dir, "dataset_meta.json"))
-            compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        assert osp.isfile(osp.join(test_dir, "dataset_meta.json"))
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_565)
-    def test_can_save_and_load_with_custom_subset_name(self, helper_tc):
+    def test_can_save_and_load_with_custom_subset_name(self, helper_tc, test_dir):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -287,32 +279,30 @@ class YoloConverterTest:
             categories=["label_" + str(i) for i in range(10)],
         )
 
-        with TestDir() as test_dir:
-            YoloConverter.convert(source_dataset, test_dir, save_media=True)
-            parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
 
-            compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_565)
-    def test_cant_save_with_reserved_subset_name(self):
-        for subset in ["backup", "classes"]:
-            dataset = Dataset.from_iterable(
-                [
-                    DatasetItem(
-                        id=3,
-                        subset=subset,
-                        media=Image(data=np.ones((8, 8, 3))),
-                    ),
-                ],
-                categories=["a"],
-            )
+    @pytest.mark.parametrize("subset", ["backup", "classes"])
+    def test_cant_save_with_reserved_subset_name(self, test_dir, subset):
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset=subset,
+                    media=Image(data=np.ones((8, 8, 3))),
+                ),
+            ],
+            categories=["a"],
+        )
 
-            with TestDir() as test_dir:
-                with pytest.raises(DatasetExportError, match=f"Can't export '{subset}' subset"):
-                    YoloConverter.convert(dataset, test_dir)
+        with pytest.raises(DatasetExportError, match=f"Can't export '{subset}' subset"):
+            self.CONVERTER.convert(dataset, test_dir)
 
     @mark_requirement(Requirements.DATUM_609)
-    def test_can_save_and_load_without_path_prefix(self, helper_tc):
+    def test_can_save_and_load_without_path_prefix(self, helper_tc, test_dir):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -327,31 +317,47 @@ class YoloConverterTest:
             categories=["a", "b"],
         )
 
-        with TestDir() as test_dir:
-            YoloConverter.convert(source_dataset, test_dir, save_media=True, add_path_prefix=False)
-            parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True, add_path_prefix=False)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
 
-            with open(osp.join(test_dir, "obj.data"), "r") as f:
-                lines = f.readlines()
-                assert "valid = valid.txt\n" in lines
+        with open(osp.join(test_dir, "obj.data"), "r") as f:
+            lines = f.readlines()
+            assert "valid = valid.txt\n" in lines
 
-            with open(osp.join(test_dir, "valid.txt"), "r") as f:
-                lines = f.readlines()
-                assert "obj_valid_data/3.jpg\n" in lines
+        with open(osp.join(test_dir, "valid.txt"), "r") as f:
+            lines = f.readlines()
+            assert "obj_valid_data/3.jpg\n" in lines
 
-            compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
 
-DUMMY_DATASET_DIR = get_test_asset_path("yolo_dataset")
+class Yolo8ConverterTest(YoloConverterTest):
+    CONVERTER = Yolo8Converter
 
 
 class YoloImporterTest:
-    def test_can_detect(self):
-        detected_formats = Environment().detect_dataset(DUMMY_DATASET_DIR)
+    @pytest.mark.parametrize(
+        "dataset_dir",
+        [
+            get_test_asset_path("yolo_dataset", child)
+            for child in os.listdir(get_test_asset_path("yolo_dataset"))
+        ],
+    )
+    def test_can_detect(self, dataset_dir: str):
+        detected_formats = Environment().detect_dataset(dataset_dir)
         assert detected_formats == [YoloImporter.NAME]
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import(self, helper_tc):
+    @pytest.mark.parametrize(
+        "dataset_dir",
+        [
+            get_test_asset_path("yolo_dataset", "yolo"),
+            get_test_asset_path("yolo_dataset", "yolo8"),
+            get_test_asset_path("yolo_dataset", "yolo8_with_list_of_imgs"),
+            get_test_asset_path("yolo_dataset", "yolo8_with_subset_txt"),
+        ],
+    )
+    def test_can_import(self, helper_tc, dataset_dir):
         expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -367,12 +373,12 @@ class YoloImporterTest:
             categories=["label_" + str(i) for i in range(10)],
         )
 
-        dataset = Dataset.import_from(DUMMY_DATASET_DIR, "yolo")
+        dataset = Dataset.import_from(dataset_dir, "yolo")
 
         compare_datasets(helper_tc, expected_dataset, dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_with_exif_rotated_images(self, helper_tc):
+    def test_can_import_with_exif_rotated_images(self, helper_tc, test_dir):
         expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -388,24 +394,30 @@ class YoloImporterTest:
             categories=["label_" + str(i) for i in range(10)],
         )
 
-        with TestDir() as test_dir:
-            dataset_path = osp.join(test_dir, "dataset")
-            shutil.copytree(DUMMY_DATASET_DIR, dataset_path)
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", "yolo"), dataset_path)
 
-            # Add exif rotation for image
-            image_path = osp.join(dataset_path, "obj_train_data", "1.jpg")
-            img = PILImage.open(image_path)
-            exif = img.getexif()
-            exif.update([(296, 3), (282, 28.0), (531, 1), (274, 6), (283, 28.0)])
-            img.save(image_path, exif=exif)
+        # Add exif rotation for image
+        image_path = osp.join(dataset_path, "obj_train_data", "1.jpg")
+        img = PILImage.open(image_path)
+        exif = img.getexif()
+        exif.update([(296, 3), (282, 28.0), (531, 1), (274, 6), (283, 28.0)])
+        img.save(image_path, exif=exif)
 
-            dataset = Dataset.import_from(dataset_path, "yolo")
+        dataset = Dataset.import_from(dataset_path, "yolo")
 
-            compare_datasets(helper_tc, expected_dataset, dataset, require_media=True)
+        compare_datasets(helper_tc, expected_dataset, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_673)
-    def test_can_pickle(self, helper_tc):
-        source = Dataset.import_from(DUMMY_DATASET_DIR, format="yolo")
+    @pytest.mark.parametrize(
+        "dataset_dir",
+        [
+            get_test_asset_path("yolo_dataset", child)
+            for child in os.listdir(get_test_asset_path("yolo_dataset"))
+        ],
+    )
+    def test_can_pickle(self, helper_tc, dataset_dir):
+        source = Dataset.import_from(dataset_dir, format="yolo")
 
         parsed = pickle.loads(pickle.dumps(source))  # nosec
 
@@ -413,7 +425,7 @@ class YoloImporterTest:
 
 
 class YoloExtractorTest:
-    def _prepare_dataset(self, path: str) -> Dataset:
+    def _prepare_dataset(self, path: str, export_format: str) -> Dataset:
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -425,47 +437,58 @@ class YoloExtractorTest:
             ],
             categories=["test"],
         )
-        dataset.export(path, "yolo", save_media=True)
+        dataset.export(path, export_format, save_media=True)
 
         return dataset
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_parse(self, helper_tc):
-        with TestDir() as test_dir:
-            expected = self._prepare_dataset(test_dir)
-
-            actual = Dataset.import_from(test_dir, "yolo")
-            compare_datasets(helper_tc, expected, actual)
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_invalid_data_file(self):
-        with TestDir() as test_dir:
-            with pytest.raises(DatasetImportError, match="Can't read dataset descriptor file"):
-                YoloExtractor(test_dir)
+    @pytest.mark.parametrize("export_format", ["yolo", "yolo8"])
+    def test_can_parse(self, helper_tc, export_format, test_dir):
+        expected = self._prepare_dataset(test_dir, export_format)
+        actual = Dataset.import_from(test_dir, "yolo")
+        compare_datasets(helper_tc, expected, actual)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_invalid_ann_line_format(self):
-        with TestDir() as test_dir:
-            self._prepare_dataset(test_dir)
-            with open(osp.join(test_dir, "obj_train_data", "a.txt"), "w") as f:
-                f.write("1 2 3\n")
-
-            with pytest.raises(AnnotationImportError) as capture:
-                Dataset.import_from(test_dir, "yolo").init_cache()
-            assert isinstance(capture.value.__cause__, InvalidAnnotationError)
-            assert "Unexpected field count" in str(capture.value.__cause__)
+    @pytest.mark.parametrize("extractor", [YoloExtractor, Yolo8Extractor])
+    def test_can_report_invalid_data_file(self, extractor, test_dir):
+        with pytest.raises(DatasetImportError, match="Can't read dataset descriptor file"):
+            extractor(test_dir)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_invalid_label(self):
-        with TestDir() as test_dir:
-            self._prepare_dataset(test_dir)
-            with open(osp.join(test_dir, "obj_train_data", "a.txt"), "w") as f:
-                f.write("10 0.5 0.5 0.5 0.5\n")
+    @pytest.mark.parametrize(
+        "export_format, anno_dir",
+        [
+            ("yolo", "obj_train_data"),
+            ("yolo8", osp.join("labels", "train")),
+        ],
+    )
+    def test_can_report_invalid_ann_line_format(self, export_format, anno_dir, test_dir):
+        self._prepare_dataset(test_dir, export_format)
+        with open(osp.join(test_dir, anno_dir, "a.txt"), "w") as f:
+            f.write("1 2 3\n")
 
-            with pytest.raises(AnnotationImportError) as capture:
-                Dataset.import_from(test_dir, "yolo").init_cache()
-            assert isinstance(capture.value.__cause__, UndeclaredLabelError)
-            assert capture.value.__cause__.id == "10"
+        with pytest.raises(AnnotationImportError) as capture:
+            Dataset.import_from(test_dir, "yolo").init_cache()
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert "Unexpected field count" in str(capture.value.__cause__)
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    @pytest.mark.parametrize(
+        "export_format, anno_dir",
+        [
+            ("yolo", "obj_train_data"),
+            ("yolo8", osp.join("labels", "train")),
+        ],
+    )
+    def test_can_report_invalid_label(self, export_format, anno_dir, test_dir):
+        self._prepare_dataset(test_dir, export_format)
+        with open(osp.join(test_dir, anno_dir, "a.txt"), "w") as f:
+            f.write("10 0.5 0.5 0.5 0.5\n")
+
+        with pytest.raises(AnnotationImportError) as capture:
+            Dataset.import_from(test_dir, "yolo").init_cache()
+        assert isinstance(capture.value.__cause__, UndeclaredLabelError)
+        assert capture.value.__cause__.id == "10"
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     @pytest.mark.parametrize(
@@ -477,45 +500,65 @@ class YoloExtractorTest:
             (4, "bbox height"),
         ],
     )
-    def test_can_report_invalid_field_type(self, field, field_name):
-        with TestDir() as test_dir:
-            self._prepare_dataset(test_dir)
-            with open(osp.join(test_dir, "obj_train_data", "a.txt"), "w") as f:
-                values = [0, 0.5, 0.5, 0.5, 0.5]
-                values[field] = "a"
-                f.write(" ".join(str(v) for v in values))
+    @pytest.mark.parametrize(
+        "export_format, anno_dir",
+        [
+            ("yolo", "obj_train_data"),
+            ("yolo8", osp.join("labels", "train")),
+        ],
+    )
+    def test_can_report_invalid_field_type(
+        self, field, field_name, export_format, anno_dir, test_dir
+    ):
+        self._prepare_dataset(test_dir, export_format)
+        with open(osp.join(test_dir, anno_dir, "a.txt"), "w") as f:
+            values = [0, 0.5, 0.5, 0.5, 0.5]
+            values[field] = "a"
+            f.write(" ".join(str(v) for v in values))
 
-            with pytest.raises(AnnotationImportError) as capture:
-                Dataset.import_from(test_dir, "yolo").init_cache()
-            assert isinstance(capture.value.__cause__, InvalidAnnotationError)
-            assert field_name in str(capture.value.__cause__)
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_missing_ann_file(self):
-        with TestDir() as test_dir:
-            self._prepare_dataset(test_dir)
-            os.remove(osp.join(test_dir, "obj_train_data", "a.txt"))
-
-            with pytest.raises(ItemImportError) as capture:
-                Dataset.import_from(test_dir, "yolo").init_cache()
-            assert isinstance(capture.value.__cause__, FileNotFoundError)
+        with pytest.raises(AnnotationImportError) as capture:
+            Dataset.import_from(test_dir, "yolo").init_cache()
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert field_name in str(capture.value.__cause__)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_missing_image_info(self):
-        with TestDir() as test_dir:
-            self._prepare_dataset(test_dir)
-            os.remove(osp.join(test_dir, "obj_train_data", "a.jpg"))
+    @pytest.mark.parametrize(
+        "export_format, anno_dir",
+        [
+            ("yolo", "obj_train_data"),
+            ("yolo8", osp.join("labels", "train")),
+        ],
+    )
+    def test_can_report_missing_ann_file(self, export_format, anno_dir, test_dir):
+        self._prepare_dataset(test_dir, export_format)
+        os.remove(osp.join(test_dir, anno_dir, "a.txt"))
 
-            with pytest.raises(ItemImportError) as capture:
-                Dataset.import_from(test_dir, "yolo").init_cache()
-            assert isinstance(capture.value.__cause__, DatasetImportError)
-            assert "Can't find image info" in str(capture.value.__cause__)
+        with pytest.raises(ItemImportError) as capture:
+            Dataset.import_from(test_dir, "yolo").init_cache()
+        assert isinstance(capture.value.__cause__, FileNotFoundError)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_missing_subset_info(self):
-        with TestDir() as test_dir:
-            self._prepare_dataset(test_dir)
-            os.remove(osp.join(test_dir, "train.txt"))
+    @pytest.mark.parametrize(
+        "export_format, img_dir",
+        [
+            ("yolo", "obj_train_data"),
+            ("yolo8", osp.join("images", "train")),
+        ],
+    )
+    def test_can_report_missing_image_info(self, export_format, img_dir, test_dir):
+        self._prepare_dataset(test_dir, export_format)
+        os.remove(osp.join(test_dir, img_dir, "a.jpg"))
 
-            with pytest.raises(InvalidAnnotationError, match="subset list file"):
-                Dataset.import_from(test_dir, "yolo").init_cache()
+        with pytest.raises(ItemImportError) as capture:
+            Dataset.import_from(test_dir, "yolo").init_cache()
+        assert isinstance(capture.value.__cause__, DatasetImportError)
+        assert "Can't find image info" in str(capture.value.__cause__)
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    @pytest.mark.parametrize("export_format", ["yolo", "yolo8"])
+    def test_can_report_missing_subset_info(self, export_format, test_dir):
+        self._prepare_dataset(test_dir, export_format)
+        os.remove(osp.join(test_dir, "train.txt"))
+
+        with pytest.raises(InvalidAnnotationError, match="subset list file"):
+            Dataset.import_from(test_dir, "yolo").init_cache()

@@ -6,12 +6,13 @@ import logging as log
 import os
 import os.path as osp
 from collections import OrderedDict
+from typing import Dict
 
 import yaml
 
 from datumaro.components.annotation import AnnotationType, Bbox
 from datumaro.components.converter import Converter
-from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset import DatasetPatch, ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExtractor
 from datumaro.components.media import Image
@@ -55,7 +56,6 @@ class YoloConverter(Converter):
         self._prefix = "data" if add_path_prefix else ""
 
     def apply(self):
-        extractor = self._extractor
         save_dir = self._save_dir
 
         if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
@@ -65,11 +65,6 @@ class YoloConverter(Converter):
 
         if self._save_dataset_meta:
             self._save_meta_file(self._save_dir)
-
-        label_categories = extractor.categories()[AnnotationType.label]
-        label_ids = {label.name: idx for idx, label in enumerate(label_categories.items)}
-        with open(osp.join(save_dir, "obj.names"), "w", encoding="utf-8") as f:
-            f.writelines("%s\n" % l[0] for l in sorted(label_ids.items(), key=lambda x: x[1]))
 
         subset_lists = OrderedDict()
 
@@ -83,25 +78,37 @@ class YoloConverter(Converter):
                     f"Can't export '{subset_name}' subset in YOLO format, this word is reserved."
                 )
 
-            subset_dir = osp.join(save_dir, "obj_%s_data" % subset_name)
-            os.makedirs(subset_dir, exist_ok=True)
+            subset_image_dir = self._make_image_subset_folder(save_dir, subset_name)
+            subset_anno_dir = self._make_annotation_subset_folder(save_dir, subset_name)
+            os.makedirs(subset_image_dir, exist_ok=True)
+            os.makedirs(subset_anno_dir, exist_ok=True)
 
             image_paths = OrderedDict()
             for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
                 try:
-                    image_fpath = self._export_media(item, subset_dir)
-                    image_name = osp.relpath(image_fpath, subset_dir)
+                    image_fpath = self._export_media(item, subset_image_dir)
+                    image_name = osp.relpath(image_fpath, subset_image_dir)
                     image_paths[item.id] = osp.join(
-                        self._prefix, osp.basename(subset_dir), image_name
+                        self._prefix, osp.relpath(subset_image_dir, save_dir), image_name
                     )
 
-                    self._export_item_annotation(item, subset_dir)
+                    self._export_item_annotation(item, subset_anno_dir)
 
                 except Exception as e:
                     self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
             if subset_list_name := self._make_subset_list_file(subset_name, image_paths):
                 subset_lists[subset_name] = subset_list_name
+
+        self._save_config_files(subset_lists)
+
+    def _save_config_files(self, subset_lists: Dict[str, str]):
+        extractor = self._extractor
+        save_dir = self._save_dir
+        label_categories = extractor.categories()[AnnotationType.label]
+        label_ids = {label.name: idx for idx, label in enumerate(label_categories.items)}
+        with open(osp.join(save_dir, "obj.names"), "w", encoding="utf-8") as f:
+            f.writelines("%s\n" % l[0] for l in sorted(label_ids.items(), key=lambda x: x[1]))
 
         with open(osp.join(save_dir, "obj.data"), "w", encoding="utf-8") as f:
             f.write(f"classes = {len(label_ids)}\n")
@@ -171,8 +178,16 @@ class YoloConverter(Converter):
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
+    @staticmethod
+    def _make_image_subset_folder(save_dir: str, subset: str) -> str:
+        return osp.join(save_dir, f"obj_{subset}_data")
+
+    @staticmethod
+    def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
+        return osp.join(save_dir, f"obj_{subset}_data")
+
     @classmethod
-    def patch(cls, dataset, patch, save_dir, **kwargs):
+    def patch(cls, dataset: IExtractor, patch: DatasetPatch, save_dir: str, **kwargs):
         conv = cls(dataset, save_dir=save_dir, **kwargs)
         conv._patch = patch
         conv.apply()
@@ -188,13 +203,14 @@ class YoloConverter(Converter):
 
             if subset == DEFAULT_SUBSET_NAME:
                 subset = YoloPath.DEFAULT_SUBSET_NAME
-            subset_dir = osp.join(save_dir, f"obj_{subset}_data")
+            subset_image_dir = cls._make_image_subset_folder(save_dir, subset)
+            subset_anno_dir = cls._make_annotation_subset_folder(save_dir, subset)
 
-            image_path = osp.join(subset_dir, conv._make_image_filename(item))
+            image_path = osp.join(subset_image_dir, conv._make_image_filename(item))
             if osp.isfile(image_path):
                 os.remove(image_path)
 
-            ann_path = osp.join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
+            ann_path = osp.join(subset_anno_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             if osp.isfile(ann_path):
                 os.remove(ann_path)
 
@@ -202,51 +218,9 @@ class YoloConverter(Converter):
 class Yolo8Converter(YoloConverter):
     RESERVED_CONFIG_KEYS = Yolo8Path.RESERVED_CONFIG_KEYS
 
-    def apply(self):
+    def _save_config_files(self, subset_lists: Dict[str, str]):
         extractor = self._extractor
         save_dir = self._save_dir
-
-        if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
-            raise MediaTypeError("Media type is not an image")
-
-        os.makedirs(save_dir, exist_ok=True)
-
-        if self._save_dataset_meta:
-            self._save_meta_file(self._save_dir)
-
-        subset_lists = OrderedDict()
-
-        subsets = self._extractor.subsets()
-        pbars = self._ctx.progress_reporter.split(len(subsets))
-        for (subset_name, subset), pbar in zip(subsets.items(), pbars):
-            if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
-                subset_name = YoloPath.DEFAULT_SUBSET_NAME
-            elif subset_name in self.RESERVED_CONFIG_KEYS:
-                raise DatasetExportError(
-                    f"Can't export '{subset_name}' subset in YOLO format, this word is reserved."
-                )
-
-            images_subset_dir = osp.join(save_dir, Yolo8Path.IMAGES_FOLDER_NAME, subset_name)
-            labels_subset_dir = osp.join(save_dir, Yolo8Path.LABELS_FOLDER_NAME, subset_name)
-            os.makedirs(images_subset_dir, exist_ok=True)
-
-            image_paths = OrderedDict()
-            for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
-                try:
-                    image_fpath = self._export_media(item, images_subset_dir)
-                    image_name = osp.relpath(image_fpath, images_subset_dir)
-                    image_paths[item.id] = osp.join(
-                        self._prefix, Yolo8Path.IMAGES_FOLDER_NAME, subset_name, image_name
-                    )
-
-                    self._export_item_annotation(item, labels_subset_dir)
-
-                except Exception as e:
-                    self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
-
-            if subset_list_name := self._make_subset_list_file(subset_name, image_paths):
-                subset_lists[subset_name] = subset_list_name
-
         with open(osp.join(save_dir, "data.yaml"), "w", encoding="utf-8") as f:
             label_categories = extractor.categories()[AnnotationType.label]
             data = dict(
@@ -255,3 +229,11 @@ class Yolo8Converter(YoloConverter):
                 **subset_lists,
             )
             yaml.dump(data, f)
+
+    @staticmethod
+    def _make_image_subset_folder(save_dir: str, subset: str) -> str:
+        return osp.join(save_dir, Yolo8Path.IMAGES_FOLDER_NAME, subset)
+
+    @staticmethod
+    def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
+        return osp.join(save_dir, Yolo8Path.LABELS_FOLDER_NAME, subset)

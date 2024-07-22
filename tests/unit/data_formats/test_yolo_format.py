@@ -380,6 +380,47 @@ class Yolo8ConverterTest(YoloConverterTest):
 
         compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_inplace_save_writes_only_updated_data(self, helper_tc, test_dir):
+        expected = Dataset.from_iterable(
+            [
+                DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
+                DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))),
+            ],
+            categories=[],
+        )
+
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
+                DatasetItem(2, subset="train", media=Image(path="2.jpg", size=(3, 2))),
+                DatasetItem(3, subset="valid", media=Image(data=np.ones((2, 2, 3)))),
+            ],
+            categories=[],
+        )
+        dataset.export(test_dir, "yolo8", save_media=True)
+
+        dataset.put(DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))))
+        dataset.remove(3, "valid")
+        dataset.save(save_media=True)
+
+        assert set(os.listdir(osp.join(test_dir, "images", "train"))) == {
+            "1.jpg",
+            "2.jpg",
+        }
+        assert set(os.listdir(osp.join(test_dir, "labels", "train"))) == {
+            "1.txt",
+            "2.txt",
+        }
+        assert set(os.listdir(osp.join(test_dir, "images", "valid"))) == set()
+        assert set(os.listdir(osp.join(test_dir, "labels", "valid"))) == set()
+        compare_datasets(
+            helper_tc,
+            expected,
+            Dataset.import_from(test_dir, "yolo"),
+            require_media=True,
+        )
+
 
 class YoloImporterTest:
     @pytest.mark.parametrize(

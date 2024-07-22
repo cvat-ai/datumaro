@@ -1,6 +1,7 @@
 import os
 import os.path as osp
 import pickle  # nosec - disable B403:import_pickle check
+import random
 import shutil
 
 import numpy as np
@@ -8,7 +9,7 @@ import pytest
 import yaml
 from PIL import Image as PILImage
 
-from datumaro.components.annotation import Bbox
+from datumaro.components.annotation import Bbox, Polygon
 from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
@@ -21,7 +22,11 @@ from datumaro.components.errors import (
 )
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.yolo_format.converter import Yolo8Converter, YoloConverter
+from datumaro.plugins.yolo_format.converter import (
+    Yolo8Converter,
+    Yolo8SegmentationConverter,
+    YoloConverter,
+)
 from datumaro.plugins.yolo_format.extractor import Yolo8Extractor, YoloExtractor
 from datumaro.plugins.yolo_format.importer import YoloImporter
 from datumaro.util.image import save_image
@@ -33,6 +38,15 @@ from ...utils.assets import get_test_asset_path
 
 class YoloConverterTest:
     CONVERTER = YoloConverter
+
+    def _generate_random_annotation(self, n_of_labels=10):
+        return Bbox(
+            x=random.randint(0, 4),
+            y=random.randint(0, 4),
+            w=random.randint(1, 4),
+            h=random.randint(1, 4),
+            label=random.randint(0, n_of_labels - 1),
+        )
 
     @staticmethod
     def _make_image_path(test_dir: str, subset_name: str, image_id: str):
@@ -47,8 +61,8 @@ class YoloConverterTest:
                     subset="train",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
-                        Bbox(0, 2, 4, 2, label=2),
-                        Bbox(0, 1, 2, 3, label=4),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
                 DatasetItem(
@@ -56,9 +70,9 @@ class YoloConverterTest:
                     subset="train",
                     media=Image(data=np.ones((10, 10, 3))),
                     annotations=[
-                        Bbox(0, 2, 4, 2, label=2),
-                        Bbox(3, 3, 2, 3, label=4),
-                        Bbox(2, 1, 2, 3, label=4),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
                 DatasetItem(
@@ -66,10 +80,10 @@ class YoloConverterTest:
                     subset="valid",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
-                        Bbox(0, 1, 5, 2, label=2),
-                        Bbox(0, 2, 3, 2, label=5),
-                        Bbox(0, 2, 4, 2, label=6),
-                        Bbox(0, 7, 3, 2, label=7),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
             ],
@@ -90,8 +104,8 @@ class YoloConverterTest:
                     subset="train",
                     media=Image(path="1.jpg", size=(10, 15)),
                     annotations=[
-                        Bbox(0, 2, 4, 2, label=2),
-                        Bbox(3, 3, 2, 3, label=4),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
             ],
@@ -116,8 +130,8 @@ class YoloConverterTest:
                     subset="train",
                     media=Image(path="1.jpg", size=(10, 15)),
                     annotations=[
-                        Bbox(0, 2, 4, 2, label=2),
-                        Bbox(3, 3, 2, 3, label=4),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
             ],
@@ -137,8 +151,8 @@ class YoloConverterTest:
                     subset="train",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
-                        Bbox(0, 2, 4, 2, label=2),
-                        Bbox(0, 1, 2, 3, label=4),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
             ],
@@ -232,8 +246,8 @@ class YoloConverterTest:
                     subset="train",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
-                        Bbox(0, 2, 4, 2, label=2),
-                        Bbox(0, 1, 2, 3, label=4),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
                 DatasetItem(
@@ -241,9 +255,9 @@ class YoloConverterTest:
                     subset="train",
                     media=Image(data=np.ones((10, 10, 3))),
                     annotations=[
-                        Bbox(0, 2, 4, 2, label=2),
-                        Bbox(3, 3, 2, 3, label=4),
-                        Bbox(2, 1, 2, 3, label=4),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
                 DatasetItem(
@@ -251,10 +265,10 @@ class YoloConverterTest:
                     subset="valid",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
-                        Bbox(0, 1, 5, 2, label=2),
-                        Bbox(0, 2, 3, 2, label=5),
-                        Bbox(0, 2, 4, 2, label=6),
-                        Bbox(0, 7, 3, 2, label=7),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
             ],
@@ -276,8 +290,8 @@ class YoloConverterTest:
                     subset="anything",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
-                        Bbox(0, 1, 5, 2, label=2),
-                        Bbox(0, 2, 3, 2, label=5),
+                        self._generate_random_annotation(),
+                        self._generate_random_annotation(),
                     ],
                 ),
             ],
@@ -318,7 +332,7 @@ class YoloConverterTest:
                     subset="valid",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
-                        Bbox(0, 1, 5, 2, label=1),
+                        self._generate_random_annotation(n_of_labels=2),
                     ],
                 ),
             ],
@@ -360,7 +374,7 @@ class Yolo8ConverterTest(YoloConverterTest):
                     subset="valid",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
-                        Bbox(0, 1, 5, 2, label=1),
+                        self._generate_random_annotation(n_of_labels=2),
                     ],
                 ),
             ],
@@ -422,6 +436,52 @@ class Yolo8ConverterTest(YoloConverterTest):
         )
 
 
+class Yolo8SegmentationConverterTest(Yolo8ConverterTest):
+    CONVERTER = Yolo8SegmentationConverter
+
+    def _generate_random_annotation(self, n_of_labels=10):
+        return Polygon(
+            points=[random.randint(0, 6) for _ in range(random.randint(3, 7) * 2)],
+            label=random.randint(0, n_of_labels - 1),
+        )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_bbox_but_load_polygon(self, helper_tc, test_dir):
+        bbox = Bbox(1, 2, 3, 4, label=1)
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[
+                        Polygon([1, 2, 3, 4, 5, 6, 7, 8, 4, 6], label=0),
+                        bbox,
+                    ],
+                ),
+            ],
+            categories=["a", "b"],
+        )
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[
+                        Polygon([1, 2, 3, 4, 5, 6, 7, 8, 4, 6], label=0),
+                        Polygon(bbox.as_polygon(), label=1),
+                    ],
+                ),
+            ],
+            categories=["a", "b"],
+        )
+
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True, add_path_prefix=False)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        compare_datasets(helper_tc, expected_dataset, parsed_dataset)
+
+
 class YoloImporterTest:
     @pytest.mark.parametrize(
         "dataset_dir",
@@ -455,6 +515,28 @@ class YoloImporterTest:
                     annotations=[
                         Bbox(0, 2, 4, 2, label=2),
                         Bbox(3, 3, 2, 3, label=4),
+                    ],
+                ),
+            ],
+            categories=["label_" + str(i) for i in range(10)],
+        )
+
+        dataset = Dataset.import_from(dataset_dir, "yolo")
+
+        compare_datasets(helper_tc, expected_dataset, dataset)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_segmentation(self, helper_tc):
+        dataset_dir = get_test_asset_path("yolo_dataset", "yolo8_segmentation")
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[
+                        Polygon([1.5, 1.0, 6.0, 1.0, 6.0, 5.0], label=2),
+                        Polygon([3.0, 1.5, 6.0, 1.5, 6.0, 7.5, 4.5, 7.5, 3.75, 3.0], label=4),
                     ],
                 ),
             ],
@@ -514,23 +596,26 @@ class YoloImporterTest:
 
 class YoloExtractorTest:
     def _prepare_dataset(self, path: str, export_format: str) -> Dataset:
+        if export_format == "yolo8_segmentation":
+            anno = Polygon(points=[1, 1, 2, 4, 4, 2, 8, 8], label=0)
+        else:
+            anno = Bbox(1, 1, 2, 4, label=0)
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
                     "a",
                     subset="train",
                     media=Image(np.ones((5, 10, 3))),
-                    annotations=[Bbox(1, 1, 2, 4, label=0)],
+                    annotations=[anno],
                 )
             ],
             categories=["test"],
         )
         dataset.export(path, export_format, save_media=True)
-
         return dataset
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    @pytest.mark.parametrize("export_format", ["yolo", "yolo8"])
+    @pytest.mark.parametrize("export_format", ["yolo", "yolo8", "yolo8_segmentation"])
     def test_can_parse(self, helper_tc, export_format, test_dir):
         expected = self._prepare_dataset(test_dir, export_format)
         actual = Dataset.import_from(test_dir, "yolo")
@@ -548,6 +633,7 @@ class YoloExtractorTest:
         [
             ("yolo", "obj_train_data"),
             ("yolo8", osp.join("labels", "train")),
+            ("yolo8_segmentation", osp.join("labels", "train")),
         ],
     )
     def test_can_report_invalid_ann_line_format(self, export_format, anno_dir, test_dir):
@@ -562,16 +648,21 @@ class YoloExtractorTest:
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     @pytest.mark.parametrize(
-        "export_format, anno_dir",
+        "export_format, anno_dir, line",
         [
-            ("yolo", "obj_train_data"),
-            ("yolo8", osp.join("labels", "train")),
+            ("yolo", "obj_train_data", "10 0.5 0.5 0.5 0.5"),
+            ("yolo8", osp.join("labels", "train"), "10 0.5 0.5 0.5 0.5"),
+            (
+                "yolo8_segmentation",
+                osp.join("labels", "train"),
+                "10 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5",
+            ),
         ],
     )
-    def test_can_report_invalid_label(self, export_format, anno_dir, test_dir):
+    def test_can_report_invalid_label(self, export_format, anno_dir, test_dir, line):
         self._prepare_dataset(test_dir, export_format)
         with open(osp.join(test_dir, anno_dir, "a.txt"), "w") as f:
-            f.write("10 0.5 0.5 0.5 0.5\n")
+            f.write(f"{line}\n")
 
         with pytest.raises(AnnotationImportError) as capture:
             Dataset.import_from(test_dir, "yolo").init_cache()
@@ -611,10 +702,37 @@ class YoloExtractorTest:
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     @pytest.mark.parametrize(
+        "field, field_name",
+        [
+            (1, "polygon point 0 x"),
+            (2, "polygon point 0 y"),
+            (3, "polygon point 1 x"),
+            (4, "polygon point 1 y"),
+            (5, "polygon point 2 x"),
+            (6, "polygon point 2 y"),
+        ],
+    )
+    def test_can_report_invalid_field_type_segmentation(
+        self, field: int, field_name: str, test_dir
+    ):
+        self._prepare_dataset(test_dir, "yolo8_segmentation")
+        with open(osp.join(test_dir, "labels", "train", "a.txt"), "w") as f:
+            values = [0] + [0.5, 0.5] * 3
+            values[field] = "a"
+            f.write(" ".join(str(v) for v in values))
+
+        with pytest.raises(AnnotationImportError) as capture:
+            Dataset.import_from(test_dir, "yolo").init_cache()
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert field_name in str(capture.value.__cause__)
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    @pytest.mark.parametrize(
         "export_format, anno_dir",
         [
             ("yolo", "obj_train_data"),
             ("yolo8", osp.join("labels", "train")),
+            ("yolo8_segmentation", osp.join("labels", "train")),
         ],
     )
     def test_can_report_missing_ann_file(self, export_format, anno_dir, test_dir):
@@ -631,6 +749,7 @@ class YoloExtractorTest:
         [
             ("yolo", "obj_train_data"),
             ("yolo8", osp.join("images", "train")),
+            ("yolo8_segmentation", osp.join("images", "train")),
         ],
     )
     def test_can_report_missing_image_info(self, export_format, img_dir, test_dir):

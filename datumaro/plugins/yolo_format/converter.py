@@ -6,11 +6,12 @@ import logging as log
 import os
 import os.path as osp
 from collections import OrderedDict
-from typing import Dict
+from itertools import cycle
+from typing import Dict, Optional
 
 import yaml
 
-from datumaro.components.annotation import AnnotationType, Bbox
+from datumaro.components.annotation import Annotation, AnnotationType, Bbox, Polygon
 from datumaro.components.converter import Converter
 from datumaro.components.dataset import DatasetPatch, ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError
@@ -162,12 +163,9 @@ class YoloConverter(Converter):
             yolo_annotation = ""
 
             for bbox in item.annotations:
-                if not isinstance(bbox, Bbox) or bbox.label is None:
-                    continue
-
-                yolo_bb = _make_yolo_bbox((width, height), bbox.points)
-                yolo_bb = " ".join("%.6f" % p for p in yolo_bb)
-                yolo_annotation += "%s %s\n" % (bbox.label, yolo_bb)
+                annotation_line = self._make_annotation_line(width, height, bbox)
+                if annotation_line:
+                    yolo_annotation += annotation_line
 
             annotation_path = osp.join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             os.makedirs(osp.dirname(annotation_path), exist_ok=True)
@@ -177,6 +175,15 @@ class YoloConverter(Converter):
 
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
+
+    @staticmethod
+    def _make_annotation_line(width: int, height: int, anno: Annotation) -> Optional[str]:
+        if not isinstance(anno, Bbox) or anno.label is None:
+            return
+
+        values = _make_yolo_bbox((width, height), anno.points)
+        string_values = " ".join("%.6f" % p for p in values)
+        return "%s %s\n" % (anno.label, string_values)
 
     @staticmethod
     def _make_image_subset_folder(save_dir: str, subset: str) -> str:
@@ -237,3 +244,20 @@ class Yolo8Converter(YoloConverter):
     @staticmethod
     def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
         return osp.join(save_dir, Yolo8Path.LABELS_FOLDER_NAME, subset)
+
+
+class Yolo8SegmentationConverter(Yolo8Converter):
+    @staticmethod
+    def _make_annotation_line(width: int, height: int, anno: Annotation) -> Optional[str]:
+        if anno.label is None:
+            return
+        if isinstance(anno, Polygon):
+            points = anno.points
+        elif isinstance(anno, Bbox):
+            points = anno.as_polygon()
+        else:
+            return
+
+        values = [value / size for value, size in zip(points, cycle((width, height)))]
+        string_values = " ".join("%.6f" % p for p in values)
+        return "%s %s\n" % (anno.label, string_values)

@@ -9,11 +9,18 @@ import os
 import os.path as osp
 import re
 from collections import OrderedDict
+from itertools import cycle
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import yaml
 
-from datumaro.components.annotation import Annotation, AnnotationType, Bbox, LabelCategories
+from datumaro.components.annotation import (
+    Annotation,
+    AnnotationType,
+    Bbox,
+    LabelCategories,
+    Polygon,
+)
 from datumaro.components.errors import (
     DatasetImportError,
     InvalidAnnotationError,
@@ -230,36 +237,40 @@ class YoloExtractor(SourceExtractor):
 
         for line in lines:
             try:
-                parts = line.split()
-                if len(parts) != 5:
-                    raise InvalidAnnotationError(
-                        f"Unexpected field count {len(parts)} in the bbox description. "
-                        "Expected 5 fields (label, xc, yc, w, h)."
-                    )
-                label_id, xc, yc, w, h = parts
-
-                label_id = self._parse_field(label_id, int, "bbox label id")
-                if label_id not in self._categories[AnnotationType.label]:
-                    raise UndeclaredLabelError(str(label_id))
-
-                w = self._parse_field(w, float, "bbox width")
-                h = self._parse_field(h, float, "bbox height")
-                x = self._parse_field(xc, float, "bbox center x") - w * 0.5
-                y = self._parse_field(yc, float, "bbox center y") - h * 0.5
-
                 annotations.append(
-                    Bbox(
-                        x * image_width,
-                        y * image_height,
-                        w * image_width,
-                        h * image_height,
-                        label=label_id,
-                    )
+                    self._load_one_annotation(line.split(), image_height, image_width)
                 )
             except Exception as e:
                 self._ctx.error_policy.report_annotation_error(e, item_id=item_id)
 
         return annotations
+
+    def _load_one_annotation(
+        self, parts: List[str], image_height: int, image_width: int
+    ) -> Annotation:
+        if len(parts) != 5:
+            raise InvalidAnnotationError(
+                f"Unexpected field count {len(parts)} in the bbox description. "
+                "Expected 5 fields (label, xc, yc, w, h)."
+            )
+        label_id, xc, yc, w, h = parts
+
+        label_id = self._parse_field(label_id, int, "bbox label id")
+        if label_id not in self._categories[AnnotationType.label]:
+            raise UndeclaredLabelError(str(label_id))
+
+        w = self._parse_field(w, float, "bbox width")
+        h = self._parse_field(h, float, "bbox height")
+        x = self._parse_field(xc, float, "bbox center x") - w * 0.5
+        y = self._parse_field(yc, float, "bbox center y") - h * 0.5
+
+        return Bbox(
+            x * image_width,
+            y * image_height,
+            w * image_width,
+            h * image_height,
+            label=label_id,
+        )
 
     def _load_categories(self, config: Dict[str, str]):
         names_path = config.get("names")
@@ -357,3 +368,34 @@ class Yolo8Extractor(YoloExtractor):
                 )
         else:
             yield from subset_images_source
+
+    def _load_segmentation_annotation(
+        self, parts: List[str], image_height: int, image_width: int
+    ) -> Polygon:
+        label_id = self._parse_field(parts[0], int, "Polygon label id")
+        if label_id not in self._categories[AnnotationType.label]:
+            raise UndeclaredLabelError(str(label_id))
+
+        points = [
+            self._parse_field(
+                value, float, f"polygon point {idx // 2} {'x' if idx % 2 == 0 else 'y'}"
+            )
+            for idx, value in enumerate(parts[1:])
+        ]
+        scaled_points = [
+            value * size for value, size in zip(points, cycle((image_width, image_height)))
+        ]
+        return Polygon(scaled_points, label=label_id)
+
+    def _load_one_annotation(
+        self, parts: List[str], image_height: int, image_width: int
+    ) -> Annotation:
+        if len(parts) == 5:
+            return super()._load_one_annotation(parts, image_height, image_width)
+        elif len(parts) > 5 and len(parts) % 2 == 1:
+            return self._load_segmentation_annotation(parts, image_height, image_width)
+        raise InvalidAnnotationError(
+            f"Unexpected field count {len(parts)} in the bbox description. "
+            "Expected 5 fields for box annotation (label, xc, yc, w, h) "
+            "or odd number > 5 of fields for segment annotation (label, x1, y1, x2, y2, x3, y3, ...)"
+        )

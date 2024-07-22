@@ -5,6 +5,7 @@ import shutil
 
 import numpy as np
 import pytest
+import yaml
 from PIL import Image as PILImage
 
 from datumaro.components.annotation import Bbox
@@ -32,6 +33,10 @@ from ...utils.assets import get_test_asset_path
 
 class YoloConverterTest:
     CONVERTER = YoloConverter
+
+    @staticmethod
+    def _make_image_path(test_dir: str, subset_name: str, image_id: str):
+        return osp.join(test_dir, f"obj_{subset_name}_data", image_id)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load(self, helper_tc, test_dir):
@@ -96,7 +101,7 @@ class YoloConverterTest:
         self.CONVERTER.convert(source_dataset, test_dir)
 
         save_image(
-            osp.join(test_dir, "obj_train_data", "1.jpg"), np.ones((10, 15, 3))
+            self._make_image_path(test_dir, "train", "1.jpg"), np.ones((10, 15, 3))
         )  # put the image for dataset
         parsed_dataset = Dataset.import_from(test_dir, "yolo")
 
@@ -287,6 +292,9 @@ class YoloConverterTest:
     @mark_requirement(Requirements.DATUM_565)
     @pytest.mark.parametrize("subset", ["backup", "classes"])
     def test_cant_save_with_reserved_subset_name(self, test_dir, subset):
+        self._check_cant_save_with_reserved_subset_name(test_dir, subset)
+
+    def _check_cant_save_with_reserved_subset_name(self, test_dir, subset):
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -334,6 +342,44 @@ class YoloConverterTest:
 class Yolo8ConverterTest(YoloConverterTest):
     CONVERTER = Yolo8Converter
 
+    @staticmethod
+    def _make_image_path(test_dir: str, subset_name: str, image_id: str):
+        return osp.join(test_dir, "images", subset_name, image_id)
+
+    @mark_requirement(Requirements.DATUM_565)
+    @pytest.mark.parametrize("subset", ["backup", "classes", "path", "names"])
+    def test_cant_save_with_reserved_subset_name(self, test_dir, subset):
+        self._check_cant_save_with_reserved_subset_name(test_dir, subset)
+
+    @mark_requirement(Requirements.DATUM_609)
+    def test_can_save_and_load_without_path_prefix(self, helper_tc, test_dir):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[
+                        Bbox(0, 1, 5, 2, label=1),
+                    ],
+                ),
+            ],
+            categories=["a", "b"],
+        )
+
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True, add_path_prefix=False)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
+
+        with open(osp.join(test_dir, "data.yaml"), "r") as f:
+            config = yaml.safe_load(f)
+            assert config.get("valid") == "valid.txt"
+
+        with open(osp.join(test_dir, "valid.txt"), "r") as f:
+            lines = f.readlines()
+            assert "images/valid/3.jpg\n" in lines
+
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)
+
 
 class YoloImporterTest:
     @pytest.mark.parametrize(
@@ -355,6 +401,7 @@ class YoloImporterTest:
             get_test_asset_path("yolo_dataset", "yolo8"),
             get_test_asset_path("yolo_dataset", "yolo8_with_list_of_imgs"),
             get_test_asset_path("yolo_dataset", "yolo8_with_subset_txt"),
+            get_test_asset_path("yolo_dataset", "yolo8_with_list_of_names"),
         ],
     )
     def test_can_import(self, helper_tc, dataset_dir):
@@ -562,3 +609,12 @@ class YoloExtractorTest:
 
         with pytest.raises(InvalidAnnotationError, match="subset list file"):
             Dataset.import_from(test_dir, "yolo").init_cache()
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_report_missing_subset_folder(self, test_dir):
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", "yolo8"), dataset_path)
+        shutil.rmtree(osp.join(dataset_path, "images", "train"))
+
+        with pytest.raises(InvalidAnnotationError, match="subset image folder"):
+            Dataset.import_from(dataset_path, "yolo").init_cache()

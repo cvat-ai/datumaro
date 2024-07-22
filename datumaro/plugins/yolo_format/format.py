@@ -8,6 +8,7 @@ class YoloPath:
     SUBSET_NAMES = ["train", "valid"]
     RESERVED_CONFIG_KEYS = ["backup", "classes", "names"]
     LABELS_EXT = ".txt"
+    SUBSET_LIST_EXT = ".txt"
 
 
 class Yolo8Path(YoloPath):

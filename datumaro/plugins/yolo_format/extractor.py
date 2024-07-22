@@ -309,9 +309,11 @@ class Yolo8Extractor(YoloExtractor):
     def _load_categories(self, config: Dict[str, str]) -> LabelCategories:
         names = config.get("names")
 
-        if names:
+        if names is not None:
             if isinstance(names, dict):
                 return LabelCategories.from_iterable([names[i] for i in range(len(names))])
+            if isinstance(names, list):
+                return LabelCategories.from_iterable(names)
 
         raise InvalidAnnotationError(f"Failed to parse names from config")
 
@@ -341,10 +343,12 @@ class Yolo8Extractor(YoloExtractor):
         self, subset_name: str, subset_images_source: Union[str, List[str]]
     ):
         if isinstance(subset_images_source, str):
-            path = osp.join(self._path, self.localize_path(subset_images_source))
-            if osp.isfile(path):
+            if subset_images_source.endswith(YoloPath.SUBSET_LIST_EXT):
                 yield from super()._iterate_over_image_paths(subset_name, subset_images_source)
             else:
+                path = osp.join(self._path, self.localize_path(subset_images_source))
+                if not osp.isdir(path):
+                    raise InvalidAnnotationError(f"Can't find '{subset_name}' subset image folder")
                 yield from (
                     osp.relpath(osp.join(root, file), self._path)
                     for root, dirs, files in os.walk(path)

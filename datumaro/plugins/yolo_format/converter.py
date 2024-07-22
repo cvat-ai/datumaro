@@ -7,6 +7,8 @@ import os
 import os.path as osp
 from collections import OrderedDict
 
+import yaml
+
 from datumaro.components.annotation import AnnotationType, Bbox
 from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
@@ -15,7 +17,7 @@ from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExt
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
 
-from .format import YoloPath
+from .format import Yolo8Path, YoloPath
 
 
 def _make_yolo_bbox(img_size, box):
@@ -32,6 +34,7 @@ def _make_yolo_bbox(img_size, box):
 class YoloConverter(Converter):
     # https://github.com/AlexeyAB/darknet#how-to-train-to-detect-your-custom-objects
     DEFAULT_IMAGE_EXT = ".jpg"
+    RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -75,7 +78,7 @@ class YoloConverter(Converter):
         for (subset_name, subset), pbar in zip(subsets.items(), pbars):
             if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
                 subset_name = YoloPath.DEFAULT_SUBSET_NAME
-            elif subset_name in YoloPath.RESERVED_CONFIG_KEYS:
+            elif subset_name in self.RESERVED_CONFIG_KEYS:
                 raise DatasetExportError(
                     f"Can't export '{subset_name}' subset in YOLO format, this word is reserved."
                 )
@@ -97,16 +100,8 @@ class YoloConverter(Converter):
                 except Exception as e:
                     self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
-            subset_list_name = f"{subset_name}.txt"
-            subset_list_path = osp.join(save_dir, subset_list_name)
-            if self._patch and subset_name in self._patch.updated_subsets and not image_paths:
-                if osp.isfile(subset_list_path):
-                    os.remove(subset_list_path)
-                continue
-
-            subset_lists[subset_name] = subset_list_name
-            with open(subset_list_path, "w", encoding="utf-8") as f:
-                f.writelines("%s\n" % s.replace("\\", "/") for s in image_paths.values())
+            if subset_list_name := self._make_subset_list_file(subset_name, image_paths):
+                subset_lists[subset_name] = subset_list_name
 
         with open(osp.join(save_dir, "obj.data"), "w", encoding="utf-8") as f:
             f.write(f"classes = {len(label_ids)}\n")
@@ -119,6 +114,18 @@ class YoloConverter(Converter):
 
             f.write("names = %s\n" % osp.join(self._prefix, "obj.names"))
             f.write("backup = backup/\n")
+
+    def _make_subset_list_file(self, subset_name, image_paths):
+        subset_list_name = f"{subset_name}{YoloPath.SUBSET_LIST_EXT}"
+        subset_list_path = osp.join(self._save_dir, subset_list_name)
+        if self._patch and subset_name in self._patch.updated_subsets and not image_paths:
+            if osp.isfile(subset_list_path):
+                os.remove(subset_list_path)
+            return
+
+        with open(subset_list_path, "w", encoding="utf-8") as f:
+            f.writelines("%s\n" % s.replace("\\", "/") for s in image_paths.values())
+        return subset_list_name
 
     def _export_media(self, item: DatasetItem, subset_img_dir: str) -> str:
         try:
@@ -193,4 +200,58 @@ class YoloConverter(Converter):
 
 
 class Yolo8Converter(YoloConverter):
-    pass
+    RESERVED_CONFIG_KEYS = Yolo8Path.RESERVED_CONFIG_KEYS
+
+    def apply(self):
+        extractor = self._extractor
+        save_dir = self._save_dir
+
+        if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
+            raise MediaTypeError("Media type is not an image")
+
+        os.makedirs(save_dir, exist_ok=True)
+
+        if self._save_dataset_meta:
+            self._save_meta_file(self._save_dir)
+
+        subset_lists = OrderedDict()
+
+        subsets = self._extractor.subsets()
+        pbars = self._ctx.progress_reporter.split(len(subsets))
+        for (subset_name, subset), pbar in zip(subsets.items(), pbars):
+            if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
+                subset_name = YoloPath.DEFAULT_SUBSET_NAME
+            elif subset_name in self.RESERVED_CONFIG_KEYS:
+                raise DatasetExportError(
+                    f"Can't export '{subset_name}' subset in YOLO format, this word is reserved."
+                )
+
+            images_subset_dir = osp.join(save_dir, Yolo8Path.IMAGES_FOLDER_NAME, subset_name)
+            labels_subset_dir = osp.join(save_dir, Yolo8Path.LABELS_FOLDER_NAME, subset_name)
+            os.makedirs(images_subset_dir, exist_ok=True)
+
+            image_paths = OrderedDict()
+            for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
+                try:
+                    image_fpath = self._export_media(item, images_subset_dir)
+                    image_name = osp.relpath(image_fpath, images_subset_dir)
+                    image_paths[item.id] = osp.join(
+                        self._prefix, Yolo8Path.IMAGES_FOLDER_NAME, subset_name, image_name
+                    )
+
+                    self._export_item_annotation(item, labels_subset_dir)
+
+                except Exception as e:
+                    self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
+
+            if subset_list_name := self._make_subset_list_file(subset_name, image_paths):
+                subset_lists[subset_name] = subset_list_name
+
+        with open(osp.join(save_dir, "data.yaml"), "w", encoding="utf-8") as f:
+            label_categories = extractor.categories()[AnnotationType.label]
+            data = dict(
+                path=".",
+                names={idx: label.name for idx, label in enumerate(label_categories.items)},
+                **subset_lists,
+            )
+            yaml.dump(data, f)

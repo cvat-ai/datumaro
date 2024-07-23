@@ -1,3 +1,4 @@
+import copy
 import os
 import os.path as osp
 import pickle  # nosec - disable B403:import_pickle check
@@ -24,12 +25,15 @@ from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.plugins.yolo_format.converter import (
     Yolo8Converter,
+    Yolo8ObbConverter,
     Yolo8SegmentationConverter,
     YoloConverter,
 )
-from datumaro.plugins.yolo_format.extractor import Yolo8Extractor, YoloExtractor
+from datumaro.plugins.yolo_format.extractor import Yolo8Extractor, YoloExtractor, Yolo8SegmentationExtractor, \
+    Yolo8ObbExtractor
 from datumaro.plugins.yolo_format.importer import (
     Yolo8Importer,
+    Yolo8ObbImporter,
     Yolo8SegmentationImporter,
     YoloImporter,
 )
@@ -43,6 +47,13 @@ from ...utils.assets import get_test_asset_path
 class YoloConverterTest:
     CONVERTER = YoloConverter
     IMPORTER = YoloImporter
+
+    @pytest.fixture(autouse=True)
+    def setup(self, helper_tc):
+        self.helper_tc = helper_tc
+
+    def compare_datasets(self, *args, **kwargs):
+        compare_datasets(self.helper_tc, *args, **kwargs)
 
     def _generate_random_bbox(self, n_of_labels=10, **kwargs):
         return Bbox(
@@ -102,7 +113,7 @@ class YoloConverterTest:
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
 
-        compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_image_info(self, helper_tc, test_dir):
@@ -128,7 +139,7 @@ class YoloConverterTest:
         )  # put the image for dataset
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
 
-        compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_load_dataset_with_exact_image_info(self, helper_tc, test_dir):
@@ -151,7 +162,7 @@ class YoloConverterTest:
         parsed_dataset = Dataset.import_from(
             test_dir, self.IMPORTER.NAME, image_info={"1": (10, 15)}
         )
-        compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_cyrillic_and_spaces_in_filename(self, helper_tc, test_dir):
@@ -172,7 +183,7 @@ class YoloConverterTest:
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        compare_datasets(helper_tc, source_dataset, parsed_dataset, require_media=True)
+        self.compare_datasets(source_dataset, parsed_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     @pytest.mark.parametrize("save_media", [True, False])
@@ -188,7 +199,7 @@ class YoloConverterTest:
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=save_media)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_image_with_arbitrary_extension(self, helper_tc, test_dir):
@@ -208,7 +219,7 @@ class YoloConverterTest:
 
         self.CONVERTER.convert(dataset, test_dir, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        compare_datasets(helper_tc, dataset, parsed_dataset, require_media=True)
+        self.compare_datasets(dataset, parsed_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_inplace_save_writes_only_updated_data(self, helper_tc, test_dir):
@@ -241,8 +252,7 @@ class YoloConverterTest:
             "2.jpg",
         }
         assert set(os.listdir(osp.join(test_dir, "obj_valid_data"))) == set()
-        compare_datasets(
-            helper_tc,
+        self.compare_datasets(
             expected,
             Dataset.import_from(test_dir, "yolo"),
             require_media=True,
@@ -290,7 +300,7 @@ class YoloConverterTest:
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
 
         assert osp.isfile(osp.join(test_dir, "dataset_meta.json"))
-        compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_565)
     def test_can_save_and_load_with_custom_subset_name(self, helper_tc, test_dir):
@@ -312,7 +322,7 @@ class YoloConverterTest:
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
 
-        compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_565)
     @pytest.mark.parametrize("subset", ["backup", "classes"])
@@ -361,7 +371,7 @@ class YoloConverterTest:
             lines = f.readlines()
             assert "obj_valid_data/3.jpg\n" in lines
 
-        compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_export_rotated_bbox(self, test_dir):
@@ -424,7 +434,7 @@ class Yolo8ConverterTest(YoloConverterTest):
             lines = f.readlines()
             assert "images/valid/3.jpg\n" in lines
 
-        compare_datasets(helper_tc, source_dataset, parsed_dataset)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_inplace_save_writes_only_updated_data(self, helper_tc, test_dir):
@@ -460,8 +470,7 @@ class Yolo8ConverterTest(YoloConverterTest):
         }
         assert set(os.listdir(osp.join(test_dir, "images", "valid"))) == set()
         assert set(os.listdir(osp.join(test_dir, "labels", "valid"))) == set()
-        compare_datasets(
-            helper_tc,
+        self.compare_datasets(
             expected,
             Dataset.import_from(test_dir, self.IMPORTER.NAME),
             require_media=True,
@@ -512,7 +521,7 @@ class Yolo8SegmentationConverterTest(Yolo8ConverterTest):
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True, add_path_prefix=False)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        compare_datasets(helper_tc, expected_dataset, parsed_dataset)
+        self.compare_datasets(expected_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_export_rotated_bbox(self, test_dir, helper_tc):
@@ -554,7 +563,43 @@ class Yolo8SegmentationConverterTest(Yolo8ConverterTest):
         )
         dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        compare_datasets(helper_tc, expected_dataset, parsed_dataset)
+        self.compare_datasets(expected_dataset, parsed_dataset)
+
+
+class Yolo8ObbConverterTest(Yolo8ConverterTest):
+    CONVERTER = Yolo8ObbConverter
+    IMPORTER = Yolo8ObbImporter
+
+    def _generate_random_annotation(self, n_of_labels=10):
+        return self._generate_random_bbox(n_of_labels=n_of_labels, rotation=random.randint(10, 350))
+
+    def compare_datasets(self, expected, actual, **kwargs):
+        actual_copy = copy.deepcopy(actual)
+        compare_datasets(self.helper_tc, expected, actual, ignored_attrs=["rotation"], **kwargs)
+        for item_a, item_b in zip(expected, actual_copy):
+            for ann_a, ann_b in zip(item_a.annotations, item_b.annotations):
+                assert ("rotation" in ann_a.attributes) == ("rotation" in ann_b.attributes)
+                assert abs(ann_a.attributes.get("rotation", 0) - ann_b.attributes.get("rotation", 0)) < 0.01
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_export_rotated_bbox(self, test_dir):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[
+                        self._generate_random_bbox(n_of_labels=2, rotation=30.0),
+                    ],
+                ),
+            ],
+            categories=["a", "b"],
+        )
+        source_dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        assert abs(list(parsed_dataset)[0].annotations[0].attributes["rotation"] - 30) < 0.001
+        self.compare_datasets(source_dataset, parsed_dataset)
 
 
 class YoloImporterTest:
@@ -576,6 +621,7 @@ class YoloImporterTest:
         assert set(detected_formats) == {
             Yolo8Importer.NAME,
             Yolo8SegmentationImporter.NAME,
+            Yolo8ObbImporter.NAME,
         }
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -632,6 +678,29 @@ class YoloImporterTest:
         compare_datasets(helper_tc, expected_dataset, dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_obb(self, helper_tc):
+        dataset_dir = get_test_asset_path("yolo_dataset", "yolo8_obb")
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[
+                        Bbox(1, 2, 3, 4, label=2, attributes=dict(rotation=30)),
+                        Bbox(3, 2, 6, 2, label=4, attributes=dict(rotation=120)),
+                    ],
+                ),
+            ],
+            categories=["label_" + str(i) for i in range(10)],
+        )
+
+        dataset = Dataset.import_from(dataset_dir, "yolo8_obb")
+
+        assert abs(list(dataset)[0].annotations[0].attributes["rotation"] - 30) < 0.001
+        compare_datasets(helper_tc, expected_dataset, dataset, ignored_attrs=["rotation"])
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_with_exif_rotated_images(self, helper_tc, test_dir):
         expected_dataset = Dataset.from_iterable(
             [
@@ -672,6 +741,7 @@ class YoloImporterTest:
             ("yolo8", get_test_asset_path("yolo_dataset", "yolo8_with_subset_txt")),
             ("yolo8", get_test_asset_path("yolo_dataset", "yolo8_with_list_of_names")),
             ("yolo8_segmentation", get_test_asset_path("yolo_dataset", "yolo8_segmentation")),
+            ("yolo8_obb", get_test_asset_path("yolo_dataset", "yolo8_obb")),
         ],
     )
     def test_can_pickle(self, helper_tc, import_format, dataset_dir):
@@ -686,6 +756,8 @@ class YoloExtractorTest:
     def _prepare_dataset(self, path: str, export_format: str) -> Dataset:
         if export_format == "yolo8_segmentation":
             anno = Polygon(points=[1, 1, 2, 4, 4, 2, 8, 8], label=0)
+        elif export_format == "yolo8_obb":
+            anno = Bbox(1, 1, 2, 4, label=0, attributes=dict(rotation=30))
         else:
             anno = Bbox(1, 1, 2, 4, label=0)
         dataset = Dataset.from_iterable(
@@ -703,14 +775,16 @@ class YoloExtractorTest:
         return dataset
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    @pytest.mark.parametrize("export_format", ["yolo", "yolo8", "yolo8_segmentation"])
+    @pytest.mark.parametrize("export_format", ["yolo", "yolo8", "yolo8_segmentation", "yolo8_obb"])
     def test_can_parse(self, helper_tc, export_format, test_dir):
         expected = self._prepare_dataset(test_dir, export_format)
         actual = Dataset.import_from(test_dir, export_format)
-        compare_datasets(helper_tc, expected, actual)
+        if export_format == "yolo8_obb":
+            assert abs(list(actual)[0].annotations[0].attributes["rotation"] - 30) < 0.001
+        compare_datasets(helper_tc, expected, actual, ignored_attrs=["rotation"])
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    @pytest.mark.parametrize("extractor", [YoloExtractor, Yolo8Extractor])
+    @pytest.mark.parametrize("extractor", [YoloExtractor, Yolo8Extractor, Yolo8SegmentationExtractor, Yolo8ObbExtractor])
     def test_can_report_invalid_data_file(self, extractor, test_dir):
         with pytest.raises(DatasetImportError, match="Can't read dataset descriptor file"):
             extractor(test_dir)
@@ -722,6 +796,7 @@ class YoloExtractorTest:
             ("yolo", "obj_train_data"),
             ("yolo8", osp.join("labels", "train")),
             ("yolo8_segmentation", osp.join("labels", "train")),
+            ("yolo8_obb", osp.join("labels", "train")),
         ],
     )
     def test_can_report_invalid_ann_line_format(self, export_format, anno_dir, test_dir):
@@ -744,6 +819,11 @@ class YoloExtractorTest:
                 "yolo8_segmentation",
                 osp.join("labels", "train"),
                 "10 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5",
+            ),
+            (
+                    "yolo8_obb",
+                    osp.join("labels", "train"),
+                    "10 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5",
             ),
         ],
     )
@@ -816,11 +896,38 @@ class YoloExtractorTest:
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     @pytest.mark.parametrize(
+        "field, field_name",
+        [
+            (1, "bbox point 0 x"),
+            (2, "bbox point 0 y"),
+            (3, "bbox point 1 x"),
+            (4, "bbox point 1 y"),
+            (5, "bbox point 2 x"),
+            (6, "bbox point 2 y"),
+        ],
+    )
+    def test_can_report_invalid_field_type_oriented_bb(
+        self, field: int, field_name: str, test_dir
+    ):
+        self._prepare_dataset(test_dir, "yolo8_obb")
+        with open(osp.join(test_dir, "labels", "train", "a.txt"), "w") as f:
+            values = [0] + [0.5, 0.5] * 4
+            values[field] = "a"
+            f.write(" ".join(str(v) for v in values))
+
+        with pytest.raises(AnnotationImportError) as capture:
+            Dataset.import_from(test_dir, "yolo8_obb").init_cache()
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert field_name in str(capture.value.__cause__)
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    @pytest.mark.parametrize(
         "export_format, anno_dir",
         [
             ("yolo", "obj_train_data"),
             ("yolo8", osp.join("labels", "train")),
             ("yolo8_segmentation", osp.join("labels", "train")),
+            ("yolo8_obb", osp.join("labels", "train")),
         ],
     )
     def test_can_report_missing_ann_file(self, export_format, anno_dir, test_dir):
@@ -838,6 +945,7 @@ class YoloExtractorTest:
             ("yolo", "obj_train_data"),
             ("yolo8", osp.join("images", "train")),
             ("yolo8_segmentation", osp.join("images", "train")),
+            ("yolo8_obb", osp.join("images", "train")),
         ],
     )
     def test_can_report_missing_image_info(self, export_format, img_dir, test_dir):
@@ -850,7 +958,7 @@ class YoloExtractorTest:
         assert "Can't find image info" in str(capture.value.__cause__)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    @pytest.mark.parametrize("export_format", ["yolo", "yolo8"])
+    @pytest.mark.parametrize("export_format", ["yolo", "yolo8", "yolo8_segmentation", "yolo8_obb"])
     def test_can_report_missing_subset_info(self, export_format, test_dir):
         self._prepare_dataset(test_dir, export_format)
         os.remove(osp.join(test_dir, "train.txt"))

@@ -292,3 +292,14 @@ class Yolo8SegmentationConverter(Yolo8Converter):
         values = [value / size for value, size in zip(points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
         return "%s %s\n" % (anno.label, string_values)
+
+
+class Yolo8ObbConverter(Yolo8Converter):
+    @staticmethod
+    def _make_annotation_line(width: int, height: int, anno: Annotation) -> Optional[str]:
+        if anno.label is None or not isinstance(anno, Bbox):
+            return
+        points = _bbox_annotation_as_polygon(anno)
+        values = [value / size for value, size in zip(points, cycle((width, height)))]
+        string_values = " ".join("%.6f" % p for p in values)
+        return "%s %s\n" % (anno.label, string_values)

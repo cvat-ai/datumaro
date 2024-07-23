@@ -10,6 +10,7 @@ from datumaro import Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.plugins.yolo_format.extractor import (
     Yolo8Extractor,
+    Yolo8ObbExtractor,
     Yolo8SegmentationExtractor,
 )
 
@@ -38,3 +39,7 @@ class Yolo8Importer(Importer):
 
 class Yolo8SegmentationImporter(Yolo8Importer):
     EXTRACTOR = Yolo8SegmentationExtractor
+
+
+class Yolo8ObbImporter(Yolo8Importer):
+    EXTRACTOR = Yolo8ObbExtractor

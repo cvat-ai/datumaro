@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import os.path as osp
 import re
@@ -397,4 +398,44 @@ class Yolo8SegmentationExtractor(Yolo8Extractor):
         raise InvalidAnnotationError(
             f"Unexpected field count {len(parts)} in the polygon description. "
             "Expected odd number > 5 of fields for segment annotation (label, x1, y1, x2, y2, x3, y3, ...)"
+        )
+
+
+class Yolo8ObbExtractor(Yolo8Extractor):
+    def _load_one_annotation(
+        self, parts: List[str], image_height: int, image_width: int
+    ) -> Annotation:
+        if len(parts) != 9:
+            raise InvalidAnnotationError(
+                f"Unexpected field count {len(parts)} in the bbox description. "
+                "Expected 9 fields (label, x1, y1, x2, y2, x3, y3, x4, y4)."
+            )
+        label_id = self._parse_field(parts[0], int, "bbox label id")
+        if label_id not in self._categories[AnnotationType.label]:
+            raise UndeclaredLabelError(str(label_id))
+        points = [
+            self._parse_field(value, float, f"bbox point {idx // 2} {'x' if idx % 2 == 0 else 'y'}")
+            for idx, value in enumerate(parts[1:])
+        ]
+        scaled_points = [
+            value * size for value, size in zip(points, cycle((image_width, image_height)))
+        ]
+
+        x1, y1, x2, y2, x3, y3, x4, y4 = scaled_points
+        width = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+        height = math.sqrt((x2 - x3) ** 2 + (y2 - y3) ** 2)
+        rotation = math.atan2(y2 - y1, x2 - x1)
+        if rotation < 0:
+            rotation += math.pi * 2
+
+        center_x = sum(scaled_points[::2]) / 4
+        center_y = sum(scaled_points[1::2]) / 4
+
+        return Bbox(
+            x=center_x - width / 2,
+            y=center_y - height / 2,
+            w=width,
+            h=height,
+            label=label_id,
+            attributes=(dict(rotation=180 * rotation / math.pi) if abs(rotation) > 0.00001 else {}),
         )

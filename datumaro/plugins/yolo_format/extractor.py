@@ -369,6 +369,8 @@ class Yolo8Extractor(YoloExtractor):
         else:
             yield from subset_images_source
 
+
+class Yolo8SegmentationExtractor(Yolo8Extractor):
     def _load_segmentation_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Polygon:
@@ -390,12 +392,9 @@ class Yolo8Extractor(YoloExtractor):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
-        if len(parts) == 5:
-            return super()._load_one_annotation(parts, image_height, image_width)
-        elif len(parts) > 5 and len(parts) % 2 == 1:
+        if len(parts) > 5 and len(parts) % 2 == 1:
             return self._load_segmentation_annotation(parts, image_height, image_width)
         raise InvalidAnnotationError(
-            f"Unexpected field count {len(parts)} in the bbox description. "
-            "Expected 5 fields for box annotation (label, xc, yc, w, h) "
-            "or odd number > 5 of fields for segment annotation (label, x1, y1, x2, y2, x3, y3, ...)"
+            f"Unexpected field count {len(parts)} in the polygon description. "
+            "Expected odd number > 5 of fields for segment annotation (label, x1, y1, x2, y2, x3, y3, ...)"
         )

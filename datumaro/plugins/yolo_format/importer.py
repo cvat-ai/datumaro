@@ -8,9 +8,13 @@ from typing import Any, Dict, List
 
 from datumaro import Importer
 from datumaro.components.format_detection import FormatDetectionContext
+from datumaro.plugins.yolo_format.extractor import (
+    Yolo8Extractor,
+    Yolo8SegmentationExtractor,
+)
 
 
-class _YoloImporter(Importer):
+class YoloImporter(Importer):
     @classmethod
     def detect(cls, context: FormatDetectionContext) -> None:
         context.require_file("obj.data")
@@ -20,35 +24,17 @@ class _YoloImporter(Importer):
         return cls._find_sources_recursive(path, ".data", "yolo")
 
 
-class _Yolo8Importer(Importer):
+class Yolo8Importer(Importer):
+    EXTRACTOR = Yolo8Extractor
+
     @classmethod
     def detect(cls, context: FormatDetectionContext) -> None:
         context.require_file("data.yaml")
 
     @classmethod
     def find_sources(cls, path) -> List[Dict[str, Any]]:
-        return cls._find_sources_recursive(path, ".yaml", "yolo8")
+        return cls._find_sources_recursive(path, ".yaml", cls.EXTRACTOR.NAME)
 
 
-class YoloImporter(Importer):
-    SUB_IMPORTERS: List[Importer] = [
-        _YoloImporter,
-        _Yolo8Importer,
-    ]
-
-    @classmethod
-    def detect(cls, context: FormatDetectionContext) -> None:
-        with context.require_any():
-            for importer_cls in cls.SUB_IMPORTERS:
-                with context.alternative():
-                    return importer_cls.detect(context)
-
-        context.fail("Any yolo format is not detected.")
-
-    @classmethod
-    def find_sources(cls, path: str) -> List[Dict[str, Any]]:
-        for importer_cls in cls.SUB_IMPORTERS:
-            if sources := importer_cls.find_sources(path):
-                return sources
-
-        return []
+class Yolo8SegmentationImporter(Yolo8Importer):
+    EXTRACTOR = Yolo8SegmentationExtractor

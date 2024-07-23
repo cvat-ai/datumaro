@@ -39,14 +39,18 @@ from ...utils.assets import get_test_asset_path
 class YoloConverterTest:
     CONVERTER = YoloConverter
 
-    def _generate_random_annotation(self, n_of_labels=10):
+    def _generate_random_bbox(self, n_of_labels=10, **kwargs):
         return Bbox(
             x=random.randint(0, 4),
             y=random.randint(0, 4),
             w=random.randint(1, 4),
             h=random.randint(1, 4),
             label=random.randint(0, n_of_labels - 1),
+            attributes=kwargs,
         )
+
+    def _generate_random_annotation(self, n_of_labels=10, **kwargs):
+        return self._generate_random_bbox(n_of_labels=n_of_labels, **kwargs)
 
     @staticmethod
     def _make_image_path(test_dir: str, subset_name: str, image_id: str):
@@ -352,6 +356,26 @@ class YoloConverterTest:
 
         compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_export_rotated_bbox(self, test_dir):
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[
+                        self._generate_random_bbox(n_of_labels=2, rotation=30.0),
+                    ],
+                ),
+            ],
+            categories=["a", "b"],
+        )
+        with pytest.raises(DatasetExportError) as capture:
+            dataset.export(test_dir, self.CONVERTER.NAME)
+        assert isinstance(capture.value.__cause__, DatasetExportError)
+        assert "Can't export rotated bbox" in str(capture.value.__cause__)
+
 
 class Yolo8ConverterTest(YoloConverterTest):
     CONVERTER = Yolo8Converter
@@ -478,6 +502,48 @@ class Yolo8SegmentationConverterTest(Yolo8ConverterTest):
         )
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True, add_path_prefix=False)
+        parsed_dataset = Dataset.import_from(test_dir, "yolo")
+        compare_datasets(helper_tc, expected_dataset, parsed_dataset)
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_export_rotated_bbox(self, test_dir, helper_tc):
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[
+                        Bbox(
+                            x=1,
+                            y=2,
+                            w=3,
+                            h=4,
+                            label=0,
+                            attributes=dict(rotation=30.0),
+                        )
+                    ],
+                ),
+            ],
+            categories=["a", "b"],
+        )
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[
+                        Polygon(
+                            points=[2.2, 1.52, 4.8, 3.02, 2.8, 6.48, 0.2, 4.98],
+                            label=0,
+                        )
+                    ],
+                ),
+            ],
+            categories=["a", "b"],
+        )
+        dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, "yolo")
         compare_datasets(helper_tc, expected_dataset, parsed_dataset)
 

@@ -3,11 +3,12 @@
 # SPDX-License-Identifier: MIT
 
 import logging as log
+import math
 import os
 import os.path as osp
 from collections import OrderedDict
 from itertools import cycle
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -31,6 +32,34 @@ def _make_yolo_bbox(img_size, box):
     w = (box[2] - box[0]) / img_size[0]
     h = (box[3] - box[1]) / img_size[1]
     return x, y, w, h
+
+
+def _bbox_annotation_as_polygon(bbox: Bbox) -> List[float]:
+    points = bbox.as_polygon()
+
+    def rotate_point(x: float, y: float):
+        new_x = (
+            center_x
+            + math.cos(rotation_radians) * (x - center_x)
+            - math.sin(rotation_radians) * (y - center_y)
+        )
+        new_y = (
+            center_y
+            + math.sin(rotation_radians) * (x - center_x)
+            + math.cos(rotation_radians) * (y - center_y)
+        )
+        return new_x, new_y
+
+    if rotation := bbox.attributes.get("rotation"):
+        rotation_radians = rotation * math.pi / 180
+        center_x = bbox.x + bbox.w / 2
+        center_y = bbox.y + bbox.h / 2
+        points = [
+            coordinate
+            for x, y in zip(points[::2], points[1::2])
+            for coordinate in rotate_point(x, y)
+        ]
+    return points
 
 
 class YoloConverter(Converter):
@@ -180,6 +209,8 @@ class YoloConverter(Converter):
     def _make_annotation_line(width: int, height: int, anno: Annotation) -> Optional[str]:
         if not isinstance(anno, Bbox) or anno.label is None:
             return
+        if anno.attributes.get("rotation"):
+            raise DatasetExportError("Can't export rotated bbox")
 
         values = _make_yolo_bbox((width, height), anno.points)
         string_values = " ".join("%.6f" % p for p in values)
@@ -254,7 +285,7 @@ class Yolo8SegmentationConverter(Yolo8Converter):
         if isinstance(anno, Polygon):
             points = anno.points
         elif isinstance(anno, Bbox):
-            points = anno.as_polygon()
+            points = _bbox_annotation_as_polygon(anno)
         else:
             return
 

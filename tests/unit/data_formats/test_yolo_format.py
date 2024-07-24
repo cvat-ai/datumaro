@@ -92,43 +92,34 @@ class YoloConverterTest(CompareDatasetMixin):
     def _make_image_path(test_dir: str, subset_name: str, image_id: str):
         return osp.join(test_dir, f"obj_{subset_name}_data", image_id)
 
+    def _generate_random_dataset(self, recipes, n_of_labels=10):
+        items = [
+            DatasetItem(
+                id=recipe.get("id", index + 1),
+                subset=recipe.get("subset", "train"),
+                media=recipe.get(
+                    "media",
+                    Image(data=np.ones((random.randint(8, 10), random.randint(8, 10), 3))),
+                ),
+                annotations=[
+                    self._generate_random_annotation(n_of_labels=n_of_labels)
+                    for _ in range(recipe.get("annotations", 1))
+                ],
+            )
+            for index, recipe in enumerate(recipes)
+        ]
+        return Dataset.from_iterable(
+            items,
+            categories=["label_" + str(i) for i in range(n_of_labels)],
+        )
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load(self, helper_tc, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=1,
-                    subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-                DatasetItem(
-                    id=2,
-                    subset="train",
-                    media=Image(data=np.ones((10, 10, 3))),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-            ],
-            categories=["label_" + str(i) for i in range(10)],
-        )
+        source_dataset = self._generate_random_dataset([
+            {"annotations": 2},
+            {"annotations": 3},
+            {"annotations": 4},
+        ])
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
@@ -137,20 +128,12 @@ class YoloConverterTest(CompareDatasetMixin):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_image_info(self, helper_tc, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=1,
-                    subset="train",
-                    media=Image(path="1.jpg", size=(10, 15)),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-            ],
-            categories=["label_" + str(i) for i in range(10)],
-        )
+        source_dataset = self._generate_random_dataset([
+            {
+                "annotations": 2,
+                "media": Image(path="1.jpg", size=(10, 15)),
+            },
+        ])
 
         self.CONVERTER.convert(source_dataset, test_dir)
 
@@ -163,20 +146,12 @@ class YoloConverterTest(CompareDatasetMixin):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_load_dataset_with_exact_image_info(self, helper_tc, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=1,
-                    subset="train",
-                    media=Image(path="1.jpg", size=(10, 15)),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-            ],
-            categories=["label_" + str(i) for i in range(10)],
-        )
+        source_dataset = self._generate_random_dataset([
+            {
+                "annotations": 2,
+                "media": Image(path="1.jpg", size=(10, 15)),
+            },
+        ])
 
         self.CONVERTER.convert(source_dataset, test_dir)
         parsed_dataset = Dataset.import_from(
@@ -186,20 +161,12 @@ class YoloConverterTest(CompareDatasetMixin):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_cyrillic_and_spaces_in_filename(self, helper_tc, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id="кириллица с пробелом",
-                    subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-            ],
-            categories=["label_" + str(i) for i in range(10)],
-        )
+        source_dataset = self._generate_random_dataset([
+            {
+                "id": "кириллица с пробелом",
+                "annotations": 2,
+            },
+        ])
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
@@ -280,41 +247,12 @@ class YoloConverterTest(CompareDatasetMixin):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_with_meta_file(self, helper_tc, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=1,
-                    subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-                DatasetItem(
-                    id=2,
-                    subset="train",
-                    media=Image(data=np.ones((10, 10, 3))),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-            ],
-            categories=["label_" + str(i) for i in range(10)],
-        )
+        source_dataset = self._generate_random_dataset([
+            {"annotations": 2},
+            {"annotations": 3},
+            {"annotations": 4},
+        ])
+
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True, save_dataset_meta=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
@@ -324,20 +262,9 @@ class YoloConverterTest(CompareDatasetMixin):
 
     @mark_requirement(Requirements.DATUM_565)
     def test_can_save_and_load_with_custom_subset_name(self, helper_tc, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=3,
-                    subset="anything",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        self._generate_random_annotation(),
-                        self._generate_random_annotation(),
-                    ],
-                ),
-            ],
-            categories=["label_" + str(i) for i in range(10)],
-        )
+        source_dataset = self._generate_random_dataset([
+            {"annotations": 2, "subset": "anything", "id": 3},
+        ])
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
@@ -366,19 +293,9 @@ class YoloConverterTest(CompareDatasetMixin):
 
     @mark_requirement(Requirements.DATUM_609)
     def test_can_save_and_load_without_path_prefix(self, helper_tc, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        self._generate_random_annotation(n_of_labels=2),
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
+        source_dataset = self._generate_random_dataset([
+            {"subset": "valid", "id": 3},
+        ], n_of_labels=2)
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True, add_path_prefix=False)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
@@ -429,19 +346,9 @@ class Yolo8ConverterTest(YoloConverterTest):
 
     @mark_requirement(Requirements.DATUM_609)
     def test_can_save_and_load_without_path_prefix(self, helper_tc, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        self._generate_random_annotation(n_of_labels=2),
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
+        source_dataset = self._generate_random_dataset([
+            {"subset": "valid", "id": 3},
+        ], n_of_labels=2)
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True, add_path_prefix=False)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)

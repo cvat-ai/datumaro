@@ -763,12 +763,11 @@ class Yolo8ObbImporterTest(CompareDatasetsRotationMixin, Yolo8ImporterTest):
 
 
 class YoloExtractorTest:
-    def _prepare_dataset(self, path: str, export_format: str) -> Dataset:
-        if export_format == "yolo8_segmentation":
-            anno = Polygon(points=[1, 1, 2, 4, 4, 2, 8, 8], label=0)
-        elif export_format == "yolo8_obb":
-            anno = Bbox(1, 1, 2, 4, label=0, attributes=dict(rotation=30))
-        else:
+    IMPORTER = YoloImporter
+    EXTRACTOR = YoloExtractor
+
+    def _prepare_dataset(self, path: str, anno=None) -> Dataset:
+        if anno is None:
             anno = Bbox(1, 1, 2, 4, label=0)
         dataset = Dataset.from_iterable(
             [
@@ -781,71 +780,50 @@ class YoloExtractorTest:
             ],
             categories=["test"],
         )
-        dataset.export(path, export_format, save_media=True)
+        dataset.export(path, self.EXTRACTOR.NAME, save_media=True)
         return dataset
 
+    @staticmethod
+    def _get_annotation_dir(subset="train"):
+        return f"obj_{subset}_data"
+
+    @staticmethod
+    def _get_image_dir(subset="train"):
+        return f"obj_{subset}_data"
+
+    @staticmethod
+    def _make_some_annotation_values():
+        return [0.5, 0.5, 0.5, 0.5]
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    @pytest.mark.parametrize("export_format", ["yolo", "yolo8", "yolo8_segmentation", "yolo8_obb"])
-    def test_can_parse(self, helper_tc, export_format, test_dir):
-        expected = self._prepare_dataset(test_dir, export_format)
-        actual = Dataset.import_from(test_dir, export_format)
-        if export_format == "yolo8_obb":
-            assert abs(list(actual)[0].annotations[0].attributes["rotation"] - 30) < 0.001
-        compare_datasets(helper_tc, expected, actual, ignored_attrs=["rotation"])
+    def test_can_parse(self, helper_tc, test_dir):
+        expected = self._prepare_dataset(test_dir)
+        actual = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        compare_datasets(helper_tc, expected, actual)
 
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    @pytest.mark.parametrize(
-        "extractor", [YoloExtractor, Yolo8Extractor, Yolo8SegmentationExtractor, Yolo8ObbExtractor]
-    )
-    def test_can_report_invalid_data_file(self, extractor, test_dir):
+    def test_can_report_invalid_data_file(self, test_dir):
         with pytest.raises(DatasetImportError, match="Can't read dataset descriptor file"):
-            extractor(test_dir)
+            self.EXTRACTOR(test_dir)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    @pytest.mark.parametrize(
-        "export_format, anno_dir",
-        [
-            ("yolo", "obj_train_data"),
-            ("yolo8", osp.join("labels", "train")),
-            ("yolo8_segmentation", osp.join("labels", "train")),
-            ("yolo8_obb", osp.join("labels", "train")),
-        ],
-    )
-    def test_can_report_invalid_ann_line_format(self, export_format, anno_dir, test_dir):
-        self._prepare_dataset(test_dir, export_format)
-        with open(osp.join(test_dir, anno_dir, "a.txt"), "w") as f:
+    def test_can_report_invalid_ann_line_format(self, test_dir):
+        self._prepare_dataset(test_dir)
+        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
             f.write("1 2 3\n")
 
         with pytest.raises(AnnotationImportError) as capture:
-            Dataset.import_from(test_dir, export_format).init_cache()
+            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
         assert isinstance(capture.value.__cause__, InvalidAnnotationError)
         assert "Unexpected field count" in str(capture.value.__cause__)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    @pytest.mark.parametrize(
-        "export_format, anno_dir, line",
-        [
-            ("yolo", "obj_train_data", "10 0.5 0.5 0.5 0.5"),
-            ("yolo8", osp.join("labels", "train"), "10 0.5 0.5 0.5 0.5"),
-            (
-                "yolo8_segmentation",
-                osp.join("labels", "train"),
-                "10 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5",
-            ),
-            (
-                "yolo8_obb",
-                osp.join("labels", "train"),
-                "10 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5",
-            ),
-        ],
-    )
-    def test_can_report_invalid_label(self, export_format, anno_dir, test_dir, line):
-        self._prepare_dataset(test_dir, export_format)
-        with open(osp.join(test_dir, anno_dir, "a.txt"), "w") as f:
-            f.write(f"{line}\n")
+    def test_can_report_invalid_label(self, test_dir):
+        self._prepare_dataset(test_dir)
+        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
+            f.write(" ".join(str(v) for v in [10] + self._make_some_annotation_values()))
 
         with pytest.raises(AnnotationImportError) as capture:
-            Dataset.import_from(test_dir, export_format).init_cache()
+            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
         assert isinstance(capture.value.__cause__, UndeclaredLabelError)
         assert capture.value.__cause__.id == "10"
 
@@ -859,26 +837,83 @@ class YoloExtractorTest:
             (4, "bbox height"),
         ],
     )
-    @pytest.mark.parametrize(
-        "export_format, anno_dir",
-        [
-            ("yolo", "obj_train_data"),
-            ("yolo8", osp.join("labels", "train")),
-        ],
-    )
-    def test_can_report_invalid_field_type(
-        self, field, field_name, export_format, anno_dir, test_dir
-    ):
-        self._prepare_dataset(test_dir, export_format)
-        with open(osp.join(test_dir, anno_dir, "a.txt"), "w") as f:
-            values = [0, 0.5, 0.5, 0.5, 0.5]
+    def test_can_report_invalid_field_type(self, field, field_name, test_dir):
+        self._check_can_report_invalid_field_type(field, field_name, test_dir)
+
+    def _check_can_report_invalid_field_type(self, field, field_name, test_dir):
+        self._prepare_dataset(test_dir)
+        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
+            values = [0] + self._make_some_annotation_values()
             values[field] = "a"
             f.write(" ".join(str(v) for v in values))
 
         with pytest.raises(AnnotationImportError) as capture:
-            Dataset.import_from(test_dir, export_format).init_cache()
+            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
         assert isinstance(capture.value.__cause__, InvalidAnnotationError)
         assert field_name in str(capture.value.__cause__)
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_report_missing_ann_file(self, test_dir):
+        self._prepare_dataset(test_dir)
+        os.remove(osp.join(test_dir, self._get_annotation_dir(), "a.txt"))
+
+        with pytest.raises(ItemImportError) as capture:
+            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
+        assert isinstance(capture.value.__cause__, FileNotFoundError)
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_report_missing_image_info(self, test_dir):
+        self._prepare_dataset(test_dir)
+        os.remove(osp.join(test_dir, self._get_image_dir(), "a.jpg"))
+
+        with pytest.raises(ItemImportError) as capture:
+            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
+        assert isinstance(capture.value.__cause__, DatasetImportError)
+        assert "Can't find image info" in str(capture.value.__cause__)
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_report_missing_subset_info(self, test_dir):
+        self._prepare_dataset(test_dir)
+        os.remove(osp.join(test_dir, "train.txt"))
+
+        with pytest.raises(InvalidAnnotationError, match="subset list file"):
+            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
+
+
+class Yolo8ExtractorTest(YoloExtractorTest):
+    IMPORTER = Yolo8Importer
+    EXTRACTOR = Yolo8Extractor
+
+    @staticmethod
+    def _get_annotation_dir(subset="train"):
+        return osp.join("labels", subset)
+
+    @staticmethod
+    def _get_image_dir(subset="train"):
+        return osp.join("images", subset)
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_report_missing_subset_folder(self, test_dir):
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", self.IMPORTER.NAME), dataset_path)
+        shutil.rmtree(osp.join(dataset_path, "images", "train"))
+
+        with pytest.raises(InvalidAnnotationError, match="subset image folder"):
+            Dataset.import_from(dataset_path, self.IMPORTER.NAME).init_cache()
+
+
+class Yolo8SegmentationExtractorTest(Yolo8ExtractorTest):
+    IMPORTER = Yolo8SegmentationImporter
+    EXTRACTOR = Yolo8SegmentationExtractor
+
+    def _prepare_dataset(self, path: str, anno=None) -> Dataset:
+        return super()._prepare_dataset(
+            path, anno=Polygon(points=[1, 1, 2, 4, 4, 2, 8, 8], label=0)
+        )
+
+    @staticmethod
+    def _make_some_annotation_values():
+        return [0.5, 0.5] * 3
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     @pytest.mark.parametrize(
@@ -892,19 +927,29 @@ class YoloExtractorTest:
             (6, "polygon point 2 y"),
         ],
     )
-    def test_can_report_invalid_field_type_segmentation(
-        self, field: int, field_name: str, test_dir
-    ):
-        self._prepare_dataset(test_dir, "yolo8_segmentation")
-        with open(osp.join(test_dir, "labels", "train", "a.txt"), "w") as f:
-            values = [0] + [0.5, 0.5] * 3
-            values[field] = "a"
-            f.write(" ".join(str(v) for v in values))
+    def test_can_report_invalid_field_type(self, field, field_name, test_dir):
+        self._check_can_report_invalid_field_type(field, field_name, test_dir)
 
-        with pytest.raises(AnnotationImportError) as capture:
-            Dataset.import_from(test_dir, "yolo8_segmentation").init_cache()
-        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
-        assert field_name in str(capture.value.__cause__)
+
+class Yolo8ObbExtractorTest(Yolo8ExtractorTest):
+    IMPORTER = Yolo8ObbImporter
+    EXTRACTOR = Yolo8ObbExtractor
+
+    def _prepare_dataset(self, path: str, anno=None) -> Dataset:
+        return super()._prepare_dataset(
+            path, anno=Bbox(1, 1, 2, 4, label=0, attributes=dict(rotation=30))
+        )
+
+    @staticmethod
+    def _make_some_annotation_values():
+        return [0.5, 0.5] * 4
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_parse(self, helper_tc, test_dir):
+        expected = self._prepare_dataset(test_dir)
+        actual = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        assert abs(list(actual)[0].annotations[0].attributes["rotation"] - 30) < 0.001
+        compare_datasets(helper_tc, expected, actual, ignored_attrs=["rotation"])
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     @pytest.mark.parametrize(
@@ -918,69 +963,5 @@ class YoloExtractorTest:
             (6, "bbox point 2 y"),
         ],
     )
-    def test_can_report_invalid_field_type_oriented_bb(self, field: int, field_name: str, test_dir):
-        self._prepare_dataset(test_dir, "yolo8_obb")
-        with open(osp.join(test_dir, "labels", "train", "a.txt"), "w") as f:
-            values = [0] + [0.5, 0.5] * 4
-            values[field] = "a"
-            f.write(" ".join(str(v) for v in values))
-
-        with pytest.raises(AnnotationImportError) as capture:
-            Dataset.import_from(test_dir, "yolo8_obb").init_cache()
-        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
-        assert field_name in str(capture.value.__cause__)
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    @pytest.mark.parametrize(
-        "export_format, anno_dir",
-        [
-            ("yolo", "obj_train_data"),
-            ("yolo8", osp.join("labels", "train")),
-            ("yolo8_segmentation", osp.join("labels", "train")),
-            ("yolo8_obb", osp.join("labels", "train")),
-        ],
-    )
-    def test_can_report_missing_ann_file(self, export_format, anno_dir, test_dir):
-        self._prepare_dataset(test_dir, export_format)
-        os.remove(osp.join(test_dir, anno_dir, "a.txt"))
-
-        with pytest.raises(ItemImportError) as capture:
-            Dataset.import_from(test_dir, export_format).init_cache()
-        assert isinstance(capture.value.__cause__, FileNotFoundError)
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    @pytest.mark.parametrize(
-        "export_format, img_dir",
-        [
-            ("yolo", "obj_train_data"),
-            ("yolo8", osp.join("images", "train")),
-            ("yolo8_segmentation", osp.join("images", "train")),
-            ("yolo8_obb", osp.join("images", "train")),
-        ],
-    )
-    def test_can_report_missing_image_info(self, export_format, img_dir, test_dir):
-        self._prepare_dataset(test_dir, export_format)
-        os.remove(osp.join(test_dir, img_dir, "a.jpg"))
-
-        with pytest.raises(ItemImportError) as capture:
-            Dataset.import_from(test_dir, export_format).init_cache()
-        assert isinstance(capture.value.__cause__, DatasetImportError)
-        assert "Can't find image info" in str(capture.value.__cause__)
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    @pytest.mark.parametrize("export_format", ["yolo", "yolo8", "yolo8_segmentation", "yolo8_obb"])
-    def test_can_report_missing_subset_info(self, export_format, test_dir):
-        self._prepare_dataset(test_dir, export_format)
-        os.remove(osp.join(test_dir, "train.txt"))
-
-        with pytest.raises(InvalidAnnotationError, match="subset list file"):
-            Dataset.import_from(test_dir, export_format).init_cache()
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_missing_subset_folder(self, test_dir):
-        dataset_path = osp.join(test_dir, "dataset")
-        shutil.copytree(get_test_asset_path("yolo_dataset", "yolo8"), dataset_path)
-        shutil.rmtree(osp.join(dataset_path, "images", "train"))
-
-        with pytest.raises(InvalidAnnotationError, match="subset image folder"):
-            Dataset.import_from(dataset_path, "yolo8").init_cache()
+    def test_can_report_invalid_field_type(self, field, field_name, test_dir):
+        self._check_can_report_invalid_field_type(field, field_name, test_dir)

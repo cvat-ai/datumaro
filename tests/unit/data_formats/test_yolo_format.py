@@ -8,6 +8,7 @@ import shutil
 import numpy as np
 import pytest
 import yaml
+from PIL import ExifTags
 from PIL import Image as PILImage
 
 from datumaro.components.annotation import Bbox, Polygon
@@ -29,8 +30,12 @@ from datumaro.plugins.yolo_format.converter import (
     Yolo8SegmentationConverter,
     YoloConverter,
 )
-from datumaro.plugins.yolo_format.extractor import Yolo8Extractor, YoloExtractor, Yolo8SegmentationExtractor, \
-    Yolo8ObbExtractor
+from datumaro.plugins.yolo_format.extractor import (
+    Yolo8Extractor,
+    Yolo8ObbExtractor,
+    Yolo8SegmentationExtractor,
+    YoloExtractor,
+)
 from datumaro.plugins.yolo_format.importer import (
     Yolo8Importer,
     Yolo8ObbImporter,
@@ -44,16 +49,31 @@ from ...requirements import Requirements, mark_requirement
 from ...utils.assets import get_test_asset_path
 
 
-class YoloConverterTest:
-    CONVERTER = YoloConverter
-    IMPORTER = YoloImporter
-
+class CompareDatasetMixin:
     @pytest.fixture(autouse=True)
     def setup(self, helper_tc):
         self.helper_tc = helper_tc
 
     def compare_datasets(self, *args, **kwargs):
         compare_datasets(self.helper_tc, *args, **kwargs)
+
+
+class CompareDatasetsRotationMixin(CompareDatasetMixin):
+    def compare_datasets(self, expected, actual, **kwargs):
+        actual_copy = copy.deepcopy(actual)
+        compare_datasets(self.helper_tc, expected, actual, ignored_attrs=["rotation"], **kwargs)
+        for item_a, item_b in zip(expected, actual_copy):
+            for ann_a, ann_b in zip(item_a.annotations, item_b.annotations):
+                assert ("rotation" in ann_a.attributes) == ("rotation" in ann_b.attributes)
+                assert (
+                    abs(ann_a.attributes.get("rotation", 0) - ann_b.attributes.get("rotation", 0))
+                    < 0.01
+                )
+
+
+class YoloConverterTest(CompareDatasetMixin):
+    CONVERTER = YoloConverter
+    IMPORTER = YoloImporter
 
     def _generate_random_bbox(self, n_of_labels=10, **kwargs):
         return Bbox(
@@ -566,20 +586,12 @@ class Yolo8SegmentationConverterTest(Yolo8ConverterTest):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
 
-class Yolo8ObbConverterTest(Yolo8ConverterTest):
+class Yolo8ObbConverterTest(CompareDatasetsRotationMixin, Yolo8ConverterTest):
     CONVERTER = Yolo8ObbConverter
     IMPORTER = Yolo8ObbImporter
 
     def _generate_random_annotation(self, n_of_labels=10):
         return self._generate_random_bbox(n_of_labels=n_of_labels, rotation=random.randint(10, 350))
-
-    def compare_datasets(self, expected, actual, **kwargs):
-        actual_copy = copy.deepcopy(actual)
-        compare_datasets(self.helper_tc, expected, actual, ignored_attrs=["rotation"], **kwargs)
-        for item_a, item_b in zip(expected, actual_copy):
-            for ann_a, ann_b in zip(item_a.annotations, item_b.annotations):
-                assert ("rotation" in ann_a.attributes) == ("rotation" in ann_b.attributes)
-                assert abs(ann_a.attributes.get("rotation", 0) - ann_b.attributes.get("rotation", 0)) < 0.01
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_export_rotated_bbox(self, test_dir):
@@ -602,41 +614,18 @@ class Yolo8ObbConverterTest(Yolo8ConverterTest):
         self.compare_datasets(source_dataset, parsed_dataset)
 
 
-class YoloImporterTest:
-    def test_can_detect_yolo(self):
+class YoloImporterTest(CompareDatasetMixin):
+    IMPORTER = YoloImporter
+    ASSETS = ["yolo"]
+
+    def test_can_detect(self):
         dataset_dir = get_test_asset_path("yolo_dataset", "yolo")
         detected_formats = Environment().detect_dataset(dataset_dir)
-        assert detected_formats == [YoloImporter.NAME]
+        assert detected_formats == [self.IMPORTER.NAME]
 
-    @pytest.mark.parametrize(
-        "dataset_dir",
-        [
-            get_test_asset_path("yolo_dataset", child)
-            for child in os.listdir(get_test_asset_path("yolo_dataset"))
-            if child.startswith("yolo8")
-        ],
-    )
-    def test_can_detect_yolo8(self, dataset_dir: str):
-        detected_formats = Environment().detect_dataset(dataset_dir)
-        assert set(detected_formats) == {
-            Yolo8Importer.NAME,
-            Yolo8SegmentationImporter.NAME,
-            Yolo8ObbImporter.NAME,
-        }
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    @pytest.mark.parametrize(
-        "import_format, dataset_dir",
-        [
-            ("yolo", get_test_asset_path("yolo_dataset", "yolo")),
-            ("yolo8", get_test_asset_path("yolo_dataset", "yolo8")),
-            ("yolo8", get_test_asset_path("yolo_dataset", "yolo8_with_list_of_imgs")),
-            ("yolo8", get_test_asset_path("yolo_dataset", "yolo8_with_subset_txt")),
-            ("yolo8", get_test_asset_path("yolo_dataset", "yolo8_with_list_of_names")),
-        ],
-    )
-    def test_can_import(self, helper_tc, import_format, dataset_dir):
-        expected_dataset = Dataset.from_iterable(
+    @staticmethod
+    def _asset_dataset():
+        return Dataset.from_iterable(
             [
                 DatasetItem(
                     id=1,
@@ -651,54 +640,13 @@ class YoloImporterTest:
             categories=["label_" + str(i) for i in range(10)],
         )
 
-        dataset = Dataset.import_from(dataset_dir, import_format)
-
-        compare_datasets(helper_tc, expected_dataset, dataset)
-
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_segmentation(self, helper_tc):
-        dataset_dir = get_test_asset_path("yolo_dataset", "yolo8_segmentation")
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=1,
-                    subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
-                    annotations=[
-                        Polygon([1.5, 1.0, 6.0, 1.0, 6.0, 5.0], label=2),
-                        Polygon([3.0, 1.5, 6.0, 1.5, 6.0, 7.5, 4.5, 7.5, 3.75, 3.0], label=4),
-                    ],
-                ),
-            ],
-            categories=["label_" + str(i) for i in range(10)],
-        )
-
-        dataset = Dataset.import_from(dataset_dir, "yolo8_segmentation")
-
-        compare_datasets(helper_tc, expected_dataset, dataset)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_obb(self, helper_tc):
-        dataset_dir = get_test_asset_path("yolo_dataset", "yolo8_obb")
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=1,
-                    subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
-                    annotations=[
-                        Bbox(1, 2, 3, 4, label=2, attributes=dict(rotation=30)),
-                        Bbox(3, 2, 6, 2, label=4, attributes=dict(rotation=120)),
-                    ],
-                ),
-            ],
-            categories=["label_" + str(i) for i in range(10)],
-        )
-
-        dataset = Dataset.import_from(dataset_dir, "yolo8_obb")
-
-        assert abs(list(dataset)[0].annotations[0].attributes["rotation"] - 30) < 0.001
-        compare_datasets(helper_tc, expected_dataset, dataset, ignored_attrs=["rotation"])
+    def test_can_import(self, helper_tc):
+        expected_dataset = self._asset_dataset()
+        for asset in self.ASSETS:
+            dataset_dir = get_test_asset_path("yolo_dataset", asset)
+            dataset = Dataset.import_from(dataset_dir, self.IMPORTER.NAME)
+            self.compare_datasets(expected_dataset, dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_with_exif_rotated_images(self, helper_tc, test_dir):
@@ -724,32 +672,94 @@ class YoloImporterTest:
         image_path = osp.join(dataset_path, "obj_train_data", "1.jpg")
         img = PILImage.open(image_path)
         exif = img.getexif()
-        exif.update([(296, 3), (282, 28.0), (531, 1), (274, 6), (283, 28.0)])
+        exif.update(
+            [
+                (ExifTags.Base.ResolutionUnit, 3),
+                (ExifTags.Base.XResolution, 28.0),
+                (ExifTags.Base.YCbCrPositioning, 1),
+                (ExifTags.Base.Orientation, 6),
+                (ExifTags.Base.YResolution, 28.0),
+            ]
+        )
         img.save(image_path, exif=exif)
 
         dataset = Dataset.import_from(dataset_path, "yolo")
 
-        compare_datasets(helper_tc, expected_dataset, dataset, require_media=True)
+        self.compare_datasets(expected_dataset, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_673)
-    @pytest.mark.parametrize(
-        "import_format, dataset_dir",
-        [
-            ("yolo", get_test_asset_path("yolo_dataset", "yolo")),
-            ("yolo8", get_test_asset_path("yolo_dataset", "yolo8")),
-            ("yolo8", get_test_asset_path("yolo_dataset", "yolo8_with_list_of_imgs")),
-            ("yolo8", get_test_asset_path("yolo_dataset", "yolo8_with_subset_txt")),
-            ("yolo8", get_test_asset_path("yolo_dataset", "yolo8_with_list_of_names")),
-            ("yolo8_segmentation", get_test_asset_path("yolo_dataset", "yolo8_segmentation")),
-            ("yolo8_obb", get_test_asset_path("yolo_dataset", "yolo8_obb")),
-        ],
-    )
-    def test_can_pickle(self, helper_tc, import_format, dataset_dir):
-        source = Dataset.import_from(dataset_dir, format=import_format)
+    def test_can_pickle(self, helper_tc):
+        for asset in self.ASSETS:
+            dataset_dir = get_test_asset_path("yolo_dataset", asset)
+            source = Dataset.import_from(dataset_dir, format=self.IMPORTER.NAME)
+            parsed = pickle.loads(pickle.dumps(source))  # nosec
+            compare_datasets_strict(helper_tc, source, parsed)
 
-        parsed = pickle.loads(pickle.dumps(source))  # nosec
 
-        compare_datasets_strict(helper_tc, source, parsed)
+class Yolo8ImporterTest(YoloImporterTest):
+    IMPORTER = Yolo8Importer
+    ASSETS = [
+        "yolo8",
+        "yolo8_with_list_of_imgs",
+        "yolo8_with_subset_txt",
+        "yolo8_with_list_of_names",
+    ]
+
+    def test_can_detect(self):
+        for asset in self.ASSETS:
+            dataset_dir = get_test_asset_path("yolo_dataset", asset)
+            detected_formats = Environment().detect_dataset(dataset_dir)
+            assert set(detected_formats) == {
+                Yolo8Importer.NAME,
+                Yolo8SegmentationImporter.NAME,
+                Yolo8ObbImporter.NAME,
+            }
+
+
+class Yolo8SegmentationImporterTest(Yolo8ImporterTest):
+    IMPORTER = Yolo8SegmentationImporter
+    ASSETS = [
+        "yolo8_segmentation",
+    ]
+
+    @staticmethod
+    def _asset_dataset():
+        return Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[
+                        Polygon([1.5, 1.0, 6.0, 1.0, 6.0, 5.0], label=2),
+                        Polygon([3.0, 1.5, 6.0, 1.5, 6.0, 7.5, 4.5, 7.5, 3.75, 3.0], label=4),
+                    ],
+                ),
+            ],
+            categories=["label_" + str(i) for i in range(10)],
+        )
+
+
+class Yolo8ObbImporterTest(CompareDatasetsRotationMixin, Yolo8ImporterTest):
+    IMPORTER = Yolo8ObbImporter
+    ASSETS = ["yolo8_obb"]
+
+    @staticmethod
+    def _asset_dataset():
+        return Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[
+                        Bbox(1, 2, 3, 4, label=2, attributes=dict(rotation=30)),
+                        Bbox(3, 2, 6, 2, label=4, attributes=dict(rotation=120)),
+                    ],
+                ),
+            ],
+            categories=["label_" + str(i) for i in range(10)],
+        )
 
 
 class YoloExtractorTest:
@@ -784,7 +794,9 @@ class YoloExtractorTest:
         compare_datasets(helper_tc, expected, actual, ignored_attrs=["rotation"])
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    @pytest.mark.parametrize("extractor", [YoloExtractor, Yolo8Extractor, Yolo8SegmentationExtractor, Yolo8ObbExtractor])
+    @pytest.mark.parametrize(
+        "extractor", [YoloExtractor, Yolo8Extractor, Yolo8SegmentationExtractor, Yolo8ObbExtractor]
+    )
     def test_can_report_invalid_data_file(self, extractor, test_dir):
         with pytest.raises(DatasetImportError, match="Can't read dataset descriptor file"):
             extractor(test_dir)
@@ -821,9 +833,9 @@ class YoloExtractorTest:
                 "10 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5",
             ),
             (
-                    "yolo8_obb",
-                    osp.join("labels", "train"),
-                    "10 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5",
+                "yolo8_obb",
+                osp.join("labels", "train"),
+                "10 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5",
             ),
         ],
     )
@@ -906,9 +918,7 @@ class YoloExtractorTest:
             (6, "bbox point 2 y"),
         ],
     )
-    def test_can_report_invalid_field_type_oriented_bb(
-        self, field: int, field_name: str, test_dir
-    ):
+    def test_can_report_invalid_field_type_oriented_bb(self, field: int, field_name: str, test_dir):
         self._prepare_dataset(test_dir, "yolo8_obb")
         with open(osp.join(test_dir, "labels", "train", "a.txt"), "w") as f:
             values = [0] + [0.5, 0.5] * 4

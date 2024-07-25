@@ -60,13 +60,17 @@ from ...requirements import Requirements, mark_requirement
 from ...utils.assets import get_test_asset_path
 
 
+def randint(a, b):
+    return random.randint(a, b)  # nosec B311
+
+
 class CompareDatasetMixin:
     @pytest.fixture(autouse=True)
     def setup(self, helper_tc):
         self.helper_tc = helper_tc
 
-    def compare_datasets(self, *args, **kwargs):
-        compare_datasets(self.helper_tc, *args, **kwargs)
+    def compare_datasets(self, expected, actual, **kwargs):
+        compare_datasets(self.helper_tc, expected, actual, **kwargs)
 
 
 class CompareDatasetsRotationMixin(CompareDatasetMixin):
@@ -88,11 +92,11 @@ class YoloConverterTest(CompareDatasetMixin):
 
     def _generate_random_bbox(self, n_of_labels=10, **kwargs):
         return Bbox(
-            x=random.randint(0, 4),
-            y=random.randint(0, 4),
-            w=random.randint(1, 4),
-            h=random.randint(1, 4),
-            label=random.randint(0, n_of_labels - 1),
+            x=randint(0, 4),
+            y=randint(0, 4),
+            w=randint(1, 4),
+            h=randint(1, 4),
+            label=randint(0, n_of_labels - 1),
             attributes=kwargs,
         )
 
@@ -110,7 +114,7 @@ class YoloConverterTest(CompareDatasetMixin):
                 subset=recipe.get("subset", "train"),
                 media=recipe.get(
                     "media",
-                    Image(data=np.ones((random.randint(8, 10), random.randint(8, 10), 3))),
+                    Image(data=np.ones((randint(8, 10), randint(8, 10), 3))),
                 ),
                 annotations=[
                     self._generate_random_annotation(n_of_labels=n_of_labels)
@@ -125,7 +129,7 @@ class YoloConverterTest(CompareDatasetMixin):
         )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_and_load(self, helper_tc, test_dir):
+    def test_can_save_and_load(self, test_dir):
         source_dataset = self._generate_random_dataset(
             [
                 {"annotations": 2},
@@ -140,7 +144,7 @@ class YoloConverterTest(CompareDatasetMixin):
         self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_dataset_with_image_info(self, helper_tc, test_dir):
+    def test_can_save_dataset_with_image_info(self, test_dir):
         source_dataset = self._generate_random_dataset(
             [
                 {
@@ -160,7 +164,7 @@ class YoloConverterTest(CompareDatasetMixin):
         self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_load_dataset_with_exact_image_info(self, helper_tc, test_dir):
+    def test_can_load_dataset_with_exact_image_info(self, test_dir):
         source_dataset = self._generate_random_dataset(
             [
                 {
@@ -177,7 +181,7 @@ class YoloConverterTest(CompareDatasetMixin):
         self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_dataset_with_cyrillic_and_spaces_in_filename(self, helper_tc, test_dir):
+    def test_can_save_dataset_with_cyrillic_and_spaces_in_filename(self, test_dir):
         source_dataset = self._generate_random_dataset(
             [
                 {
@@ -193,7 +197,7 @@ class YoloConverterTest(CompareDatasetMixin):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     @pytest.mark.parametrize("save_media", [True, False])
-    def test_relative_paths(self, helper_tc, save_media, test_dir):
+    def test_relative_paths(self, save_media, test_dir):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(id="1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
@@ -208,7 +212,7 @@ class YoloConverterTest(CompareDatasetMixin):
         self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_and_load_image_with_arbitrary_extension(self, helper_tc, test_dir):
+    def test_can_save_and_load_image_with_arbitrary_extension(self, test_dir):
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -228,7 +232,7 @@ class YoloConverterTest(CompareDatasetMixin):
         self.compare_datasets(dataset, parsed_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_inplace_save_writes_only_updated_data(self, helper_tc, test_dir):
+    def test_inplace_save_writes_only_updated_data(self, test_dir):
         expected = Dataset.from_iterable(
             [
                 DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
@@ -245,12 +249,15 @@ class YoloConverterTest(CompareDatasetMixin):
             ],
             categories=[],
         )
-        dataset.export(test_dir, "yolo", save_media=True)
+        dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
 
         dataset.put(DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))))
         dataset.remove(3, "valid")
         dataset.save(save_media=True)
 
+        self._check_inplace_save_writes_only_updated_data(test_dir, expected)
+
+    def _check_inplace_save_writes_only_updated_data(self, test_dir, expected):
         assert set(os.listdir(osp.join(test_dir, "obj_train_data"))) == {
             "1.txt",
             "2.txt",
@@ -265,7 +272,7 @@ class YoloConverterTest(CompareDatasetMixin):
         )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_and_load_with_meta_file(self, helper_tc, test_dir):
+    def test_can_save_and_load_with_meta_file(self, test_dir):
         source_dataset = self._generate_random_dataset(
             [
                 {"annotations": 2},
@@ -281,7 +288,7 @@ class YoloConverterTest(CompareDatasetMixin):
         self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_565)
-    def test_can_save_and_load_with_custom_subset_name(self, helper_tc, test_dir):
+    def test_can_save_and_load_with_custom_subset_name(self, test_dir):
         source_dataset = self._generate_random_dataset(
             [
                 {"annotations": 2, "subset": "anything", "id": 3},
@@ -314,7 +321,7 @@ class YoloConverterTest(CompareDatasetMixin):
             self.CONVERTER.convert(dataset, test_dir)
 
     @mark_requirement(Requirements.DATUM_609)
-    def test_can_save_and_load_without_path_prefix(self, helper_tc, test_dir):
+    def test_can_save_and_load_without_path_prefix(self, test_dir):
         source_dataset = self._generate_random_dataset(
             [
                 {"subset": "valid", "id": 3},
@@ -370,7 +377,7 @@ class Yolo8ConverterTest(YoloConverterTest):
         self._check_cant_save_with_reserved_subset_name(test_dir, subset)
 
     @mark_requirement(Requirements.DATUM_609)
-    def test_can_save_and_load_without_path_prefix(self, helper_tc, test_dir):
+    def test_can_save_and_load_without_path_prefix(self, test_dir):
         source_dataset = self._generate_random_dataset(
             [
                 {"subset": "valid", "id": 3},
@@ -391,30 +398,7 @@ class Yolo8ConverterTest(YoloConverterTest):
 
         self.compare_datasets(source_dataset, parsed_dataset)
 
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_inplace_save_writes_only_updated_data(self, helper_tc, test_dir):
-        expected = Dataset.from_iterable(
-            [
-                DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
-                DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))),
-            ],
-            categories=[],
-        )
-
-        dataset = Dataset.from_iterable(
-            [
-                DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
-                DatasetItem(2, subset="train", media=Image(path="2.jpg", size=(3, 2))),
-                DatasetItem(3, subset="valid", media=Image(data=np.ones((2, 2, 3)))),
-            ],
-            categories=[],
-        )
-        dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
-
-        dataset.put(DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))))
-        dataset.remove(3, "valid")
-        dataset.save(save_media=True)
-
+    def _check_inplace_save_writes_only_updated_data(self, test_dir, expected):
         assert set(os.listdir(osp.join(test_dir, "images", "train"))) == {
             "1.jpg",
             "2.jpg",
@@ -438,12 +422,12 @@ class Yolo8SegmentationConverterTest(Yolo8ConverterTest):
 
     def _generate_random_annotation(self, n_of_labels=10):
         return Polygon(
-            points=[random.randint(0, 6) for _ in range(random.randint(3, 7) * 2)],
-            label=random.randint(0, n_of_labels - 1),
+            points=[randint(0, 6) for _ in range(randint(3, 7) * 2)],
+            label=randint(0, n_of_labels - 1),
         )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_bbox_but_load_polygon(self, helper_tc, test_dir):
+    def test_can_save_bbox_but_load_polygon(self, test_dir):
         bbox = Bbox(1, 2, 3, 4, label=1)
         source_dataset = Dataset.from_iterable(
             [
@@ -479,7 +463,7 @@ class Yolo8SegmentationConverterTest(Yolo8ConverterTest):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_export_rotated_bbox(self, test_dir, helper_tc):
+    def test_export_rotated_bbox(self, test_dir):
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -526,7 +510,7 @@ class Yolo8ObbConverterTest(CompareDatasetsRotationMixin, Yolo8ConverterTest):
     IMPORTER = Yolo8ObbImporter
 
     def _generate_random_annotation(self, n_of_labels=10):
-        return self._generate_random_bbox(n_of_labels=n_of_labels, rotation=random.randint(10, 350))
+        return self._generate_random_bbox(n_of_labels=n_of_labels, rotation=randint(10, 350))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_export_rotated_bbox(self, test_dir):
@@ -554,12 +538,12 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
     IMPORTER = Yolo8PoseImporter
 
     def _generate_random_skeleton_annotation(self, skeleton_label_to_point_labels, n_of_labels=10):
-        label_id = random.choice(list(skeleton_label_to_point_labels.keys()))
+        label_id = random.choice(list(skeleton_label_to_point_labels.keys()))  # nosec B311
         return Skeleton(
             [
                 Points(
-                    [random.randint(1, 7), random.randint(1, 7)],
-                    [random.randint(0, 2)],
+                    [randint(1, 7), randint(1, 7)],
+                    [randint(0, 2)],
                     label=label,
                 )
                 for label in skeleton_label_to_point_labels[label_id]
@@ -568,7 +552,7 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
         )
 
     def _generate_random_dataset(self, recipes, n_of_labels=10):
-        n_of_points_in_skeleton = random.randint(3, 8)
+        n_of_points_in_skeleton = randint(3, 8)
         labels = [f"skeleton_label_{index}" for index in range(n_of_labels)] + [
             (f"skeleton_label_{parent_index}_point_{point_index}", f"skeleton_label_{parent_index}")
             for parent_index in range(n_of_labels)
@@ -589,7 +573,7 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
                 subset=recipe.get("subset", "train"),
                 media=recipe.get(
                     "media",
-                    Image(data=np.ones((random.randint(8, 10), random.randint(8, 10), 3))),
+                    Image(data=np.ones((randint(8, 10), randint(8, 10), 3))),
                 ),
                 annotations=[
                     self._generate_random_skeleton_annotation(
@@ -624,11 +608,11 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
             },
         )
 
-    def test_export_rotated_bbox(self):
+    def test_export_rotated_bbox(self, test_dir):
         pass
 
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_loses_skeleton_edges_and_point_labels_on_save_load_without_meta_file(self, test_dir):
+    @staticmethod
+    def _make_dataset_with_edges_and_point_labels():
         items = [
             DatasetItem(
                 id="1",
@@ -645,7 +629,7 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
                 ],
             ),
         ]
-        source_dataset = Dataset.from_iterable(
+        return Dataset.from_iterable(
             items,
             categories={
                 AnnotationType.label: LabelCategories.from_iterable(
@@ -660,8 +644,12 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
                 ),
             },
         )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_loses_skeleton_edges_and_point_labels_on_save_load_without_meta_file(self, test_dir):
+        source_dataset = self._make_dataset_with_edges_and_point_labels()
         expected_dataset = Dataset.from_iterable(
-            items,
+            list(source_dataset),
             categories={
                 AnnotationType.label: LabelCategories.from_iterable(
                     [
@@ -680,38 +668,8 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_and_load_with_meta_file(self, helper_tc, test_dir):
-        items = [
-            DatasetItem(
-                id="1",
-                subset="train",
-                media=Image(data=np.ones((5, 10, 3))),
-                annotations=[
-                    Skeleton(
-                        [
-                            Points([1.5, 2.0], [2], label=1),
-                            Points([4.5, 4.0], [2], label=2),
-                        ],
-                        label=0,
-                    ),
-                ],
-            ),
-        ]
-        source_dataset = Dataset.from_iterable(
-            items,
-            categories={
-                AnnotationType.label: LabelCategories.from_iterable(
-                    [
-                        "skeleton_label",
-                        ("point_label_1", "skeleton_label"),
-                        ("point_label_2", "skeleton_label"),
-                    ]
-                ),
-                AnnotationType.points: PointsCategories.from_iterable(
-                    [(0, ["point_label_1", "point_label_2"], {(0, 1)})],
-                ),
-            },
-        )
+    def test_can_save_and_load_with_meta_file(self, test_dir):
+        source_dataset = self._make_dataset_with_edges_and_point_labels()
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True, save_dataset_meta=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         assert osp.isfile(osp.join(test_dir, "dataset_meta.json"))
@@ -745,7 +703,7 @@ class YoloImporterTest(CompareDatasetMixin):
         )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import(self, helper_tc):
+    def test_can_import(self):
         expected_dataset = self._asset_dataset()
         for asset in self.ASSETS:
             dataset_dir = get_test_asset_path("yolo_dataset", asset)
@@ -753,7 +711,7 @@ class YoloImporterTest(CompareDatasetMixin):
             self.compare_datasets(expected_dataset, dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_with_exif_rotated_images(self, helper_tc, test_dir):
+    def test_can_import_with_exif_rotated_images(self, test_dir):
         expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -1129,12 +1087,23 @@ class Yolo8ObbExtractorTest(Yolo8ExtractorTest):
     def test_can_report_invalid_field_type(self, field, field_name, test_dir):
         self._check_can_report_invalid_field_type(field, field_name, test_dir)
 
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_report_invalid_shape(self, test_dir):
+        self._prepare_dataset(test_dir)
+        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
+            f.write("0 0.1 0.1 0.5 0.1 0.5 0.5 0.5 0.2")
+
+        with pytest.raises(AnnotationImportError) as capture:
+            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert "Given points do not form a rectangle" in str(capture.value.__cause__)
+
 
 class Yolo8PoseExtractorTest(Yolo8ExtractorTest):
     IMPORTER = Yolo8PoseImporter
     EXTRACTOR = Yolo8PoseExtractor
 
-    def _prepare_dataset(self, path: str) -> Dataset:
+    def _prepare_dataset(self, path: str, anno=None) -> Dataset:
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(

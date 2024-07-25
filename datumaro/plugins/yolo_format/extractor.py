@@ -42,7 +42,7 @@ from datumaro.util.image import (
 from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_meta_file
 from datumaro.util.os_util import split_path
 
-from ...util import parse_json_file
+from ...util import parse_json_file, take_by
 from .format import Yolo8Path, Yolo8PoseFormat, YoloPath
 
 T = TypeVar("T")
@@ -419,6 +419,18 @@ class Yolo8SegmentationExtractor(Yolo8Extractor):
 
 
 class Yolo8ObbExtractor(Yolo8Extractor):
+    @staticmethod
+    def _check_is_rectangle(p1, p2, p3, p4):
+        p12_angle = math.atan2(p2[0] - p1[0], p2[1] - p1[1])
+        p23_angle = math.atan2(p3[0] - p2[0], p3[1] - p2[1])
+        p43_angle = math.atan2(p3[0] - p4[0], p3[1] - p4[1])
+        p14_angle = math.atan2(p4[0] - p1[0], p4[1] - p1[1])
+
+        if abs(p12_angle - p43_angle) > 0.001 or abs(p23_angle - p14_angle) > 0.001:
+            raise InvalidAnnotationError(
+                "Given points do not form a rectangle: opposite sides have different slope angles."
+            )
+
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -431,22 +443,24 @@ class Yolo8ObbExtractor(Yolo8Extractor):
         if label_id not in self._categories[AnnotationType.label]:
             raise UndeclaredLabelError(str(label_id))
         points = [
-            self._parse_field(value, float, f"bbox point {idx // 2} {'x' if idx % 2 == 0 else 'y'}")
-            for idx, value in enumerate(parts[1:])
+            (
+                self._parse_field(x, float, f"bbox point {idx} x") * image_width,
+                self._parse_field(y, float, f"bbox point {idx} y") * image_height,
+            )
+            for idx, (x, y) in enumerate(take_by(parts[1:], 2))
         ]
-        scaled_points = [
-            value * size for value, size in zip(points, cycle((image_width, image_height)))
-        ]
+        self._check_is_rectangle(*points)
 
-        x1, y1, x2, y2, x3, y3, x4, y4 = scaled_points
+        (x1, y1), (x2, y2), (x3, y3), (x4, y4) = points
+
         width = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
         height = math.sqrt((x2 - x3) ** 2 + (y2 - y3) ** 2)
         rotation = math.atan2(y2 - y1, x2 - x1)
         if rotation < 0:
             rotation += math.pi * 2
 
-        center_x = sum(scaled_points[::2]) / 4
-        center_y = sum(scaled_points[1::2]) / 4
+        center_x = (x1 + x2 + x3 + x4) / 4
+        center_y = (y1 + y2 + y3 + y4) / 4
 
         return Bbox(
             x=center_x - width / 2,
@@ -501,7 +515,7 @@ class Yolo8PoseExtractor(Yolo8Extractor):
                 categories[AnnotationType.points] = point_categories
             return categories
 
-        number_of_points, values_per_point = self._kpt_shape
+        number_of_points, _ = self._kpt_shape
         names = self._config["names"]
         if isinstance(names, dict):
             skeleton_labels = [names[i] for i in range(len(names))]

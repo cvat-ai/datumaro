@@ -213,8 +213,7 @@ class YoloConverter(Converter):
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
-    @staticmethod
-    def _make_annotation_line(width: int, height: int, anno: Annotation) -> Optional[str]:
+    def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if not isinstance(anno, Bbox) or anno.label is None:
             return
         if anno.attributes.get("rotation"):
@@ -286,8 +285,7 @@ class Yolo8Converter(YoloConverter):
 
 
 class Yolo8SegmentationConverter(Yolo8Converter):
-    @staticmethod
-    def _make_annotation_line(width: int, height: int, anno: Annotation) -> Optional[str]:
+    def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None:
             return
         if isinstance(anno, Polygon):
@@ -303,8 +301,7 @@ class Yolo8SegmentationConverter(Yolo8Converter):
 
 
 class Yolo8ObbConverter(Yolo8Converter):
-    @staticmethod
-    def _make_annotation_line(width: int, height: int, anno: Annotation) -> Optional[str]:
+    def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Bbox):
             return
         points = _bbox_annotation_as_polygon(anno)

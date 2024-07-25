@@ -10,6 +10,7 @@ import os
 import os.path as osp
 import re
 from collections import OrderedDict
+from functools import cached_property
 from itertools import cycle
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
@@ -20,7 +21,10 @@ from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
     LabelCategories,
+    Points,
+    PointsCategories,
     Polygon,
+    Skeleton,
 )
 from datumaro.components.errors import (
     DatasetImportError,
@@ -35,10 +39,11 @@ from datumaro.util.image import (
     load_image,
     load_image_meta_file,
 )
-from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_meta_file
 from datumaro.util.os_util import split_path
 
-from .format import Yolo8Path, YoloPath
+from ...util import parse_json_file
+from .format import Yolo8Path, Yolo8PoseFormat, YoloPath
 
 T = TypeVar("T")
 
@@ -77,6 +82,7 @@ class YoloExtractor(SourceExtractor):
         super().__init__(**kwargs)
 
         rootpath = osp.dirname(config_path)
+        self._config_path = config_path
         self._path = rootpath
 
         assert image_info is None or isinstance(image_info, (str, dict))
@@ -89,9 +95,7 @@ class YoloExtractor(SourceExtractor):
 
         self._image_info = image_info
 
-        config = self._parse_config(config_path)
-
-        self._categories = {AnnotationType.label: self._load_categories(config)}
+        self._categories = self._load_categories()
 
         # The original format is like this:
         #
@@ -103,7 +107,7 @@ class YoloExtractor(SourceExtractor):
         #
         # To support more subset names, we disallow subsets
         # called 'classes', 'names' and 'backup'.
-        subsets = {k: v for k, v in config.items() if k not in self.RESERVED_CONFIG_KEYS}
+        subsets = {k: v for k, v in self._config.items() if k not in self.RESERVED_CONFIG_KEYS}
 
         for subset_name, list_path in subsets.items():
             subset = YoloExtractor.Subset(subset_name, self)
@@ -123,9 +127,9 @@ class YoloExtractor(SourceExtractor):
         with open(list_path, "r", encoding="utf-8") as f:
             yield from (p for p in f if p.strip())
 
-    @staticmethod
-    def _parse_config(path: str) -> Dict[str, str]:
-        with open(path, "r", encoding="utf-8") as f:
+    @cached_property
+    def _config(self) -> Dict[str, str]:
+        with open(self._config_path, "r", encoding="utf-8") as f:
             config_lines = f.readlines()
 
         config = {}
@@ -273,15 +277,19 @@ class YoloExtractor(SourceExtractor):
             label=label_id,
         )
 
-    def _load_categories(self, config: Dict[str, str]):
-        names_path = config.get("names")
+    def _load_categories(self) -> Dict[AnnotationType, LabelCategories]:
+        names_path = self._config.get("names")
         if not names_path:
             raise InvalidAnnotationError(f"Failed to parse names file path from config")
 
         names_path = osp.join(self._path, self.localize_path(names_path))
 
         if has_meta_file(osp.dirname(names_path)):
-            return LabelCategories.from_iterable(parse_meta_file(osp.dirname(names_path)).keys())
+            return {
+                AnnotationType.label: LabelCategories.from_iterable(
+                    parse_meta_file(osp.dirname(names_path)).keys()
+                )
+            }
 
         label_categories = LabelCategories()
 
@@ -291,7 +299,7 @@ class YoloExtractor(SourceExtractor):
                 if label:
                     label_categories.add(label)
 
-        return label_categories
+        return {AnnotationType.label: label_categories}
 
     def __iter__(self):
         subsets = self._subsets
@@ -310,22 +318,31 @@ class YoloExtractor(SourceExtractor):
 class Yolo8Extractor(YoloExtractor):
     RESERVED_CONFIG_KEYS = Yolo8Path.RESERVED_CONFIG_KEYS
 
-    @staticmethod
-    def _parse_config(path: str) -> Dict[str, Any]:
-        with open(path) as stream:
+    @cached_property
+    def _config(self) -> Dict[str, Any]:
+        with open(self._config_path) as stream:
             try:
                 return yaml.safe_load(stream)
             except yaml.YAMLError:
                 raise InvalidAnnotationError("Failed to parse config file")
 
-    def _load_categories(self, config: Dict[str, str]) -> LabelCategories:
-        names = config.get("names")
+    def _load_categories(self) -> Dict[AnnotationType, LabelCategories]:
+        if has_meta_file(self._path):
+            return {
+                AnnotationType.label: LabelCategories.from_iterable(
+                    parse_meta_file(self._path).keys()
+                )
+            }
 
-        if names is not None:
+        if (names := self._config.get("names")) is not None:
             if isinstance(names, dict):
-                return LabelCategories.from_iterable([names[i] for i in range(len(names))])
+                return {
+                    AnnotationType.label: LabelCategories.from_iterable(
+                        [names[i] for i in range(len(names))]
+                    )
+                }
             if isinstance(names, list):
-                return LabelCategories.from_iterable(names)
+                return {AnnotationType.label: LabelCategories.from_iterable(names)}
 
         raise InvalidAnnotationError(f"Failed to parse names from config")
 
@@ -438,4 +455,147 @@ class Yolo8ObbExtractor(Yolo8Extractor):
             h=height,
             label=label_id,
             attributes=(dict(rotation=180 * rotation / math.pi) if abs(rotation) > 0.00001 else {}),
+        )
+
+
+class Yolo8PoseExtractor(Yolo8Extractor):
+    @cached_property
+    def _kpt_shape(self):
+        if Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME not in self._config:
+            raise InvalidAnnotationError(
+                f"Failed to parse {Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME} from config"
+            )
+        kpt_shape = self._config[Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME]
+        if not isinstance(kpt_shape, list) or len(kpt_shape) != 2:
+            raise InvalidAnnotationError(
+                f"Failed to parse {Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME} from config"
+            )
+        if kpt_shape[1] not in [2, 3]:
+            raise InvalidAnnotationError(
+                f"Unexpected values per point {kpt_shape[1]} in field"
+                f"{Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME}. Expected 2 or 3."
+            )
+        if not isinstance(kpt_shape[0], int) or kpt_shape[0] < 0:
+            raise InvalidAnnotationError(
+                f"Unexpected number of points {kpt_shape[0]} in field "
+                f"{Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME}. Expected non-negative integer."
+            )
+
+        return kpt_shape
+
+    def _load_categories(self) -> Dict[AnnotationType, LabelCategories]:
+        if "names" not in self._config:
+            raise InvalidAnnotationError(f"Failed to parse names from config")
+
+        if has_meta_file(self._path):
+            dataset_meta = parse_json_file(get_meta_file(self._path))
+            point_categories = PointsCategories.from_iterable(
+                dataset_meta.get("point_categories", [])
+            )
+            categories = {
+                AnnotationType.label: LabelCategories.from_iterable(
+                    dataset_meta["label_categories"]
+                )
+            }
+            if len(point_categories) > 0:
+                categories[AnnotationType.points] = point_categories
+            return categories
+
+        number_of_points, values_per_point = self._kpt_shape
+        names = self._config["names"]
+        if isinstance(names, dict):
+            skeleton_labels = [names[i] for i in range(len(names))]
+        elif isinstance(names, list):
+            skeleton_labels = names
+        else:
+            raise InvalidAnnotationError(f"Failed to parse names from config")
+
+        def make_children_names(skeleton_label):
+            return [
+                f"{skeleton_label}_point_{point_index}" for point_index in range(number_of_points)
+            ]
+
+        point_labels = [
+            (child_name, skeleton_label)
+            for skeleton_label in skeleton_labels
+            for child_name in make_children_names(skeleton_label)
+        ]
+
+        point_categories = PointsCategories.from_iterable(
+            [
+                (
+                    index,
+                    make_children_names(skeleton_label),
+                    set(),
+                )
+                for index, skeleton_label in enumerate(skeleton_labels)
+            ]
+        )
+        categories = {
+            AnnotationType.label: LabelCategories.from_iterable(skeleton_labels + point_labels)
+        }
+        if len(point_categories) > 0:
+            categories[AnnotationType.points] = point_categories
+
+        return categories
+
+    def _load_one_annotation(
+        self, parts: List[str], image_height: int, image_width: int
+    ) -> Annotation:
+        number_of_points, values_per_point = self._kpt_shape
+        if len(parts) != 5 + number_of_points * values_per_point:
+            raise InvalidAnnotationError(
+                f"Unexpected field count {len(parts)} in the skeleton description. "
+                "Expected 5 fields (label, xc, yc, w, h)"
+                f"and then {values_per_point} for each of {number_of_points} points"
+            )
+
+        label_id = self._parse_field(parts[0], int, "skeleton label id")
+        if label_id not in self._categories[AnnotationType.label]:
+            raise UndeclaredLabelError(str(label_id))
+        if self._categories[AnnotationType.label][label_id].parent != "":
+            raise InvalidAnnotationError("WTF")
+
+        point_labels = self._categories[AnnotationType.points][label_id].labels
+        point_label_ids = [
+            self._categories[AnnotationType.label].find(
+                name=point_label,
+                parent=self._categories[AnnotationType.label][label_id].name,
+            )[0]
+            for point_label in point_labels
+        ]
+
+        points = [
+            Points(
+                [
+                    self._parse_field(parts[x_index], float, f"skeleton point {point_index} x")
+                    * image_width,
+                    self._parse_field(parts[y_index], float, f"skeleton point {point_index} y")
+                    * image_height,
+                ],
+                (
+                    [
+                        self._parse_field(
+                            parts[visibility_index],
+                            int,
+                            f"skeleton point {point_index} visibility",
+                        ),
+                    ]
+                    if values_per_point == 3
+                    else [Points.Visibility.visible.value]
+                ),
+                label=label_id,
+            )
+            for point_index, label_id in enumerate(point_label_ids)
+            for x_index, y_index, visibility_index in [
+                (
+                    5 + point_index * values_per_point,
+                    5 + point_index * values_per_point + 1,
+                    5 + point_index * values_per_point + 2,
+                ),
+            ]
+        ]
+        return Skeleton(
+            points,
+            label=label_id,
         )

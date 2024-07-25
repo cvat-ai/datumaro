@@ -14,6 +14,12 @@ class YoloPath:
 class Yolo8Path(YoloPath):
     RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS + [
         "path",
+        "kpt_shape",
+        "flip_idx",
     ]
     IMAGES_FOLDER_NAME = "images"
     LABELS_FOLDER_NAME = "labels"
+
+
+class Yolo8PoseFormat:
+    KPT_SHAPE_FIELD_NAME = "kpt_shape"

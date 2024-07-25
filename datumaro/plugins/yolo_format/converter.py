@@ -12,7 +12,15 @@ from typing import Dict, List, Optional
 
 import yaml
 
-from datumaro.components.annotation import Annotation, AnnotationType, Bbox, Polygon
+from datumaro.components.annotation import (
+    Annotation,
+    AnnotationType,
+    Bbox,
+    Points,
+    PointsCategories,
+    Polygon,
+    Skeleton,
+)
 from datumaro.components.converter import Converter
 from datumaro.components.dataset import DatasetPatch, ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError
@@ -303,3 +311,70 @@ class Yolo8ObbConverter(Yolo8Converter):
         values = [value / size for value, size in zip(points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
         return "%s %s\n" % (anno.label, string_values)
+
+
+class Yolo8PoseConverter(Yolo8Converter):
+    def _save_config_files(self, subset_lists: Dict[str, str]):
+        extractor = self._extractor
+        save_dir = self._save_dir
+
+        point_categories = extractor.categories().get(
+            AnnotationType.points, PointsCategories.from_iterable([])
+        )
+        if len(set(len(cat.labels) for cat in point_categories.items.values())) > 1:
+            raise DatasetExportError(
+                "Can't export: skeletons should have the same number of points"
+            )
+        if set(point_categories.items.keys()) != set(range(len(point_categories.items))):
+            raise DatasetExportError(
+                "Can't export: skeletons labels should be in the beginning FIXME"
+            )
+
+        n_of_points = (
+            len(next(iter(point_categories.items.values())).labels)
+            if len(point_categories) > 0
+            else 0
+        )
+
+        with open(osp.join(save_dir, "data.yaml"), "w", encoding="utf-8") as f:
+            label_categories = extractor.categories()[AnnotationType.label]
+            parent_categories = {
+                label_id: label_categories.items[label_id].name
+                for label_id in point_categories.items
+            }
+            assert set(parent_categories.keys()) == set(range(len(parent_categories)))
+            data = dict(
+                path=".",
+                names=parent_categories,
+                kpt_shape=[n_of_points, 3],
+                **subset_lists,
+            )
+            yaml.dump(data, f)
+
+    def _make_annotation_line(self, width: int, height: int, skeleton: Annotation) -> Optional[str]:
+        if skeleton.label is None or not isinstance(skeleton, Skeleton):
+            return
+
+        x, y, w, h = skeleton.get_bbox()
+        bbox_values = _make_yolo_bbox((width, height), [x, y, x + w, y + h])
+        bbox_string_values = " ".join("%.6f" % p for p in bbox_values)
+
+        point_label_ids = [
+            self._extractor.categories()[AnnotationType.label].find(
+                name=child_label,
+                parent=self._extractor.categories()[AnnotationType.label][skeleton.label].name,
+            )[0]
+            for child_label in self._extractor.categories()[AnnotationType.points]
+            .items[skeleton.label]
+            .labels
+        ]
+
+        points_values = [f"0.0, 0.0, {Points.Visibility.absent.value}"] * len(point_label_ids)
+        for element in skeleton.elements:
+            assert len(element.points) == 2 and len(element.visibility) == 1
+            position = point_label_ids.index(element.label)
+            x = element.points[0] / width
+            y = element.points[1] / height
+            points_values[position] = f"{x:.6f} {y:.6f} {element.visibility[0].value}"
+
+        return f"{skeleton.label} {bbox_string_values} {' '.join(points_values)}\n"

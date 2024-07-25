@@ -50,6 +50,14 @@ def save_meta_file(path, categories):
 
     labels = [label.name for label in categories[AnnotationType.label]]
     dataset_meta["labels"] = labels
+    dataset_meta["label_categories"] = [
+        (label.name, label.parent) for label in categories[AnnotationType.label]
+    ]
+    if categories.get(AnnotationType.points):
+        dataset_meta["point_categories"] = [
+            (label_id, cat.labels, list(cat.joints))
+            for label_id, cat in categories[AnnotationType.points].items.items()
+        ]
 
     if categories.get(AnnotationType.mask):
         label_map = {}

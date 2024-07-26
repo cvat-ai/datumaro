@@ -62,6 +62,11 @@ from ...requirements import Requirements, mark_requirement
 from ...utils.assets import get_test_asset_path
 
 
+@pytest.fixture(autouse=True)
+def seed_random():
+    random.seed(1234)
+
+
 def randint(a, b):
     return random.randint(a, b)  # nosec B311 NOSONAR
 

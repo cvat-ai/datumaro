@@ -12,6 +12,8 @@ class YoloPath:
 
 
 class Yolo8Path(YoloPath):
+    CONFIG_FILE_EXT = ".yaml"
+    DEFAULT_CONFIG_FILE = "data.yaml"
     RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS + [
         "path",
         "kpt_shape",

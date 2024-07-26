@@ -263,10 +263,33 @@ class YoloConverter(Converter):
 class Yolo8Converter(YoloConverter):
     RESERVED_CONFIG_KEYS = Yolo8Path.RESERVED_CONFIG_KEYS
 
+    def __init__(
+        self,
+        extractor: IExtractor,
+        save_dir: str,
+        *,
+        add_path_prefix: bool = True,
+        config_file=None,
+        **kwargs,
+    ) -> None:
+        super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
+        self._config_filename = config_file or Yolo8Path.DEFAULT_CONFIG_FILE
+
+    @classmethod
+    def build_cmdline_parser(cls, **kwargs):
+        parser = super().build_cmdline_parser(**kwargs)
+        parser.add_argument(
+            "--config-file",
+            default=Yolo8Path.DEFAULT_CONFIG_FILE,
+            type=str,
+            help="config file name (default: %(default)s)",
+        )
+        return parser
+
     def _save_config_files(self, subset_lists: Dict[str, str]):
         extractor = self._extractor
         save_dir = self._save_dir
-        with open(osp.join(save_dir, "data.yaml"), "w", encoding="utf-8") as f:
+        with open(osp.join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
             label_categories = extractor.categories()[AnnotationType.label]
             data = dict(
                 path=".",
@@ -333,7 +356,7 @@ class Yolo8PoseConverter(Yolo8Converter):
             else 0
         )
 
-        with open(osp.join(save_dir, "data.yaml"), "w", encoding="utf-8") as f:
+        with open(osp.join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
             label_categories = extractor.categories()[AnnotationType.label]
             parent_categories = {
                 label_id: label_categories.items[label_id].name

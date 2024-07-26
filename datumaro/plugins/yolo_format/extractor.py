@@ -318,6 +318,14 @@ class YoloExtractor(SourceExtractor):
 class Yolo8Extractor(YoloExtractor):
     RESERVED_CONFIG_KEYS = Yolo8Path.RESERVED_CONFIG_KEYS
 
+    def __init__(
+        self,
+        *args,
+        config_file=None,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+
     @cached_property
     def _config(self) -> Dict[str, Any]:
         with open(self._config_path) as stream:

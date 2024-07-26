@@ -26,11 +26,13 @@ from datumaro.components.errors import (
     AnnotationImportError,
     DatasetExportError,
     DatasetImportError,
+    DatasetNotFoundError,
     InvalidAnnotationError,
     ItemImportError,
     UndeclaredLabelError,
 )
 from datumaro.components.extractor import DatasetItem
+from datumaro.components.format_detection import FormatDetectionContext, FormatRequirementsUnmet
 from datumaro.components.media import Image
 from datumaro.plugins.yolo_format.converter import (
     Yolo8Converter,
@@ -375,6 +377,23 @@ class Yolo8ConverterTest(YoloConverterTest):
     @pytest.mark.parametrize("subset", ["backup", "classes", "path", "names"])
     def test_cant_save_with_reserved_subset_name(self, test_dir, subset):
         self._check_cant_save_with_reserved_subset_name(test_dir, subset)
+
+    @mark_requirement(Requirements.DATUM_609)
+    def test_can_save_and_load_with_custom_config_file(self, test_dir):
+        source_dataset = self._generate_random_dataset(
+            [
+                {"subset": "valid", "id": 3},
+            ],
+            n_of_labels=2,
+        )
+        filename = "custom_config_name.yaml"
+        self.CONVERTER.convert(
+            source_dataset, test_dir, save_media=True, add_path_prefix=False, config_file=filename
+        )
+        assert not osp.exists(osp.join(test_dir, "data.yaml"))
+        assert osp.isfile(osp.join(test_dir, filename))
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME, config_file=filename)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_609)
     def test_can_save_and_load_without_path_prefix(self, test_dir):
@@ -776,6 +795,69 @@ class Yolo8ImporterTest(YoloImporterTest):
                 Yolo8SegmentationImporter.NAME,
                 Yolo8ObbImporter.NAME,
             }
+
+    def test_can_detect_and_import_with_any_yaml_as_config(self, test_dir):
+        expected_dataset = self._asset_dataset()
+        for asset in self.ASSETS:
+            dataset_path = osp.join(test_dir, "dataset")
+            shutil.copytree(get_test_asset_path("yolo_dataset", asset), dataset_path)
+            os.rename(
+                osp.join(dataset_path, "data.yaml"), osp.join(dataset_path, "custom_file_name.yaml")
+            )
+
+            self.IMPORTER.detect(FormatDetectionContext(dataset_path))
+            dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+            self.compare_datasets(expected_dataset, dataset)
+            shutil.rmtree(dataset_path)
+
+    def test_can_detect_and_import_if_multiple_yamls_with_default_among_them(self, test_dir):
+        expected_dataset = self._asset_dataset()
+        for asset in self.ASSETS:
+            dataset_path = osp.join(test_dir, "dataset")
+            shutil.copytree(get_test_asset_path("yolo_dataset", asset), dataset_path)
+            shutil.copyfile(
+                osp.join(dataset_path, "data.yaml"), osp.join(dataset_path, "custom_file_name.yaml")
+            )
+
+            self.IMPORTER.detect(FormatDetectionContext(dataset_path))
+            dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+            self.compare_datasets(expected_dataset, dataset)
+            shutil.rmtree(dataset_path)
+
+    def test_can_not_detect_or_import_if_multiple_yamls_but_no_default_among_them(self, test_dir):
+        for asset in self.ASSETS:
+            dataset_path = osp.join(test_dir, "dataset")
+            shutil.copytree(get_test_asset_path("yolo_dataset", asset), dataset_path)
+            shutil.copyfile(
+                osp.join(dataset_path, "data.yaml"),
+                osp.join(dataset_path, "custom_file_name1.yaml"),
+            )
+            os.rename(
+                osp.join(dataset_path, "data.yaml"),
+                osp.join(dataset_path, "custom_file_name2.yaml"),
+            )
+
+            with pytest.raises(FormatRequirementsUnmet):
+                self.IMPORTER.detect(FormatDetectionContext(dataset_path))
+            with pytest.raises(DatasetNotFoundError):
+                Dataset.import_from(dataset_path, self.IMPORTER.NAME, config_file="data.yaml")
+
+            shutil.rmtree(dataset_path)
+
+    def test_can_import_despite_multiple_yamls_if_config_file_provided_as_argument(self, test_dir):
+        expected_dataset = self._asset_dataset()
+        for asset in self.ASSETS:
+            dataset_path = osp.join(test_dir, "dataset")
+            shutil.copytree(get_test_asset_path("yolo_dataset", asset), dataset_path)
+            shutil.copyfile(
+                osp.join(dataset_path, "data.yaml"), osp.join(dataset_path, "custom_file_name.yaml")
+            )
+
+            dataset = Dataset.import_from(
+                dataset_path, self.IMPORTER.NAME, config_file="custom_file_name.yaml"
+            )
+            self.compare_datasets(expected_dataset, dataset)
+            shutil.rmtree(dataset_path)
 
 
 class Yolo8SegmentationImporterTest(Yolo8ImporterTest):

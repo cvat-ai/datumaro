@@ -63,7 +63,7 @@ from ...utils.assets import get_test_asset_path
 
 
 def randint(a, b):
-    return random.randint(a, b)  # nosec B311
+    return random.randint(a, b)  # nosec B311 NOSONAR
 
 
 class CompareDatasetMixin:
@@ -557,7 +557,7 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
     IMPORTER = Yolo8PoseImporter
 
     def _generate_random_skeleton_annotation(self, skeleton_label_to_point_labels, n_of_labels=10):
-        label_id = random.choice(list(skeleton_label_to_point_labels.keys()))  # nosec B311
+        label_id = random.choice(list(skeleton_label_to_point_labels.keys()))  # nosec B311 NOSONAR
         return Skeleton(
             [
                 Points(

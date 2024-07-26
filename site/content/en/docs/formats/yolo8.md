@@ -6,7 +6,9 @@ description: ''
 
 ## Format specification
 
-The YOLO8 format family allows you to define the dataset root directory, the relative paths to training/validation/testing image directories or *.txt files containing image paths, and a dictionary of class names.
+The YOLO8 format family allows you to define the dataset root directory, the relative paths
+to training/validation/testing image directories or *.txt files containing image paths,
+and a dictionary of class names.
 
 Family consists of four formats:
 - [Detection](https://docs.ultralytics.com/datasets/detect/)
@@ -15,7 +17,7 @@ Family consists of four formats:
 - [Pose](https://docs.ultralytics.com/datasets/pose/)
 
 Supported annotation types and formats:
-- `Bbox` 
+- `Bbox`
   - Detection (only not rotated)
   - Oriented Bounding Box,
   - Segmentation (only export))
@@ -84,7 +86,7 @@ train: train.txt  # train images (relative to 'path') 4 images
 val: val.txt  # val images (relative to 'path') 4 images
 
 # YOLO8 Pose specific field
-# First number is a number of points in skeleton 
+# First number is a number of points in skeleton
 # Second number defines a format of point info in an annotation txt files
 kpt_shape: [17, 3]
 
@@ -99,7 +101,8 @@ names:
   79: toothbrush
 ```
 
-> Note, that though by default YOLO8 expects `data.yaml`, Datumaro allows this file to have arbitrary name. 
+> Note, that though by default YOLO8 expects `data.yaml`,
+  Datumaro allows this file to have arbitrary name.
 
 Files `train.txt` and `val.txt` should have the following structure:
 
@@ -109,10 +112,11 @@ Files `train.txt` and `val.txt` should have the following structure:
 ...
 ```
 
-Files in directories `labels/train/` and `labels/valid/` should contain information about labels for images in `images/train` and `images/valid` respectively.
+Files in directories `labels/train/` and `labels/valid/` should
+contain information about labels for images in `images/train` and `images/valid` respectively.
 If there are no objects in an image, no `.txt` file is required.
 
-Content of the `.txt` file depends on format. 
+Content of the `.txt` file depends on format.
 
 For **Detection** it contains bounding boxes:
 ```txt
@@ -123,7 +127,8 @@ For **Detection** it contains bounding boxes:
 ...
 ```
 
-For **Oriented Bounding Box** and **Segmentation** it contains coordinates of all points of oriented bounding box or polygon respectively:
+For **Oriented Bounding Box** and **Segmentation** it contains coordinates
+of all points of oriented bounding box or polygon respectively:
 ```txt
 # labels/image1.txt:
 # <label_index> <x1> <y1> <x2> <y2> <x3> <y3> <x4> <y4>
@@ -133,8 +138,11 @@ For **Oriented Bounding Box** and **Segmentation** it contains coordinates of al
 ```
 
 For **Pose** it contains bounding boxes and then description of points in one of two forms.
-- If the second number in kpt_shape field is 2, then the line contains two values for every point - `x`, `y`.
-- If the second number in kpt_shape field is 3, then the line contains three values for every point - `x`, `y`, `visibility`, where `visibility` can have one of three values: 
+- If the second number in kpt_shape field is 2,
+  then the line contains two values for every point - `x`, `y`.
+- If the second number in kpt_shape field is 3,
+  then the line contains three values for every point - `x`, `y`, `visibility`,
+  where `visibility` can have one of three values:
   - 0: The keypoint is not visible.
   - 1: The keypoint is partially visible.
   - 2: The keypoint is fully visible.
@@ -147,13 +155,16 @@ For **Pose** it contains bounding boxes and then description of points in one of
 ...
 ```
 
-All coordinates must be normalized and be in range [0, 1]. It can be achieved by dividing x coordinates and widths by image width, and y coordinates and heights by image height.
+All coordinates must be normalized and be in range \[0, 1\].
+It can be achieved by dividing x coordinates and widths by image width,
+and y coordinates and heights by image height.
 
 
 ## Export to other formats
 
 Datumaro can convert a YOLO8 dataset into any other format Datumaro supports.
-To get the expected result, convert the dataset to formats that support the same annotations as YOLO8 format you have.
+To get the expected result, convert the dataset to formats
+that support the same annotations as YOLO8 format you have.
 
 ```bash
 datum create
@@ -181,7 +192,8 @@ dataset.export('save_dir', 'coco_instances')
 ```
 
 ## Export to YOLO8 format
-Datumaro can convert an existing dataset to YOLO8 format if it supports annotations from source format.
+Datumaro can convert an existing dataset to YOLO8 format
+if it supports annotations from source format.
 
 Example:
 

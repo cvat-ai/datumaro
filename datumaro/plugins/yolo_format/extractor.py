@@ -426,7 +426,7 @@ class Yolo8SegmentationExtractor(Yolo8Extractor):
         )
 
 
-class Yolo8ObbExtractor(Yolo8Extractor):
+class Yolo8OrientedBoxesExtractor(Yolo8Extractor):
     @staticmethod
     def _check_is_rectangle(p1, p2, p3, p4):
         p12_angle = math.atan2(p2[0] - p1[0], p2[1] - p1[1])

@@ -323,7 +323,7 @@ class Yolo8SegmentationConverter(Yolo8Converter):
         return "%s %s\n" % (anno.label, string_values)
 
 
-class Yolo8ObbConverter(Yolo8Converter):
+class Yolo8OrientedBoxesConverter(Yolo8Converter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Bbox):
             return

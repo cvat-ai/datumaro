@@ -39,7 +39,7 @@ To create a Datumaro project with a YOLO8 source, use the following commands:
 ```bash
 datum create
 datum import --format yolo8 <path/to/dataset> # for Detection dataset
-datum import --format yolo8_obb <path/to/dataset> # for Oriented Bounding Box dataset
+datum import --format yolo8_oriented_boxes <path/to/dataset> # for Oriented Bounding Box dataset
 datum import --format yolo8_segmentation <path/to/dataset> # for Segmentation dataset
 datum import --format yolo8_pose <path/to/dataset> # for Pose dataset
 ```
@@ -257,7 +257,7 @@ dataset = dm.Dataset.from_iterable(
     ],
     categories=["label_" + str(i) for i in range(10)],
 )
-dataset.export('../yolov8_dataset', format='yolo8_obb')
+dataset.export('../yolov8_dataset', format='yolo8_oriented_boxes')
 ```
 
 ### Example 3. Create a custom dataset in YOLO8 Segmentation format

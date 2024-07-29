@@ -7,6 +7,7 @@ import math
 import os
 import os.path as osp
 from collections import OrderedDict
+from functools import cached_property
 from itertools import cycle
 from typing import Dict, List, Optional
 
@@ -217,7 +218,9 @@ class YoloConverter(Converter):
         if not isinstance(anno, Bbox) or anno.label is None:
             return
         if anno.attributes.get("rotation"):
-            raise DatasetExportError("Can't export rotated bbox")
+            raise DatasetExportError(
+                f"Can't export bbox, because it is rotated. Rotation: {anno.attributes.get('rotation')}"
+            )
 
         values = _make_yolo_bbox((width, height), anno.points)
         string_values = " ".join("%.6f" % p for p in values)
@@ -334,6 +337,13 @@ class Yolo8OrientedBoxesConverter(Yolo8Converter):
 
 
 class Yolo8PoseConverter(Yolo8Converter):
+    @cached_property
+    def _map_labels_for_save(self):
+        point_categories = self._extractor.categories().get(
+            AnnotationType.points, PointsCategories.from_iterable([])
+        )
+        return {label_id: index for index, label_id in enumerate(sorted(point_categories.items))}
+
     def _save_config_files(self, subset_lists: Dict[str, str]):
         extractor = self._extractor
         save_dir = self._save_dir
@@ -345,11 +355,6 @@ class Yolo8PoseConverter(Yolo8Converter):
             raise DatasetExportError(
                 "Can't export: skeletons should have the same number of points"
             )
-        if set(point_categories.items.keys()) != set(range(len(point_categories.items))):
-            raise DatasetExportError(
-                "Can't export: skeletons labels should be in the beginning FIXME"
-            )
-
         n_of_points = (
             len(next(iter(point_categories.items.values())).labels)
             if len(point_categories) > 0
@@ -359,7 +364,7 @@ class Yolo8PoseConverter(Yolo8Converter):
         with open(osp.join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
             label_categories = extractor.categories()[AnnotationType.label]
             parent_categories = {
-                label_id: label_categories.items[label_id].name
+                self._map_labels_for_save[label_id]: label_categories.items[label_id].name
                 for label_id in point_categories.items
             }
             assert set(parent_categories.keys()) == set(range(len(parent_categories)))
@@ -397,4 +402,4 @@ class Yolo8PoseConverter(Yolo8Converter):
             y = element.points[1] / height
             points_values[position] = f"{x:.6f} {y:.6f} {element.visibility[0].value}"
 
-        return f"{skeleton.label} {bbox_string_values} {' '.join(points_values)}\n"
+        return f"{self._map_labels_for_save[skeleton.label]} {bbox_string_values} {' '.join(points_values)}\n"

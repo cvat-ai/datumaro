@@ -505,6 +505,13 @@ class Yolo8PoseExtractor(Yolo8Extractor):
 
         return kpt_shape
 
+    @cached_property
+    def _skeleton_id_to_label_id(self):
+        point_categories = self._categories.get(
+            AnnotationType.points, PointsCategories.from_iterable([])
+        )
+        return {index: label_id for index, label_id in enumerate(sorted(point_categories.items))}
+
     def _load_categories(self) -> Dict[AnnotationType, LabelCategories]:
         if "names" not in self._config:
             raise InvalidAnnotationError(f"Failed to parse names from config")
@@ -526,6 +533,10 @@ class Yolo8PoseExtractor(Yolo8Extractor):
         number_of_points, _ = self._kpt_shape
         names = self._config["names"]
         if isinstance(names, dict):
+            if set(names.keys()) != set(range(len(names))):
+                raise InvalidAnnotationError(
+                    f"Failed to parse names from config: non-sequential label ids"
+                )
             skeleton_labels = [names[i] for i in range(len(names))]
         elif isinstance(names, list):
             skeleton_labels = names
@@ -572,9 +583,10 @@ class Yolo8PoseExtractor(Yolo8Extractor):
                 f"and then {values_per_point} for each of {number_of_points} points"
             )
 
-        label_id = self._parse_field(parts[0], int, "skeleton label id")
+        skeleton_id = self._parse_field(parts[0], int, "skeleton label id")
+        label_id = self._skeleton_id_to_label_id.get(skeleton_id, -1)
         if label_id not in self._categories[AnnotationType.label]:
-            raise UndeclaredLabelError(str(label_id))
+            raise UndeclaredLabelError(str(skeleton_id))
         if self._categories[AnnotationType.label][label_id].parent != "":
             raise InvalidAnnotationError("WTF")
 

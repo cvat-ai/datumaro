@@ -367,7 +367,7 @@ class YoloConverterTest(CompareDatasetMixin):
         with pytest.raises(DatasetExportError) as capture:
             dataset.export(test_dir, self.CONVERTER.NAME)
         assert isinstance(capture.value.__cause__, DatasetExportError)
-        assert "Can't export rotated bbox" in str(capture.value.__cause__)
+        assert "Can't export bbox, because it is rotated" in str(capture.value.__cause__)
 
 
 class Yolo8ConverterTest(YoloConverterTest):
@@ -645,10 +645,10 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
                 annotations=[
                     Skeleton(
                         [
-                            Points([1.5, 2.0], [2], label=1),
-                            Points([4.5, 4.0], [2], label=2),
+                            Points([1.5, 2.0], [2], label=4),
+                            Points([4.5, 4.0], [2], label=5),
                         ],
-                        label=0,
+                        label=3,
                     ),
                 ],
             ),
@@ -658,36 +658,71 @@ class Yolo8PoseConverterTest(Yolo8ConverterTest):
             categories={
                 AnnotationType.label: LabelCategories.from_iterable(
                     [
-                        "skeleton_label",
-                        ("point_label_1", "skeleton_label"),
-                        ("point_label_2", "skeleton_label"),
+                        "skeleton_label_1",
+                        ("point_label_1", "skeleton_label_1"),
+                        ("point_label_2", "skeleton_label_1"),
+                        "skeleton_label_2",
+                        ("point_label_3", "skeleton_label_2"),
+                        ("point_label_4", "skeleton_label_2"),
                     ]
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
-                    [(0, ["point_label_1", "point_label_2"], {(0, 1)})],
+                    [
+                        (0, ["point_label_1", "point_label_2"], {(0, 1)}),
+                        (3, ["point_label_3", "point_label_4"], {}),
+                    ],
                 ),
             },
         )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_loses_skeleton_edges_and_point_labels_on_save_load_without_meta_file(self, test_dir):
+    def test_loses_some_info_on_save_load_without_meta_file(self, test_dir):
+        # loses point labels
+        # loses edges
+        # loses label ids - groups skeleton labels to the start
         source_dataset = self._make_dataset_with_edges_and_point_labels()
         expected_dataset = Dataset.from_iterable(
-            list(source_dataset),
+            [
+                DatasetItem(
+                    id="1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 10, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([1.5, 2.0], [2], label=4),
+                                Points([4.5, 4.0], [2], label=5),
+                            ],
+                            label=1,
+                        ),
+                    ],
+                ),
+            ],
             categories={
                 AnnotationType.label: LabelCategories.from_iterable(
                     [
-                        "skeleton_label",
-                        ("skeleton_label_point_0", "skeleton_label"),
-                        ("skeleton_label_point_1", "skeleton_label"),
+                        "skeleton_label_1",
+                        "skeleton_label_2",
+                        ("skeleton_label_1_point_0", "skeleton_label_1"),
+                        ("skeleton_label_1_point_1", "skeleton_label_1"),
+                        ("skeleton_label_2_point_0", "skeleton_label_2"),
+                        ("skeleton_label_2_point_1", "skeleton_label_2"),
                     ]
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
-                    [(0, ["skeleton_label_point_0", "skeleton_label_point_1"], set())],
+                    [
+                        (0, ["skeleton_label_1_point_0", "skeleton_label_1_point_1"], set()),
+                        (1, ["skeleton_label_2_point_0", "skeleton_label_2_point_1"], set()),
+                    ],
                 ),
             },
         )
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+
+        # check that annotation with label 3 was saved as 1
+        with open(osp.join(test_dir, "labels", "train", "1.txt"), "r") as f:
+            assert f.readlines()[0].startswith("1 ")
+
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         self.compare_datasets(expected_dataset, parsed_dataset)
 

@@ -1,12 +1,12 @@
 ---
-title: 'YOLO8'
-linkTitle: 'YOLO8'
+title: 'YOLOv8'
+linkTitle: 'YOLOv8'
 description: ''
 ---
 
 ## Format specification
 
-The YOLO8 format family allows you to define the dataset root directory, the relative paths
+The YOLOv8 format family allows you to define the dataset root directory, the relative paths
 to training/validation/testing image directories or *.txt files containing image paths,
 and a dictionary of class names.
 
@@ -28,12 +28,12 @@ Supported annotation types and formats:
 The format supports arbitrary subset names, except `classes`, `names`, `backup`, `path`, `kpt_shape`, `flip_idx`.
 
 > Note, that by default, the YOLO framework does not expect any subset names,
-  except `train` and `valid`, Datumaro supports this as an extension.
+  except `train` and `val`, Datumaro supports this as an extension.
   If there is no subset separation in a project, the data
   will be saved in the `train` subset.
 
-## Import YOLO8 dataset
-To create a Datumaro project with a YOLO8 source, use the following commands:
+## Import YOLOv8 dataset
+To create a Datumaro project with a YOLOv8 source, use the following commands:
 
 ```bash
 datum create
@@ -43,7 +43,7 @@ datum import --format yolo8_segmentation <path/to/dataset> # for Segmentation da
 datum import --format yolo8_pose <path/to/dataset> # for Pose dataset
 ```
 
-The YOLO8 dataset directory should have the following structure:
+The YOLOv8 dataset directory should have the following structure:
 
 ```bash
 └─ yolo_dataset/
@@ -79,12 +79,11 @@ The YOLO8 dataset directory should have the following structure:
 `data.yaml` should have the following content:
 
 ```yaml
-# Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
 path:  ./ # dataset root dir
 train: train.txt  # train images (relative to 'path') 4 images
 val: val.txt  # val images (relative to 'path') 4 images
 
-# YOLO8 Pose specific field
+# YOLOv8 Pose specific field
 # First number is a number of points in skeleton
 # Second number defines a format of point info in an annotation txt files
 kpt_shape: [17, 3]
@@ -99,17 +98,30 @@ names:
   78: hair drier
   79: toothbrush
 ```
-
-> Note, that though by default YOLO8 expects `data.yaml`,
+> Note, that though by default YOLOv8 framework expects `data.yaml`,
   Datumaro allows this file to have arbitrary name.
 
-Files `train.txt` and `val.txt` should have the following structure:
-
-```txt
-<path/to/image1.jpg>
-<path/to/image2.jpg>
-...
-```
+`data.yaml` can specify what images a subset contains in 3 ways:
+1. subset can point to a folder, in which case all images in the folder will belong to the subset:
+   ```yaml
+   val: images/valid
+   ```
+2. subset can be described as a list of images:
+   ```yaml
+   val:
+   - images/valid/image1.jpg
+   - images/valid/image2.jpg
+   ```
+3. subset can point at a `.txt` file which contains a list of images:
+   ```yaml
+   val: val.txt
+   ```
+   `val.txt` should have the following structure:
+   ```txt
+   <path/to/image1.jpg>
+   <path/to/image2.jpg>
+   ...
+   ```
 
 Files in directories `labels/train/` and `labels/valid/` should
 contain information about labels for images in `images/train` and `images/valid` respectively.
@@ -119,20 +131,29 @@ Content of the `.txt` file depends on format.
 
 For **Detection** it contains bounding boxes:
 ```txt
-# labels/image1.txt:
+# labels/train/image1.txt:
 # <label_index> <x_center> <y_center> <width> <height>
 0 0.250000 0.400000 0.300000 0.400000
 3 0.600000 0.400000 0.400000 0.266667
 ...
 ```
 
-For **Oriented Bounding Box** and **Segmentation** it contains coordinates
-of all points of oriented bounding box or polygon respectively:
+For **Oriented Bounding Box** it contains coordinates of four corners of oriented bounding box:
 ```txt
-# labels/image1.txt:
+# labels/train/image1.txt:
 # <label_index> <x1> <y1> <x2> <y2> <x3> <y3> <x4> <y4>
 0 0.146731 0.151795 0.319936 0.301795 0.186603 0.648205 0.013397 0.498205
 3 0.557735 0.090192 0.357735 0.609808 0.242265 0.509808 0.442265 -0.009808
+...
+```
+
+For **Segmentation** it contains coordinates of all points of polygon.
+A polygon can have three or more points:
+```txt
+# labels/train/image1.txt:
+# <label_index> <x1> <y1> <x2> <y2> <x3> <y3> <x4> <y4> <x5> <y5> ...
+0 0.146731 0.151795 0.319936 0.301795 0.186603 0.648205
+3 0.557735 0.090192 0.357735 0.609808 0.242265 0.509808 0.442265 -0.009808 0.400000 0.266667
 ...
 ```
 
@@ -161,9 +182,9 @@ and y coordinates and heights by image height.
 
 ## Export to other formats
 
-Datumaro can convert a YOLO8 dataset into any other format Datumaro supports.
+Datumaro can convert a YOLOv8 dataset into any other format Datumaro supports.
 To get the expected result, convert the dataset to formats
-that support the same annotations as YOLO8 format you have.
+that support the same annotations as YOLOv8 format you have.
 
 ```bash
 datum create
@@ -175,7 +196,7 @@ or
 datum convert -if yolo8 -i <path/to/dataset> -f coco_instances -o <path/to/dataset>
 ```
 
-Extra options for importing YOLO8 format:
+Extra options for importing YOLOv8 format:
 - `--config-file` allows to specify config file name to use instead of default `data.yaml`
 
 Alternatively, using the Python API:
@@ -190,8 +211,8 @@ dataset = Dataset.import_from(data_path, data_format)
 dataset.export('save_dir', 'coco_instances')
 ```
 
-## Export to YOLO8 format
-Datumaro can convert an existing dataset to YOLO8 format
+## Export to YOLOv8 format
+Datumaro can convert an existing dataset to YOLOv8 format
 if it supports annotations from source format.
 
 Example:
@@ -202,7 +223,7 @@ datum import -f coco_instances <path/to/dataset>
 datum export -f yolo8 -o <path/to/dataset>
 ```
 
-Extra options for exporting to YOLO8 format:
+Extra options for exporting to YOLOv8 format:
 - `--save-media` allow to export dataset with saving media files
   (default: `False`)
 - `--image-ext <IMAGE_EXT>` allow to specify image extension
@@ -213,7 +234,7 @@ Extra options for exporting to YOLO8 format:
 
 ## Examples
 
-### Example 1. Create a custom dataset in YOLO8 Detection format
+### Example 1. Create a custom dataset in YOLOv8 Detection format
 
 ```python
 import numpy as np
@@ -236,7 +257,7 @@ dataset = dm.Dataset.from_iterable(
 dataset.export('../yolov8_dataset', format='yolo8')
 ```
 
-### Example 2. Create a custom dataset in YOLO8 Oriented Bounding Box format
+### Example 2. Create a custom dataset in YOLOv8 Oriented Bounding Box format
 
 Orientation of bounding boxes is controlled through `rotation` attribute of `Bbox` annotation.
 Its value is a counter-clockwise angle in degrees.
@@ -262,7 +283,7 @@ dataset = dm.Dataset.from_iterable(
 dataset.export('../yolov8_dataset', format='yolo8_oriented_boxes')
 ```
 
-### Example 3. Create a custom dataset in YOLO8 Segmentation format
+### Example 3. Create a custom dataset in YOLOv8 Segmentation format
 
 ```python
 import numpy as np
@@ -284,7 +305,7 @@ dataset = dm.Dataset.from_iterable(
 dataset.export('../yolov8_dataset', format='yolo8_segmentation')
 ```
 
-### Example 4. Create a custom dataset in YOLO8 Pose format
+### Example 4. Create a custom dataset in YOLOv8 Pose format
 
 ```python
 import numpy as np

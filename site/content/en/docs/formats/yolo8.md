@@ -20,7 +20,6 @@ Supported annotation types and formats:
 - `Bbox`
   - Detection (only not rotated)
   - Oriented Bounding Box,
-  - Segmentation (only export))
 - `Polygon`
   - Segmentation
 - `Skeleton`
@@ -239,6 +238,9 @@ dataset.export('../yolov8_dataset', format='yolo8')
 
 ### Example 2. Create a custom dataset in YOLO8 Oriented Bounding Box format
 
+Orientation of bounding boxes is controlled through `rotation` attribute of `Bbox` annotation.
+Its value is a counter-clockwise angle in degrees.
+
 ```python
 import numpy as np
 import datumaro as dm
@@ -251,7 +253,7 @@ dataset = dm.Dataset.from_iterable(
             media=dm.Image(data=np.ones((8, 8, 3))),
             annotations=[
                 dm.Bbox(0, 2, 4, 2, label=2),
-                dm.Bbox(0, 1, 2, 3, label=4, attributes={"rotation": 30}),
+                dm.Bbox(0, 1, 2, 3, label=4, attributes={"rotation": 30.0}),
             ],
         ),
     ],
@@ -273,8 +275,6 @@ dataset = dm.Dataset.from_iterable(
             subset="train",
             media=dm.Image(data=np.ones((8, 8, 3))),
             annotations=[
-                dm.Bbox(0, 2, 4, 2, label=2),
-                dm.Bbox(0, 1, 2, 3, label=4, attributes={"rotation": 30}),
                 dm.Polygon([3.0, 1.5, 6.0, 1.5, 6.0, 7.5, 4.5, 7.5, 3.75, 3.0], label=4),
             ],
         ),

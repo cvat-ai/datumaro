@@ -464,83 +464,9 @@ class Yolo8SegmentationConverterTest(Yolo8ConverterTest):
             label=randint(0, n_of_labels - 1),
         )
 
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_bbox_but_load_polygon(self, test_dir):
-        bbox = Bbox(1, 2, 3, 4, label=1)
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        Polygon([1, 2, 3, 4, 5, 6, 7, 8, 4, 6], label=0),
-                        bbox,
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        Polygon([1, 2, 3, 4, 5, 6, 7, 8, 4, 6], label=0),
-                        Polygon(bbox.as_polygon(), label=1),
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
-
-        self.CONVERTER.convert(source_dataset, test_dir, save_media=True, add_path_prefix=False)
-        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        self.compare_datasets(expected_dataset, parsed_dataset)
-
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_export_rotated_bbox(self, test_dir):
-        dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        Bbox(
-                            x=1,
-                            y=2,
-                            w=3,
-                            h=4,
-                            label=0,
-                            attributes=dict(rotation=30.0),
-                        )
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        Polygon(
-                            points=[2.2, 1.52, 4.8, 3.02, 2.8, 6.48, 0.2, 4.98],
-                            label=0,
-                        )
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
-        dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
-        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        self.compare_datasets(expected_dataset, parsed_dataset)
+        pass
 
 
 class Yolo8OrientedBoxesConverterTest(CompareDatasetsRotationMixin, Yolo8ConverterTest):

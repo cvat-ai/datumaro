@@ -476,7 +476,7 @@ class Yolo8OrientedBoxesExtractor(Yolo8Extractor):
             w=width,
             h=height,
             label=label_id,
-            attributes=(dict(rotation=180 * rotation / math.pi) if abs(rotation) > 0.00001 else {}),
+            attributes=(dict(rotation=math.degrees(rotation)) if abs(rotation) > 0.00001 else {}),
         )
 
 

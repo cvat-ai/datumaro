@@ -59,8 +59,7 @@ def _bbox_annotation_as_polygon(bbox: Bbox) -> List[float]:
         )
         return new_x, new_y
 
-    if rotation := bbox.attributes.get("rotation"):
-        rotation_radians = rotation * math.pi / 180
+    if rotation_radians := math.radians(bbox.attributes.get("rotation", 0)):
         center_x = bbox.x + bbox.w / 2
         center_y = bbox.y + bbox.h / 2
         points = [
@@ -310,16 +309,9 @@ class Yolo8Converter(YoloConverter):
 
 class Yolo8SegmentationConverter(Yolo8Converter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
-        if anno.label is None:
+        if anno.label is None or not isinstance(anno, Polygon):
             return
-        if isinstance(anno, Polygon):
-            points = anno.points
-        elif isinstance(anno, Bbox):
-            points = _bbox_annotation_as_polygon(anno)
-        else:
-            return
-
-        values = [value / size for value, size in zip(points, cycle((width, height)))]
+        values = [value / size for value, size in zip(anno.points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
         return "%s %s\n" % (anno.label, string_values)
 

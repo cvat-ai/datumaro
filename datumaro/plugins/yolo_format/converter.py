@@ -217,10 +217,8 @@ class YoloConverter(Converter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if not isinstance(anno, Bbox) or anno.label is None:
             return
-        if anno.attributes.get("rotation"):
-            raise DatasetExportError(
-                f"Can't export bbox, because it is rotated. Rotation: {anno.attributes.get('rotation')}"
-            )
+        if anno.attributes.get("rotation", 0) % 360.0 > 0.00001:
+            return
 
         values = _make_yolo_bbox((width, height), anno.points)
         string_values = " ".join("%.6f" % p for p in values)

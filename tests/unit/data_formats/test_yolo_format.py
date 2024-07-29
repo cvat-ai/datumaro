@@ -351,23 +351,37 @@ class YoloConverterTest(CompareDatasetMixin):
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_export_rotated_bbox(self, test_dir):
-        dataset = Dataset.from_iterable(
+        expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
                     id=3,
                     subset="valid",
                     media=Image(data=np.ones((8, 8, 3))),
                     annotations=[
+                        self._generate_random_bbox(n_of_labels=2),
+                        self._generate_random_bbox(n_of_labels=2),
+                    ],
+                ),
+            ],
+            categories=["a", "b"],
+        )
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=list(expected_dataset)[0].annotations
+                    + [
                         self._generate_random_bbox(n_of_labels=2, rotation=30.0),
                     ],
                 ),
             ],
             categories=["a", "b"],
         )
-        with pytest.raises(DatasetExportError) as capture:
-            dataset.export(test_dir, self.CONVERTER.NAME)
-        assert isinstance(capture.value.__cause__, DatasetExportError)
-        assert "Can't export bbox, because it is rotated" in str(capture.value.__cause__)
+        source_dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, parsed_dataset)
 
 
 class Yolo8ConverterTest(YoloConverterTest):

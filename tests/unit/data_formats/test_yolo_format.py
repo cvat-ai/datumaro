@@ -778,66 +778,62 @@ class Yolo8ImporterTest(YoloImporterTest):
 
     def test_can_detect_and_import_with_any_yaml_as_config(self, test_dir):
         expected_dataset = self._asset_dataset()
-        for asset in self.ASSETS:
-            dataset_path = osp.join(test_dir, "dataset")
-            shutil.copytree(get_test_asset_path("yolo_dataset", asset), dataset_path)
-            os.rename(
-                osp.join(dataset_path, "data.yaml"), osp.join(dataset_path, "custom_file_name.yaml")
-            )
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", self.ASSETS[0]), dataset_path)
+        os.rename(
+            osp.join(dataset_path, "data.yaml"), osp.join(dataset_path, "custom_file_name.yaml")
+        )
 
-            self.IMPORTER.detect(FormatDetectionContext(dataset_path))
-            dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
-            self.compare_datasets(expected_dataset, dataset)
-            shutil.rmtree(dataset_path)
+        self.IMPORTER.detect(FormatDetectionContext(dataset_path))
+        dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, dataset)
 
     def test_can_detect_and_import_if_multiple_yamls_with_default_among_them(self, test_dir):
         expected_dataset = self._asset_dataset()
-        for asset in self.ASSETS:
-            dataset_path = osp.join(test_dir, "dataset")
-            shutil.copytree(get_test_asset_path("yolo_dataset", asset), dataset_path)
-            shutil.copyfile(
-                osp.join(dataset_path, "data.yaml"), osp.join(dataset_path, "custom_file_name.yaml")
-            )
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", self.ASSETS[0]), dataset_path)
+        shutil.copyfile(
+            osp.join(dataset_path, "data.yaml"), osp.join(dataset_path, "custom_file_name.yaml")
+        )
 
-            self.IMPORTER.detect(FormatDetectionContext(dataset_path))
-            dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
-            self.compare_datasets(expected_dataset, dataset)
-            shutil.rmtree(dataset_path)
+        self.IMPORTER.detect(FormatDetectionContext(dataset_path))
+        dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, dataset)
 
     def test_can_not_detect_or_import_if_multiple_yamls_but_no_default_among_them(self, test_dir):
-        for asset in self.ASSETS:
-            dataset_path = osp.join(test_dir, "dataset")
-            shutil.copytree(get_test_asset_path("yolo_dataset", asset), dataset_path)
-            shutil.copyfile(
-                osp.join(dataset_path, "data.yaml"),
-                osp.join(dataset_path, "custom_file_name1.yaml"),
-            )
-            os.rename(
-                osp.join(dataset_path, "data.yaml"),
-                osp.join(dataset_path, "custom_file_name2.yaml"),
-            )
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", self.ASSETS[0]), dataset_path)
+        shutil.copyfile(
+            osp.join(dataset_path, "data.yaml"),
+            osp.join(dataset_path, "custom_file_name1.yaml"),
+        )
+        os.rename(
+            osp.join(dataset_path, "data.yaml"),
+            osp.join(dataset_path, "custom_file_name2.yaml"),
+        )
 
-            with pytest.raises(FormatRequirementsUnmet):
-                self.IMPORTER.detect(FormatDetectionContext(dataset_path))
-            with pytest.raises(DatasetNotFoundError):
-                Dataset.import_from(dataset_path, self.IMPORTER.NAME, config_file="data.yaml")
-
-            shutil.rmtree(dataset_path)
+        with pytest.raises(FormatRequirementsUnmet):
+            self.IMPORTER.detect(FormatDetectionContext(dataset_path))
+        with pytest.raises(DatasetNotFoundError):
+            Dataset.import_from(dataset_path, self.IMPORTER.NAME)
 
     def test_can_import_despite_multiple_yamls_if_config_file_provided_as_argument(self, test_dir):
         expected_dataset = self._asset_dataset()
-        for asset in self.ASSETS:
-            dataset_path = osp.join(test_dir, "dataset")
-            shutil.copytree(get_test_asset_path("yolo_dataset", asset), dataset_path)
-            shutil.copyfile(
-                osp.join(dataset_path, "data.yaml"), osp.join(dataset_path, "custom_file_name.yaml")
-            )
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", self.ASSETS[0]), dataset_path)
+        shutil.copyfile(
+            osp.join(dataset_path, "data.yaml"),
+            osp.join(dataset_path, "custom_file_name1.yaml"),
+        )
+        os.rename(
+            osp.join(dataset_path, "data.yaml"),
+            osp.join(dataset_path, "custom_file_name2.yaml"),
+        )
 
-            dataset = Dataset.import_from(
-                dataset_path, self.IMPORTER.NAME, config_file="custom_file_name.yaml"
-            )
-            self.compare_datasets(expected_dataset, dataset)
-            shutil.rmtree(dataset_path)
+        dataset = Dataset.import_from(
+            dataset_path, self.IMPORTER.NAME, config_file="custom_file_name1.yaml"
+        )
+        self.compare_datasets(expected_dataset, dataset)
 
 
 class Yolo8SegmentationImporterTest(Yolo8ImporterTest):

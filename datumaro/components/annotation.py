@@ -156,11 +156,7 @@ class LabelCategories(Categories):
 
     @property
     def labels(self):
-        return {
-            label_index: parent + name
-            for (parent, name), label_index
-            in self._indices.items()
-        }
+        return {label_index: parent + name for (parent, name), label_index in self._indices.items()}
 
     def add(
         self, name: str, parent: Optional[str] = "", attributes: Optional[Set[str]] = None

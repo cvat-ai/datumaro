@@ -438,6 +438,10 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
             raise InvalidAnnotationError(
                 "Given points do not form a rectangle: opposite sides have different slope angles."
             )
+        if abs((p12_angle - p23_angle) % math.pi - math.pi / 2) > 0.001:
+            raise InvalidAnnotationError(
+                "Given points do not form a rectangle: adjacent sides are not orthogonal."
+            )
 
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int

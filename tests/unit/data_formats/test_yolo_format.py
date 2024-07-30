@@ -1160,6 +1160,17 @@ class YOLOv8OrientedBoxesExtractorTest(YOLOv8ExtractorTest):
         assert isinstance(capture.value.__cause__, InvalidAnnotationError)
         assert "Given points do not form a rectangle" in str(capture.value.__cause__)
 
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_report_invalid_shape_parallelogram(self, test_dir):
+        self._prepare_dataset(test_dir)
+        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
+            f.write("0 0.1 0.1 0.5 0.1 0.6 0.5 0.2 0.5")
+
+        with pytest.raises(AnnotationImportError) as capture:
+            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert "adjacent sides are not orthogonal" in str(capture.value.__cause__)
+
 
 class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
     IMPORTER = YOLOv8PoseImporter

@@ -1,4 +1,5 @@
 # Copyright (C) 2019-2021 Intel Corporation
+# Copyright (C) 2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 

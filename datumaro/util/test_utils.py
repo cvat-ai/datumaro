@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2022 Intel Corporation
+# Copyright (C) 2019-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -12,8 +12,9 @@ import unittest.mock
 import warnings
 from enum import Enum, auto
 from glob import glob
-from typing import Any, Collection, Optional, Union
+from typing import Any, Collection, List, Optional, Union
 
+import pytest
 from typing_extensions import Literal
 
 from datumaro.components.annotation import AnnotationType
@@ -358,3 +359,27 @@ def mock_tfds_data(example=None, subsets=("train",)):
 
         with unittest.mock.patch("tensorflow_datasets.core.DatasetBuilder.__init__", new_init):
             yield
+
+
+class TestCaseHelper:
+    """This class will exist until we complete the migration from unittest to pytest.
+    It is designed to mimic unittest.TestCase behaviors to minimize the migration work labor cost.
+    """
+
+    def assertTrue(self, boolean: bool, err_msg: str = ""):
+        assert boolean, err_msg
+
+    def assertFalse(self, boolean: bool, err_msg: str = ""):
+        assert not boolean, err_msg
+
+    def assertEqual(self, item1: Any, item2: Any, err_msg: str = ""):
+        assert item1 == item2, err_msg
+
+    def assertListEqual(self, list1: List[Any], list2: List[Any], err_msg: str = ""):
+        assert isinstance(list1, list) and isinstance(list2, list), err_msg
+        assert len(list1) == len(list2), err_msg
+        for item1, item2 in zip(list1, list2):
+            self.assertEqual(item1, item2, err_msg)
+
+    def fail(self, msg):
+        pytest.fail(reason=msg)

@@ -15,10 +15,10 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.plugins.open_images_format import OpenImagesConverter, OpenImagesImporter
-from datumaro.util.test_utils import TestDir, compare_datasets
 
 from tests.conftest import ASSETS_DIR
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.test_utils import TestDir, compare_datasets
 
 
 class OpenImagesFormatTest(TestCase):

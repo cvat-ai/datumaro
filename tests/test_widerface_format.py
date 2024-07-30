@@ -10,9 +10,10 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.plugins.widerface_format import WiderFaceConverter, WiderFaceImporter
-from datumaro.util.test_utils import IGNORE_ALL, TestDir, compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import IGNORE_ALL, TestDir, compare_datasets
 
 
 class WiderFaceFormatTest(TestCase):

@@ -60,10 +60,11 @@ from datumaro.plugins.yolo_format.importer import (
     YOLOv8SegmentationImporter,
 )
 from datumaro.util.image import save_image
-from datumaro.util.test_utils import compare_datasets, compare_datasets_strict
 
 from ...requirements import Requirements, mark_requirement
 from ...utils.assets import get_test_asset_path
+
+from tests.utils.test_utils import compare_datasets, compare_datasets_strict
 
 
 @pytest.fixture(autouse=True)

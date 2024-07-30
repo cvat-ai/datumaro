@@ -9,9 +9,10 @@ from pathlib import Path
 import pytest
 
 from datumaro.util import parse_json
-from datumaro.util.test_utils import run_datum
 
 from ..requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import run_datum
 
 DUMMY_DATASET_DIR = osp.join(
     __file__[: __file__.rfind(osp.join("tests", ""))],

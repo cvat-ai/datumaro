@@ -25,9 +25,10 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.errors import DatumaroError
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.util.test_utils import compare_datasets
 
 from .requirements import Requirements, mark_bug, mark_requirement
+
+from tests.utils.test_utils import compare_datasets
 
 
 class TransformsTest(TestCase):

@@ -10,9 +10,10 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.plugins.mot_format import MotSeqGtConverter, MotSeqImporter
-from datumaro.util.test_utils import TestDir, check_save_and_load, compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 
 class MotConverterTest(TestCase):

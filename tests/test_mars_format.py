@@ -11,10 +11,10 @@ from datumaro.components.dataset import Dataset, DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.media import Image
 from datumaro.plugins.mars_format import MarsImporter
-from datumaro.util.test_utils import compare_datasets
 
 from tests.conftest import ASSETS_DIR
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.test_utils import compare_datasets
 
 DUMMY_MARS_DATASET = str(ASSETS_DIR / "mars_dataset")
 

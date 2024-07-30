@@ -9,9 +9,10 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.util.test_utils import compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import compare_datasets
 
 DUMMY_LABELS_SEGM_DATASET_DIR = osp.join(
     osp.dirname(__file__), "assets", "synthia_dataset", "labels_segm_dataset"

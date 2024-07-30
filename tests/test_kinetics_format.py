@@ -2,7 +2,8 @@ import os.path as osp
 from unittest import TestCase
 
 from datumaro.components.media import Video
-from datumaro.util.test_utils import compare_datasets
+
+from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "kinetics_dataset")
 

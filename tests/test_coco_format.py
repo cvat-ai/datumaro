@@ -46,14 +46,15 @@ from datumaro.plugins.coco_format.converter import (
 from datumaro.plugins.coco_format.extractor import CocoInstancesExtractor
 from datumaro.plugins.coco_format.importer import CocoImporter
 from datumaro.util import dump_json_file
-from datumaro.util.test_utils import (
+
+from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import (
     TestDir,
     check_save_and_load,
     compare_datasets,
     compare_datasets_strict,
 )
-
-from .requirements import Requirements, mark_requirement
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "coco_dataset")
 

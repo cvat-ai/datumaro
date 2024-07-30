@@ -6,9 +6,10 @@ from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.components.project import Dataset
 from datumaro.plugins.image_dir_format import ImageDirConverter
-from datumaro.util.test_utils import TestDir, check_save_and_load
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, check_save_and_load
 
 
 class ImageDirFormatTest(TestCase):

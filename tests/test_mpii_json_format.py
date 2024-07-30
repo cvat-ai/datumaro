@@ -13,9 +13,10 @@ from datumaro.plugins.mpii_format.mpii_json import (
     MPII_POINTS_LABELS,
     MpiiJsonImporter,
 )
-from datumaro.util.test_utils import compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR_WITH_NUMPY_FILES = osp.join(
     osp.dirname(__file__), "assets", "mpii_json_dataset", "dataset_with_numpy_files"

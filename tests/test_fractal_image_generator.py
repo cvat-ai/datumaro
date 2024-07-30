@@ -7,9 +7,10 @@ import pytest
 
 from datumaro.plugins.synthetic_data import FractalImageGenerator
 from datumaro.util.image import load_image
-from datumaro.util.test_utils import TestDir
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir
 
 
 # TODO: update links

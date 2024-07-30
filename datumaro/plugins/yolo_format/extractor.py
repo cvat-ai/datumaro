@@ -43,7 +43,7 @@ from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_met
 from datumaro.util.os_util import split_path
 
 from ...util import parse_json_file, take_by
-from .format import Yolo8Path, Yolo8PoseFormat, YoloPath
+from .format import YoloPath, YOLOv8Path, YOLOv8PoseFormat
 
 T = TypeVar("T")
 
@@ -315,8 +315,8 @@ class YoloExtractor(SourceExtractor):
         return self._subsets[name]
 
 
-class Yolo8Extractor(YoloExtractor):
-    RESERVED_CONFIG_KEYS = Yolo8Path.RESERVED_CONFIG_KEYS
+class YOLOv8Extractor(YoloExtractor):
+    RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
 
     def __init__(
         self,
@@ -356,10 +356,10 @@ class Yolo8Extractor(YoloExtractor):
 
     def _get_labels_path_from_image_path(self, image_path: str) -> str:
         relative_image_path = osp.relpath(
-            image_path, osp.join(self._path, Yolo8Path.IMAGES_FOLDER_NAME)
+            image_path, osp.join(self._path, YOLOv8Path.IMAGES_FOLDER_NAME)
         )
-        relative_labels_path = osp.splitext(relative_image_path)[0] + Yolo8Path.LABELS_EXT
-        return osp.join(self._path, Yolo8Path.LABELS_FOLDER_NAME, relative_labels_path)
+        relative_labels_path = osp.splitext(relative_image_path)[0] + YOLOv8Path.LABELS_EXT
+        return osp.join(self._path, YOLOv8Path.LABELS_FOLDER_NAME, relative_labels_path)
 
     @classmethod
     def name_from_path(cls, path: str) -> str:
@@ -396,7 +396,7 @@ class Yolo8Extractor(YoloExtractor):
             yield from subset_images_source
 
 
-class Yolo8SegmentationExtractor(Yolo8Extractor):
+class YOLOv8SegmentationExtractor(YOLOv8Extractor):
     def _load_segmentation_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Polygon:
@@ -426,7 +426,7 @@ class Yolo8SegmentationExtractor(Yolo8Extractor):
         )
 
 
-class Yolo8OrientedBoxesExtractor(Yolo8Extractor):
+class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
     @staticmethod
     def _check_is_rectangle(p1, p2, p3, p4):
         p12_angle = math.atan2(p2[0] - p1[0], p2[1] - p1[1])
@@ -480,27 +480,27 @@ class Yolo8OrientedBoxesExtractor(Yolo8Extractor):
         )
 
 
-class Yolo8PoseExtractor(Yolo8Extractor):
+class YOLOv8PoseExtractor(YOLOv8Extractor):
     @cached_property
     def _kpt_shape(self):
-        if Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME not in self._config:
+        if YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME not in self._config:
             raise InvalidAnnotationError(
-                f"Failed to parse {Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME} from config"
+                f"Failed to parse {YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME} from config"
             )
-        kpt_shape = self._config[Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME]
+        kpt_shape = self._config[YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME]
         if not isinstance(kpt_shape, list) or len(kpt_shape) != 2:
             raise InvalidAnnotationError(
-                f"Failed to parse {Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME} from config"
+                f"Failed to parse {YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME} from config"
             )
         if kpt_shape[1] not in [2, 3]:
             raise InvalidAnnotationError(
                 f"Unexpected values per point {kpt_shape[1]} in field"
-                f"{Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME}. Expected 2 or 3."
+                f"{YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME}. Expected 2 or 3."
             )
         if not isinstance(kpt_shape[0], int) or kpt_shape[0] < 0:
             raise InvalidAnnotationError(
                 f"Unexpected number of points {kpt_shape[0]} in field "
-                f"{Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME}. Expected non-negative integer."
+                f"{YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME}. Expected non-negative integer."
             )
 
         return kpt_shape

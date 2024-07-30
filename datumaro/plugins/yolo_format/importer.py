@@ -12,12 +12,12 @@ import yaml
 from datumaro import Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.plugins.yolo_format.extractor import (
-    Yolo8Extractor,
-    Yolo8OrientedBoxesExtractor,
-    Yolo8PoseExtractor,
-    Yolo8SegmentationExtractor,
+    YOLOv8Extractor,
+    YOLOv8OrientedBoxesExtractor,
+    YOLOv8PoseExtractor,
+    YOLOv8SegmentationExtractor,
 )
-from datumaro.plugins.yolo_format.format import Yolo8Path, Yolo8PoseFormat
+from datumaro.plugins.yolo_format.format import YOLOv8Path, YOLOv8PoseFormat
 
 
 class YoloImporter(Importer):
@@ -30,8 +30,8 @@ class YoloImporter(Importer):
         return cls._find_sources_recursive(path, ".data", "yolo")
 
 
-class Yolo8Importer(Importer):
-    EXTRACTOR = Yolo8Extractor
+class YOLOv8Importer(Importer):
+    EXTRACTOR = YOLOv8Extractor
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -46,18 +46,18 @@ class Yolo8Importer(Importer):
     def _check_config_file(cls, context, config_file):
         with context.probe_text_file(
             config_file,
-            f"must not have '{Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME}' field",
+            f"must not have '{YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME}' field",
         ) as f:
             try:
                 config = yaml.safe_load(f)
-                if Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME in config:
+                if YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME in config:
                     raise Exception
             except yaml.YAMLError:
                 raise Exception
 
     @classmethod
     def detect(cls, context: FormatDetectionContext) -> None:
-        context.require_file(f"*{Yolo8Path.CONFIG_FILE_EXT}")
+        context.require_file(f"*{YOLOv8Path.CONFIG_FILE_EXT}")
         sources = cls.find_sources_with_params(context.root_path)
         if not sources or len(sources) > 1:
             context.fail("Cannot choose config file")
@@ -69,7 +69,7 @@ class Yolo8Importer(Importer):
         cls, path, config_file=None, **extra_params
     ) -> List[Dict[str, Any]]:
         sources = cls._find_sources_recursive(
-            path, Yolo8Path.CONFIG_FILE_EXT, cls.EXTRACTOR.NAME, max_depth=1
+            path, YOLOv8Path.CONFIG_FILE_EXT, cls.EXTRACTOR.NAME, max_depth=1
         )
 
         if config_file:
@@ -79,30 +79,30 @@ class Yolo8Importer(Importer):
         return [
             source
             for source in sources
-            if source["url"] == osp.join(path, Yolo8Path.DEFAULT_CONFIG_FILE)
+            if source["url"] == osp.join(path, YOLOv8Path.DEFAULT_CONFIG_FILE)
         ]
 
 
-class Yolo8SegmentationImporter(Yolo8Importer):
-    EXTRACTOR = Yolo8SegmentationExtractor
+class YOLOv8SegmentationImporter(YOLOv8Importer):
+    EXTRACTOR = YOLOv8SegmentationExtractor
 
 
-class Yolo8OrientedBoxesImporter(Yolo8Importer):
-    EXTRACTOR = Yolo8OrientedBoxesExtractor
+class YOLOv8OrientedBoxesImporter(YOLOv8Importer):
+    EXTRACTOR = YOLOv8OrientedBoxesExtractor
 
 
-class Yolo8PoseImporter(Yolo8Importer):
-    EXTRACTOR = Yolo8PoseExtractor
+class YOLOv8PoseImporter(YOLOv8Importer):
+    EXTRACTOR = YOLOv8PoseExtractor
 
     @classmethod
     def _check_config_file(cls, context, config_file):
         with context.probe_text_file(
             config_file,
-            f"must have '{Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME}' field",
+            f"must have '{YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME}' field",
         ) as f:
             try:
                 config = yaml.safe_load(f)
-                if Yolo8PoseFormat.KPT_SHAPE_FIELD_NAME not in config:
+                if YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME not in config:
                     raise Exception
             except yaml.YAMLError:
                 raise Exception

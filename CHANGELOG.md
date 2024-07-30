@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/46>)
 - Skeleton support in datumaro format
   (<https://github.com/cvat-ai/datumaro/pull/47>)
-- Support for YOLO8 formats
+- Support for YOLOv8 formats
   (<https://github.com/cvat-ai/datumaro/pull/50>)
 
 ### Changed

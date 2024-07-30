@@ -29,7 +29,7 @@ from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExt
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
 
-from .format import Yolo8Path, YoloPath
+from .format import YoloPath, YOLOv8Path
 
 
 def _make_yolo_bbox(img_size, box):
@@ -260,8 +260,8 @@ class YoloConverter(Converter):
                 os.remove(ann_path)
 
 
-class Yolo8Converter(YoloConverter):
-    RESERVED_CONFIG_KEYS = Yolo8Path.RESERVED_CONFIG_KEYS
+class YOLOv8Converter(YoloConverter):
+    RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
 
     def __init__(
         self,
@@ -273,14 +273,14 @@ class Yolo8Converter(YoloConverter):
         **kwargs,
     ) -> None:
         super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
-        self._config_filename = config_file or Yolo8Path.DEFAULT_CONFIG_FILE
+        self._config_filename = config_file or YOLOv8Path.DEFAULT_CONFIG_FILE
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
         parser = super().build_cmdline_parser(**kwargs)
         parser.add_argument(
             "--config-file",
-            default=Yolo8Path.DEFAULT_CONFIG_FILE,
+            default=YOLOv8Path.DEFAULT_CONFIG_FILE,
             type=str,
             help="config file name (default: %(default)s)",
         )
@@ -300,14 +300,14 @@ class Yolo8Converter(YoloConverter):
 
     @staticmethod
     def _make_image_subset_folder(save_dir: str, subset: str) -> str:
-        return osp.join(save_dir, Yolo8Path.IMAGES_FOLDER_NAME, subset)
+        return osp.join(save_dir, YOLOv8Path.IMAGES_FOLDER_NAME, subset)
 
     @staticmethod
     def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
-        return osp.join(save_dir, Yolo8Path.LABELS_FOLDER_NAME, subset)
+        return osp.join(save_dir, YOLOv8Path.LABELS_FOLDER_NAME, subset)
 
 
-class Yolo8SegmentationConverter(Yolo8Converter):
+class YOLOv8SegmentationConverter(YOLOv8Converter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Polygon):
             return
@@ -316,7 +316,7 @@ class Yolo8SegmentationConverter(Yolo8Converter):
         return "%s %s\n" % (anno.label, string_values)
 
 
-class Yolo8OrientedBoxesConverter(Yolo8Converter):
+class YOLOv8OrientedBoxesConverter(YOLOv8Converter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Bbox):
             return
@@ -326,7 +326,7 @@ class Yolo8OrientedBoxesConverter(Yolo8Converter):
         return "%s %s\n" % (anno.label, string_values)
 
 
-class Yolo8PoseConverter(Yolo8Converter):
+class YOLOv8PoseConverter(YOLOv8Converter):
     @cached_property
     def _map_labels_for_save(self):
         point_categories = self._extractor.categories().get(

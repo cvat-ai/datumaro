@@ -37,10 +37,10 @@ To create a Datumaro project with a YOLOv8 source, use the following commands:
 
 ```bash
 datum create
-datum import --format yolo8 <path/to/dataset> # for Detection dataset
-datum import --format yolo8_oriented_boxes <path/to/dataset> # for Oriented Bounding Box dataset
-datum import --format yolo8_segmentation <path/to/dataset> # for Segmentation dataset
-datum import --format yolo8_pose <path/to/dataset> # for Pose dataset
+datum import --format yolov8 <path/to/dataset> # for Detection dataset
+datum import --format yolov8_oriented_boxes <path/to/dataset> # for Oriented Bounding Box dataset
+datum import --format yolov8_segmentation <path/to/dataset> # for Segmentation dataset
+datum import --format yolov8_pose <path/to/dataset> # for Pose dataset
 ```
 
 The YOLOv8 dataset directory should have the following structure:
@@ -188,12 +188,12 @@ that support the same annotations as YOLOv8 format you have.
 
 ```bash
 datum create
-datum add -f yolo8 <path/to/yolov8/>
+datum add -f yolov8 <path/to/yolov8/>
 datum export -f coco_instances -o <output/dir>
 ```
 or
 ```bash
-datum convert -if yolo8 -i <path/to/dataset> -f coco_instances -o <path/to/dataset>
+datum convert -if yolov8 -i <path/to/dataset> -f coco_instances -o <path/to/dataset>
 ```
 
 Extra options for importing YOLOv8 format:
@@ -205,7 +205,7 @@ Alternatively, using the Python API:
 from datumaro.components.dataset import Dataset
 
 data_path = 'path/to/dataset'
-data_format = 'yolo8'
+data_format = 'yolov8'
 
 dataset = Dataset.import_from(data_path, data_format)
 dataset.export('save_dir', 'coco_instances')
@@ -220,7 +220,7 @@ Example:
 ```bash
 datum create
 datum import -f coco_instances <path/to/dataset>
-datum export -f yolo8 -o <path/to/dataset>
+datum export -f yolov8 -o <path/to/dataset>
 ```
 
 Extra options for exporting to YOLOv8 format:
@@ -254,7 +254,7 @@ dataset = dm.Dataset.from_iterable(
     ],
     categories=["label_" + str(i) for i in range(10)],
 )
-dataset.export('../yolov8_dataset', format='yolo8')
+dataset.export('../yolov8_dataset', format='yolov8')
 ```
 
 ### Example 2. Create a custom dataset in YOLOv8 Oriented Bounding Box format
@@ -280,7 +280,7 @@ dataset = dm.Dataset.from_iterable(
     ],
     categories=["label_" + str(i) for i in range(10)],
 )
-dataset.export('../yolov8_dataset', format='yolo8_oriented_boxes')
+dataset.export('../yolov8_dataset', format='yolov8_oriented_boxes')
 ```
 
 ### Example 3. Create a custom dataset in YOLOv8 Segmentation format
@@ -302,7 +302,7 @@ dataset = dm.Dataset.from_iterable(
     ],
     categories=["label_" + str(i) for i in range(10)],
 )
-dataset.export('../yolov8_dataset', format='yolo8_segmentation')
+dataset.export('../yolov8_dataset', format='yolov8_segmentation')
 ```
 
 ### Example 4. Create a custom dataset in YOLOv8 Pose format
@@ -341,5 +341,5 @@ dataset = dm.Dataset.from_iterable(
         ]),
     },
 )
-dataset.export('../yolov8_dataset', format='yolo8_pose')
+dataset.export('../yolov8_dataset', format='yolov8_pose')
 ```

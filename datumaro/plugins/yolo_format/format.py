@@ -11,7 +11,7 @@ class YoloPath:
     SUBSET_LIST_EXT = ".txt"
 
 
-class Yolo8Path(YoloPath):
+class YOLOv8Path(YoloPath):
     CONFIG_FILE_EXT = ".yaml"
     DEFAULT_CONFIG_FILE = "data.yaml"
     RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS + [
@@ -23,5 +23,5 @@ class Yolo8Path(YoloPath):
     LABELS_FOLDER_NAME = "labels"
 
 
-class Yolo8PoseFormat:
+class YOLOv8PoseFormat:
     KPT_SHAPE_FIELD_NAME = "kpt_shape"

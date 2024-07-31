@@ -150,7 +150,8 @@ class LabelCategories(Categories):
         indices = {}
         for index, item in enumerate(self.items):
             key = (item.parent, item.name)
-            assert key not in self._indices
+            if key in self._indices:
+                raise KeyError(f"Item with duplicate label {item.parent!r} {item.name!r}")
             indices[key] = index
         self._indices = indices
 
@@ -161,9 +162,11 @@ class LabelCategories(Categories):
     def add(
         self, name: str, parent: Optional[str] = "", attributes: Optional[Set[str]] = None
     ) -> int:
-        assert name
+        if not name:
+            raise ValueError("Label name must not be empty")
         key = (parent or "", name)
-        assert key not in self._indices
+        if key in self._indices:
+            raise KeyError(f"Label {parent!r} {name!r} already exists")
 
         index = len(self.items)
         self.items.append(self.Category(name, parent, attributes))

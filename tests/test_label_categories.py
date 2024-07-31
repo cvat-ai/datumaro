@@ -1,5 +1,5 @@
-
 import pytest
+
 from datumaro import LabelCategories
 
 

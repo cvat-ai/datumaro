@@ -39,6 +39,8 @@ def test_add_duplicate_category():
 def test_potential_collision():
     """
     Previously indices were computed as (parent or "") + name
+
+    See https://github.com/cvat-ai/datumaro/pull/51
     """
     categories = LabelCategories()
     categories.add("22", parent="parent")

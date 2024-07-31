@@ -106,7 +106,7 @@ class LabelCategories(Categories):
         parent: str = field(default="", validator=default_if_none(str))
         attributes: Set[str] = field(factory=set, validator=default_if_none(set))
 
-    items: List[str] = field(factory=list, validator=default_if_none(list))
+    items: List[Category] = field(factory=list, validator=default_if_none(list))
     _indices: Dict[Tuple[str, str], int] = field(factory=dict, init=False, eq=False)
 
     @classmethod

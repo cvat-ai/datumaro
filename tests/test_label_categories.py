@@ -32,8 +32,12 @@ def test_add_category_with_attributes():
 def test_add_duplicate_category():
     categories = LabelCategories()
     categories.add("cat")
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match="Label '' 'cat' already exists"):
         categories.add("cat")
+
+    categories.add("cat", parent="animal")
+    with pytest.raises(KeyError, match="Label 'animal' 'cat' already exists"):
+        categories.add("cat", parent="animal")
 
 
 def test_potential_collision():

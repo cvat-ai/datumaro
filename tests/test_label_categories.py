@@ -1,8 +1,7 @@
 import pytest
 
 from datumaro import LabelCategories
-from tests.requirements import Requirements
-from tests.requirements import mark_requirement
+from tests.requirements import Requirements, mark_requirement
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)

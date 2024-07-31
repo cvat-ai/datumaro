@@ -2,10 +2,14 @@
 # Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
+from pathlib import Path
+
 from datumaro.util.test_utils import TestDir
 
 from .fixtures import *
 from .utils.test_utils import TestCaseHelper
+
+ASSETS_DIR = Path(__file__).parent / "assets"
 
 
 def pytest_configure(config):

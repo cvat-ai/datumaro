@@ -15,6 +15,7 @@ from datumaro.components.project import Project
 from datumaro.util.scope import scope_add, scoped
 from datumaro.util.test_utils import TestDir
 
+from ..conftest import ASSETS_DIR
 from ..requirements import Requirements, mark_requirement
 
 
@@ -133,13 +134,13 @@ class TestRevpath(TestCase):
         # create an ambiguous dataset by merging annotations from
         # datasets in different formats
         annotation_dir = osp.join(dataset_url, "training/street")
-        assets_dir = osp.join(osp.dirname(__file__), "../assets")
         os.makedirs(annotation_dir)
-        for asset in [
-            "ade20k2017_dataset/dataset/training/street/1_atr.txt",
-            "ade20k2020_dataset/dataset/training/street/1.json",
-        ]:
-            shutil.copy(osp.join(assets_dir, asset), annotation_dir)
+        for root, asset_name in (
+            ("ade20k2017_dataset", "1_atr.txt"),
+            ("ade20k2020_dataset", "1.json"),
+        ):
+            asset = ASSETS_DIR / root / "dataset" / "training" / "street" / asset_name
+            shutil.copy(asset, annotation_dir)
 
         with self.subTest("no context"):
             with self.assertRaises(WrongRevpathError) as cm:

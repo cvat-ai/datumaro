@@ -5,6 +5,7 @@
 import pytest
 
 from datumaro import LabelCategories
+
 from tests.requirements import Requirements, mark_requirement
 
 

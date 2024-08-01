@@ -485,6 +485,15 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
 
 
 class YOLOv8PoseExtractor(YOLOv8Extractor):
+    def __init__(
+        self,
+        *args,
+        skeleton_sub_labels: Optional[Dict[str, List[str]]] = None,
+        **kwargs,
+    ) -> None:
+        self._skeleton_sub_labels = skeleton_sub_labels
+        super().__init__(*args, **kwargs)
+
     @cached_property
     def _kpt_shape(self):
         if YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME not in self._config:
@@ -535,19 +544,36 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
             return categories
 
         number_of_points, _ = self._kpt_shape
+        if self._skeleton_sub_labels:
+            if skeletons_with_wrong_sub_labels := [
+                skeleton
+                for skeleton in self._skeleton_sub_labels
+                if len(self._skeleton_sub_labels[skeleton]) != number_of_points
+            ]:
+                raise InvalidAnnotationError(
+                    f"Number of points in skeletons according to config file is {number_of_points}. "
+                    f"Following skeletons have number of sub labels which differs: {skeletons_with_wrong_sub_labels}"
+                )
+
         names = self._config["names"]
         if isinstance(names, dict):
             if set(names.keys()) != set(range(len(names))):
                 raise InvalidAnnotationError(
-                    f"Failed to parse names from config: non-sequential label ids"
+                    "Failed to parse names from config: non-sequential label ids"
                 )
             skeleton_labels = [names[i] for i in range(len(names))]
         elif isinstance(names, list):
             skeleton_labels = names
         else:
-            raise InvalidAnnotationError(f"Failed to parse names from config")
+            raise InvalidAnnotationError("Failed to parse names from config")
 
         def make_children_names(skeleton_label):
+            if self._skeleton_sub_labels:
+                if skeleton_label not in self._skeleton_sub_labels:
+                    raise InvalidAnnotationError(
+                        f"Label '{skeleton_label}' from config file is absent in {sorted(self._skeleton_sub_labels)}"
+                    )
+                return self._skeleton_sub_labels[skeleton_label]
             return [
                 f"{skeleton_label}_point_{point_index}" for point_index in range(number_of_points)
             ]

@@ -1278,9 +1278,9 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
                 },
             )
 
-    def test_fails_on_wrong_skeleton_name_in_hint(self, test_dir):
+    def test_fails_on_lack_of_skeleton_name_in_hint(self, test_dir):
         self._prepare_dataset(test_dir)
-        with pytest.raises(InvalidAnnotationError, match="config file do not match labels from"):
+        with pytest.raises(InvalidAnnotationError, match="Labels from config file are absent"):
             Dataset.import_from(
                 test_dir,
                 self.IMPORTER.NAME,
@@ -1288,3 +1288,15 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
                     "no_such_name": ["custom_name", "another_custom_name", "test_name", "42"],
                 },
             )
+
+    def test_ignores_sub_labels_in_extra_skeleton_labels(self, test_dir, helper_tc):
+        source_dataset = self._prepare_dataset(test_dir)
+        parsed_dataset = Dataset.import_from(
+            test_dir,
+            self.IMPORTER.NAME,
+            skeleton_sub_labels={
+                "test": ["test_point_0", "test_point_1", "test_point_2", "test_point_3"],
+                "no_such_name": ["only_one"],
+            },
+        )
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)

@@ -549,20 +549,19 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
         skeleton_labels = self._load_names_from_config_file()
 
         if self._skeleton_sub_labels:
+            if missing_labels := set(skeleton_labels) - set(self._skeleton_sub_labels):
+                raise InvalidAnnotationError(
+                    f"Labels from config file are absent in sub label hint: {missing_labels}"
+                )
+
             if skeletons_with_wrong_sub_labels := [
                 skeleton
-                for skeleton in self._skeleton_sub_labels
+                for skeleton in skeleton_labels
                 if len(self._skeleton_sub_labels[skeleton]) != number_of_points
             ]:
                 raise InvalidAnnotationError(
                     f"Number of points in skeletons according to config file is {number_of_points}. "
                     f"Following skeletons have number of sub labels which differs: {skeletons_with_wrong_sub_labels}"
-                )
-
-            if set(skeleton_labels) != set(self._skeleton_sub_labels):
-                raise InvalidAnnotationError(
-                    f"Labels from config file do not match labels from sub label hint. "
-                    f"From config: {skeleton_labels}. From sub label hint: {sorted(self._skeleton_sub_labels)}"
                 )
 
         children_labels = self._skeleton_sub_labels or {

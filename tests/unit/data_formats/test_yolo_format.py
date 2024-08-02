@@ -1259,7 +1259,7 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
         )
         compare_datasets(helper_tc, expected_dataset, parsed_dataset)
 
-    def test_fails_on_wrong_number_of_sub_labels_in_hint(self, test_dir):
+    def test_can_report_wrong_number_of_sub_labels_in_hint(self, test_dir):
         self._prepare_dataset(test_dir)
         with pytest.raises(
             InvalidAnnotationError, match="Number of points in skeletons according to config file"
@@ -1278,7 +1278,7 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
                 },
             )
 
-    def test_fails_on_lack_of_skeleton_name_in_hint(self, test_dir):
+    def test_can_report_the_lack_of_skeleton_label_in_hint(self, test_dir):
         self._prepare_dataset(test_dir)
         with pytest.raises(InvalidAnnotationError, match="Labels from config file are absent"):
             Dataset.import_from(
@@ -1289,7 +1289,7 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
                 },
             )
 
-    def test_ignores_sub_labels_in_extra_skeleton_labels(self, test_dir, helper_tc):
+    def test_can_import_if_sub_label_hint_has_extra_labels(self, test_dir, helper_tc):
         source_dataset = self._prepare_dataset(test_dir)
         parsed_dataset = Dataset.import_from(
             test_dir,

@@ -10,7 +10,7 @@ from tests.requirements import Requirements, mark_requirement
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_add_category():
+def test_can_add_category():
     categories = LabelCategories()
     index = categories.add("cat")
     assert index == 0
@@ -19,7 +19,7 @@ def test_add_category():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_add_category_with_parent():
+def test_can_add_category_with_parent():
     categories = LabelCategories()
     index = categories.add("cat", parent="animal")
     assert index == 0
@@ -29,7 +29,7 @@ def test_add_category_with_parent():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_add_category_with_attributes():
+def test_can_add_category_with_attributes():
     categories = LabelCategories()
     attributes = {"color", "size"}
     index = categories.add("cat", attributes=attributes)
@@ -40,7 +40,7 @@ def test_add_category_with_attributes():
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
 @pytest.mark.parametrize("name,parent", [("cat", "animal"), ("cat", "")])
-def test_add_duplicate_category(name, parent):
+def test_can_add_duplicate_category(name, parent):
     categories = LabelCategories()
     categories.add(name, parent=parent)
     with pytest.raises(KeyError, match=f"Label '{parent}' '{name}' already exists"):
@@ -48,7 +48,7 @@ def test_add_duplicate_category(name, parent):
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_potential_collision():
+def test_can_resolve_potential_collision():
     """
     Previously indices were computed as (parent or "") + name
 
@@ -64,7 +64,7 @@ def test_potential_collision():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_find_category():
+def test_can_find_category():
     categories = LabelCategories()
     categories.add("cat")
     index, category = categories.find("cat")
@@ -73,7 +73,7 @@ def test_find_category():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_find_non_existent_category():
+def test_cant_find_non_existent_category():
     categories = LabelCategories()
     index, category = categories.find("dog")
     assert index is None
@@ -81,7 +81,7 @@ def test_find_non_existent_category():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_from_iterable():
+def test_can_construct_from_iterable():
     categories = LabelCategories.from_iterable(["cat", "dog"])
     assert len(categories) == 2
     assert categories[0].name == "cat"
@@ -89,7 +89,7 @@ def test_from_iterable():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_from_iterable_with_parents():
+def test_can_construct_from_iterable_with_parents():
     categories = LabelCategories.from_iterable([("cat", "animal"), ("dog", "animal")])
     assert len(categories) == 2
     assert categories[0].name == "cat"
@@ -99,7 +99,7 @@ def test_from_iterable_with_parents():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_from_iterable_with_attributes():
+def test_can_construct_from_iterable_with_attributes():
     categories = LabelCategories.from_iterable([("cat", "animal", ["color", "size"])])
     assert len(categories) == 1
     assert categories[0].name == "cat"
@@ -108,7 +108,7 @@ def test_from_iterable_with_attributes():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_reindex():
+def test_can_reindex_on_init():
     categories = LabelCategories()
     categories.add("cat")
     categories.add("dog", parent="animal")
@@ -116,7 +116,7 @@ def test_reindex():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_labels_property():
+def test_has_labels_property():
     categories = LabelCategories()
     categories.add("cat")
     categories.add("dog", parent="animal")
@@ -126,7 +126,7 @@ def test_labels_property():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_len():
+def test_has_len():
     categories = LabelCategories()
     assert len(categories) == 0
     categories.add("cat")
@@ -134,7 +134,7 @@ def test_len():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_contains():
+def test_has_contains():
     categories = LabelCategories()
     categories.add("cat")
     assert "cat" in categories
@@ -142,7 +142,7 @@ def test_contains():
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-def test_iter():
+def test_can_iter():
     categories = LabelCategories()
     categories.add("cat")
     categories.add("dog")

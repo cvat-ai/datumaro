@@ -109,10 +109,27 @@ def test_can_construct_from_iterable_with_attributes():
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)
 def test_can_reindex_on_init():
-    categories = LabelCategories()
-    categories.add("cat")
-    categories.add("dog", parent="animal")
-    assert len(categories._indices) == 2
+    categories = LabelCategories(
+        items=[
+            cat_category := LabelCategories.Category("cat"),
+            dog_category := LabelCategories.Category("dog", "animal"),
+        ]
+    )
+    assert categories._indices == {("", "cat"): 0, ("animal", "dog"): 1}
+    assert categories.find("cat") == (0, cat_category)
+    assert categories.find("dog", parent="animal") == (1, dog_category)
+    assert categories.find("dog") == (None, None)
+
+
+@mark_requirement(Requirements.DATUM_GENERAL_REQ)
+def test_cant_reindex_on_init():
+    with pytest.raises(KeyError, match="Item with duplicate label '' 'cat'"):
+        LabelCategories(
+            items=[
+                cat_category := LabelCategories.Category("cat"),
+                cat_category,
+            ]
+        )
 
 
 @mark_requirement(Requirements.DATUM_GENERAL_REQ)

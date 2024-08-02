@@ -31,7 +31,7 @@ from datumaro.components.errors import (
     InvalidAnnotationError,
     UndeclaredLabelError,
 )
-from datumaro.components.extractor import DatasetItem, Extractor, SourceExtractor
+from datumaro.components.extractor import CategoriesInfo, DatasetItem, Extractor, SourceExtractor
 from datumaro.components.media import Image
 from datumaro.util.image import (
     DEFAULT_IMAGE_META_FILE_NAME,
@@ -277,7 +277,7 @@ class YoloExtractor(SourceExtractor):
             label=label_id,
         )
 
-    def _load_categories(self) -> Dict[AnnotationType, LabelCategories]:
+    def _load_categories(self) -> CategoriesInfo:
         names_path = self._config.get("names")
         if not names_path:
             raise InvalidAnnotationError(f"Failed to parse names file path from config")
@@ -334,7 +334,19 @@ class YOLOv8Extractor(YoloExtractor):
             except yaml.YAMLError:
                 raise InvalidAnnotationError("Failed to parse config file")
 
-    def _load_categories(self) -> Dict[AnnotationType, LabelCategories]:
+    def _load_names_from_config_file(self):
+        names = self._config["names"]
+        if isinstance(names, dict):
+            if set(names.keys()) != set(range(len(names))):
+                raise InvalidAnnotationError(
+                    "Failed to parse names from config: non-sequential label ids"
+                )
+            return [names[i] for i in range(len(names))]
+        elif isinstance(names, list):
+            return names
+        raise InvalidAnnotationError("Failed to parse names from config")
+
+    def _load_categories(self) -> CategoriesInfo:
         if has_meta_file(self._path):
             return {
                 AnnotationType.label: LabelCategories.from_iterable(
@@ -342,17 +354,8 @@ class YOLOv8Extractor(YoloExtractor):
                 )
             }
 
-        if (names := self._config.get("names")) is not None:
-            if isinstance(names, dict):
-                return {
-                    AnnotationType.label: LabelCategories.from_iterable(
-                        [names[i] for i in range(len(names))]
-                    )
-                }
-            if isinstance(names, list):
-                return {AnnotationType.label: LabelCategories.from_iterable(names)}
-
-        raise InvalidAnnotationError(f"Failed to parse names from config")
+        names = self._load_names_from_config_file()
+        return {AnnotationType.label: LabelCategories.from_iterable(names)}
 
     def _get_labels_path_from_image_path(self, image_path: str) -> str:
         relative_image_path = osp.relpath(
@@ -525,25 +528,26 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
         )
         return {index: label_id for index, label_id in enumerate(sorted(point_categories.items))}
 
-    def _load_categories(self) -> Dict[AnnotationType, LabelCategories]:
+    def _load_categories_from_meta_file(self) -> CategoriesInfo:
+        dataset_meta = parse_json_file(get_meta_file(self._path))
+        point_categories = PointsCategories.from_iterable(dataset_meta.get("point_categories", []))
+        categories = {
+            AnnotationType.label: LabelCategories.from_iterable(dataset_meta["label_categories"])
+        }
+        if len(point_categories) > 0:
+            categories[AnnotationType.points] = point_categories
+        return categories
+
+    def _load_categories(self) -> CategoriesInfo:
         if "names" not in self._config:
             raise InvalidAnnotationError(f"Failed to parse names from config")
 
         if has_meta_file(self._path):
-            dataset_meta = parse_json_file(get_meta_file(self._path))
-            point_categories = PointsCategories.from_iterable(
-                dataset_meta.get("point_categories", [])
-            )
-            categories = {
-                AnnotationType.label: LabelCategories.from_iterable(
-                    dataset_meta["label_categories"]
-                )
-            }
-            if len(point_categories) > 0:
-                categories[AnnotationType.points] = point_categories
-            return categories
+            return self._load_categories_from_meta_file()
 
         number_of_points, _ = self._kpt_shape
+        skeleton_labels = self._load_names_from_config_file()
+
         if self._skeleton_sub_labels:
             if skeletons_with_wrong_sub_labels := [
                 skeleton
@@ -555,42 +559,28 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
                     f"Following skeletons have number of sub labels which differs: {skeletons_with_wrong_sub_labels}"
                 )
 
-        names = self._config["names"]
-        if isinstance(names, dict):
-            if set(names.keys()) != set(range(len(names))):
+            if set(skeleton_labels) != set(self._skeleton_sub_labels):
                 raise InvalidAnnotationError(
-                    "Failed to parse names from config: non-sequential label ids"
+                    f"Labels from config file do not match labels from sub label hint. "
+                    f"From config: {skeleton_labels}. From sub label hint: {sorted(self._skeleton_sub_labels)}"
                 )
-            skeleton_labels = [names[i] for i in range(len(names))]
-        elif isinstance(names, list):
-            skeleton_labels = names
-        else:
-            raise InvalidAnnotationError("Failed to parse names from config")
 
-        def make_children_names(skeleton_label):
-            if self._skeleton_sub_labels:
-                if skeleton_label not in self._skeleton_sub_labels:
-                    raise InvalidAnnotationError(
-                        f"Label '{skeleton_label}' from config file is absent in {sorted(self._skeleton_sub_labels)}"
-                    )
-                return self._skeleton_sub_labels[skeleton_label]
-            return [
+        children_labels = self._skeleton_sub_labels or {
+            skeleton_label: [
                 f"{skeleton_label}_point_{point_index}" for point_index in range(number_of_points)
             ]
+            for skeleton_label in skeleton_labels
+        }
 
         point_labels = [
             (child_name, skeleton_label)
             for skeleton_label in skeleton_labels
-            for child_name in make_children_names(skeleton_label)
+            for child_name in children_labels[skeleton_label]
         ]
 
         point_categories = PointsCategories.from_iterable(
             [
-                (
-                    index,
-                    make_children_names(skeleton_label),
-                    set(),
-                )
+                (index, children_labels[skeleton_label], set())
                 for index, skeleton_label in enumerate(skeleton_labels)
             ]
         )

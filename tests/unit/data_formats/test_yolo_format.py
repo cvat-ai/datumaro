@@ -1280,7 +1280,7 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
 
     def test_fails_on_wrong_skeleton_name_in_hint(self, test_dir):
         self._prepare_dataset(test_dir)
-        with pytest.raises(InvalidAnnotationError, match="from config file is absent in"):
+        with pytest.raises(InvalidAnnotationError, match="config file do not match labels from"):
             Dataset.import_from(
                 test_dir,
                 self.IMPORTER.NAME,

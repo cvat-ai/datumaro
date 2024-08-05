@@ -839,6 +839,40 @@ class YOLOv8ImporterTest(YoloImporterTest):
         )
         self.compare_datasets(expected_dataset, dataset)
 
+    def test_can_import_if_names_dict_has_non_sequential_keys(self, test_dir):
+        if self.IMPORTER.NAME != YOLOv8Importer.NAME:
+            return
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[
+                        Bbox(0, 2, 4, 2, label=2),
+                        Bbox(3, 3, 2, 3, label=4),
+                        Bbox(3, 3, 2, 3, label=10),
+                    ],
+                ),
+            ],
+            categories=["label_" + str(i) for i in range(10)] + ["label_42"],
+        )
+
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", "yolov8"), dataset_path)
+
+        with open(osp.join(dataset_path, "data.yaml"), "r+") as f:
+            config = yaml.safe_load(f)
+            config["names"][42] = "label_42"
+            yaml.dump(config, f)
+
+        with open(osp.join(dataset_path, "labels", "train", "1.txt"), "a") as f:
+            f.write("42 0.266667 0.450000 0.133333 0.300000")
+
+        self.IMPORTER.detect(FormatDetectionContext(dataset_path))
+        dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, dataset)
+
 
 class YOLOv8SegmentationImporterTest(YOLOv8ImporterTest):
     IMPORTER = YOLOv8SegmentationImporter
@@ -1160,6 +1194,15 @@ class YOLOv8OrientedBoxesExtractorTest(YOLOv8ExtractorTest):
         assert isinstance(capture.value.__cause__, InvalidAnnotationError)
         assert "Given points do not form a rectangle" in str(capture.value.__cause__)
 
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_report_invalid_shape_parallelogram(self, test_dir):
+        self._prepare_dataset(test_dir)
+        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
+            f.write("0 0.1 0.1 0.5 0.1 0.6 0.5 0.2 0.5")
+
+        with pytest.raises(AnnotationImportError, match="adjacent sides are not orthogonal"):
+            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
+
 
 class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
     IMPORTER = YOLOv8PoseImporter
@@ -1221,3 +1264,73 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
     )
     def test_can_report_invalid_field_type(self, field, field_name, test_dir):
         self._check_can_report_invalid_field_type(field, field_name, test_dir)
+
+    def test_can_use_sub_labels_hint(self, test_dir, helper_tc):
+        source_dataset = self._prepare_dataset(test_dir)
+        expected_dataset = Dataset.from_iterable(
+            source_dataset,
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "test",
+                        ("custom_name", "test"),
+                        ("another_custom_name", "test"),
+                        ("test_name", "test"),
+                        ("42", "test"),
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [(0, ["custom_name", "another_custom_name", "test_name", "42"], set())]
+                ),
+            },
+        )
+        parsed_dataset = Dataset.import_from(
+            test_dir,
+            self.IMPORTER.NAME,
+            skeleton_sub_labels={
+                "test": ["custom_name", "another_custom_name", "test_name", "42"],
+            },
+        )
+        compare_datasets(helper_tc, expected_dataset, parsed_dataset)
+
+    def test_can_report_wrong_number_of_sub_labels_in_hint(self, test_dir):
+        self._prepare_dataset(test_dir)
+        with pytest.raises(
+            InvalidAnnotationError, match="Number of points in skeletons according to config file"
+        ):
+            Dataset.import_from(
+                test_dir,
+                self.IMPORTER.NAME,
+                skeleton_sub_labels={
+                    "test": [
+                        "custom_name",
+                        "another_custom_name",
+                        "test_name",
+                        "42",
+                        "extra_sub_label",
+                    ],
+                },
+            )
+
+    def test_can_report_the_lack_of_skeleton_label_in_hint(self, test_dir):
+        self._prepare_dataset(test_dir)
+        with pytest.raises(InvalidAnnotationError, match="Labels from config file are absent"):
+            Dataset.import_from(
+                test_dir,
+                self.IMPORTER.NAME,
+                skeleton_sub_labels={
+                    "no_such_name": ["custom_name", "another_custom_name", "test_name", "42"],
+                },
+            )
+
+    def test_can_import_if_sub_label_hint_has_extra_labels(self, test_dir, helper_tc):
+        source_dataset = self._prepare_dataset(test_dir)
+        parsed_dataset = Dataset.import_from(
+            test_dir,
+            self.IMPORTER.NAME,
+            skeleton_sub_labels={
+                "test": ["test_point_0", "test_point_1", "test_point_2", "test_point_3"],
+                "no_such_name": ["only_one"],
+            },
+        )
+        compare_datasets(helper_tc, source_dataset, parsed_dataset)

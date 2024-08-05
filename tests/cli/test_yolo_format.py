@@ -15,6 +15,9 @@ from ..requirements import Requirements, mark_requirement
 
 
 class YoloIntegrationScenarios(TestCase):
+    ASSET_PATH = ["yolo_dataset", "yolo"]
+    FORMAT_NAME = "yolo"
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_yolo_dataset(self):
         target_dataset = Dataset.from_iterable(
@@ -34,11 +37,14 @@ class YoloIntegrationScenarios(TestCase):
 
         with TestDir() as test_dir:
             yolo_dir = osp.join(
-                __file__[: __file__.rfind(osp.join("tests", ""))], "tests", "assets", "yolo_dataset"
+                __file__[: __file__.rfind(osp.join("tests", ""))],
+                "tests",
+                "assets",
+                *self.ASSET_PATH,
             )
 
             run(self, "create", "-o", test_dir)
-            run(self, "import", "-p", test_dir, "-f", "yolo", yolo_dir)
+            run(self, "import", "-p", test_dir, "-f", self.FORMAT_NAME, yolo_dir)
 
             export_dir = osp.join(test_dir, "export_dir")
             run(
@@ -49,12 +55,12 @@ class YoloIntegrationScenarios(TestCase):
                 "-o",
                 export_dir,
                 "-f",
-                "yolo",
+                self.FORMAT_NAME,
                 "--",
                 "--save-media",
             )
 
-            parsed_dataset = Dataset.import_from(export_dir, format="yolo")
+            parsed_dataset = Dataset.import_from(export_dir, format=self.FORMAT_NAME)
             compare_datasets(self, target_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -81,9 +87,20 @@ class YoloIntegrationScenarios(TestCase):
             run(self, "import", "-p", test_dir, "-f", "mot_seq", mot_dir)
 
             yolo_dir = osp.join(test_dir, "yolo_dir")
-            run(self, "export", "-p", test_dir, "-o", yolo_dir, "-f", "yolo", "--", "--save-media")
+            run(
+                self,
+                "export",
+                "-p",
+                test_dir,
+                "-o",
+                yolo_dir,
+                "-f",
+                self.FORMAT_NAME,
+                "--",
+                "--save-media",
+            )
 
-            parsed_dataset = Dataset.import_from(yolo_dir, format="yolo")
+            parsed_dataset = Dataset.import_from(yolo_dir, format=self.FORMAT_NAME)
             compare_datasets(self, target_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -125,14 +142,14 @@ class YoloIntegrationScenarios(TestCase):
                 "-i",
                 voc_dir,
                 "-f",
-                "yolo",
+                self.FORMAT_NAME,
                 "-o",
                 yolo_dir,
                 "--",
                 "--save-media",
             )
 
-            parsed_dataset = Dataset.import_from(yolo_dir, format="yolo")
+            parsed_dataset = Dataset.import_from(yolo_dir, format=self.FORMAT_NAME)
             compare_datasets(self, target_dataset, parsed_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -151,11 +168,14 @@ class YoloIntegrationScenarios(TestCase):
 
         with TestDir() as test_dir:
             yolo_dir = osp.join(
-                __file__[: __file__.rfind(osp.join("tests", ""))], "tests", "assets", "yolo_dataset"
+                __file__[: __file__.rfind(osp.join("tests", ""))],
+                "tests",
+                "assets",
+                *self.ASSET_PATH,
             )
 
             run(self, "create", "-o", test_dir)
-            run(self, "import", "-p", test_dir, "-f", "yolo", yolo_dir)
+            run(self, "import", "-p", test_dir, "-f", self.FORMAT_NAME, yolo_dir)
 
             run(
                 self,
@@ -184,8 +204,22 @@ class YoloIntegrationScenarios(TestCase):
 
             export_dir = osp.join(test_dir, "export")
             run(
-                self, "export", "-p", test_dir, "-o", export_dir, "-f", "yolo", "--", "--save-image"
+                self,
+                "export",
+                "-p",
+                test_dir,
+                "-o",
+                export_dir,
+                "-f",
+                self.FORMAT_NAME,
+                "--",
+                "--save-image",
             )
 
-            parsed_dataset = Dataset.import_from(export_dir, format="yolo")
+            parsed_dataset = Dataset.import_from(export_dir, format=self.FORMAT_NAME)
             compare_datasets(self, target_dataset, parsed_dataset)
+
+
+class YOLOv8IntegrationScenarios(YoloIntegrationScenarios):
+    ASSET_PATH = ["yolo_dataset", "yolov8"]
+    FORMAT_NAME = "yolov8"

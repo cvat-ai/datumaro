@@ -1,5 +1,5 @@
 # Copyright (C) 2021-2022 Intel Corporation
-# Copyright (C) 2022 CVAT.ai Corporation
+# Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -106,8 +106,8 @@ class LabelCategories(Categories):
         parent: str = field(default="", validator=default_if_none(str))
         attributes: Set[str] = field(factory=set, validator=default_if_none(set))
 
-    items: List[str] = field(factory=list, validator=default_if_none(list))
-    _indices: Dict[str, int] = field(factory=dict, init=False, eq=False)
+    items: List[Category] = field(factory=list, validator=default_if_none(list))
+    _indices: Dict[Tuple[str, str], int] = field(factory=dict, init=False, eq=False)
 
     @classmethod
     def from_iterable(
@@ -147,18 +147,25 @@ class LabelCategories(Categories):
         self._reindex()
 
     def _reindex(self):
-        indices = {}
+        self._indices = {}
         for index, item in enumerate(self.items):
-            assert (item.parent + item.name) not in self._indices
-            indices[item.parent + item.name] = index
-        self._indices = indices
+            key = (item.parent, item.name)
+            if key in self._indices:
+                raise KeyError(f"Item with duplicate label {item.parent!r} {item.name!r}")
+            self._indices[key] = index
+
+    @property
+    def labels(self):
+        return {label_index: parent + name for (parent, name), label_index in self._indices.items()}
 
     def add(
         self, name: str, parent: Optional[str] = "", attributes: Optional[Set[str]] = None
     ) -> int:
-        assert name
-        key = (parent or "") + name
-        assert key not in self._indices
+        if not name:
+            raise ValueError("Label name must not be empty")
+        key = (parent or "", name)
+        if key in self._indices:
+            raise KeyError(f"Label {parent!r} {name!r} already exists")
 
         index = len(self.items)
         self.items.append(self.Category(name, parent, attributes))
@@ -166,7 +173,7 @@ class LabelCategories(Categories):
         return index
 
     def find(self, name: str, parent: str = "") -> Tuple[Optional[int], Optional[Category]]:
-        index = self._indices.get(parent + name)
+        index = self._indices.get((parent, name))
         if index is not None:
             return index, self.items[index]
         return index, None

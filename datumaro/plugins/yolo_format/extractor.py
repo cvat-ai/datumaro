@@ -620,10 +620,7 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
 
     def _map_label_id(self, ann_label_id: str) -> int:
         skeleton_id = super()._map_label_id(ann_label_id)
-        label_id = self._skeleton_id_to_label_id.get(skeleton_id, -1)
-        if self._categories[AnnotationType.label][label_id].parent != "":
-            raise InvalidAnnotationError("WTF")
-        return label_id
+        return self._skeleton_id_to_label_id[skeleton_id]
 
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int

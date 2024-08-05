@@ -839,6 +839,40 @@ class YOLOv8ImporterTest(YoloImporterTest):
         )
         self.compare_datasets(expected_dataset, dataset)
 
+    def test_can_import_if_names_dict_has_non_sequential_keys(self, test_dir):
+        if self.IMPORTER.NAME != YOLOv8Importer.NAME:
+            return
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[
+                        Bbox(0, 2, 4, 2, label=2),
+                        Bbox(3, 3, 2, 3, label=4),
+                        Bbox(3, 3, 2, 3, label=10),
+                    ],
+                ),
+            ],
+            categories=["label_" + str(i) for i in range(10)] + ["label_42"],
+        )
+
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", "yolov8"), dataset_path)
+
+        with open(osp.join(dataset_path, "data.yaml"), "r+") as f:
+            config = yaml.safe_load(f)
+            config["names"][42] = "label_42"
+            yaml.dump(config, f)
+
+        with open(osp.join(dataset_path, "labels", "train", "1.txt"), "a") as f:
+            f.write("42 0.266667 0.450000 0.133333 0.300000")
+
+        self.IMPORTER.detect(FormatDetectionContext(dataset_path))
+        dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, dataset)
+
 
 class YOLOv8SegmentationImporterTest(YOLOv8ImporterTest):
     IMPORTER = YOLOv8SegmentationImporter

@@ -250,6 +250,12 @@ class YoloExtractor(SourceExtractor):
 
         return annotations
 
+    def _map_label_id(self, label_id):
+        label_id = self._parse_field(label_id, int, "bbox label id")
+        if label_id not in self._categories[AnnotationType.label]:
+            raise UndeclaredLabelError(str(label_id))
+        return label_id
+
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -260,9 +266,7 @@ class YoloExtractor(SourceExtractor):
             )
         label_id, xc, yc, w, h = parts
 
-        label_id = self._parse_field(label_id, int, "bbox label id")
-        if label_id not in self._categories[AnnotationType.label]:
-            raise UndeclaredLabelError(str(label_id))
+        label_id = self._map_label_id(label_id)
 
         w = self._parse_field(w, float, "bbox width")
         h = self._parse_field(h, float, "bbox height")
@@ -334,14 +338,39 @@ class YOLOv8Extractor(YoloExtractor):
             except yaml.YAMLError:
                 raise InvalidAnnotationError("Failed to parse config file")
 
+    @cached_property
+    def _label_mapping(self):
+        names = self._config["names"]
+        if isinstance(names, list):
+            return {index: index for index in range(len(names))}
+        if isinstance(names, dict):
+            return {
+                names_key: index
+                for index, names_key in enumerate(sorted(names.keys()))
+            }
+        raise InvalidAnnotationError("Failed to parse names from config")
+
+    def _map_label_id(self, ann_label_id):
+        names = self._config["names"]
+        ann_label_id = self._parse_field(ann_label_id, int, "label id")
+        if isinstance(names, list):
+            if ann_label_id < 0 or ann_label_id >= len(names):
+                raise UndeclaredLabelError(str(ann_label_id))
+            return ann_label_id
+
+        if isinstance(names, dict):
+            if ann_label_id not in names:
+                raise UndeclaredLabelError(str(ann_label_id))
+            return self._label_mapping[ann_label_id]
+
     def _load_names_from_config_file(self):
         names = self._config["names"]
         if isinstance(names, dict):
-            if set(names.keys()) != set(range(len(names))):
-                raise InvalidAnnotationError(
-                    "Failed to parse names from config: non-sequential label ids"
-                )
-            return [names[i] for i in range(len(names))]
+            names_with_mapped_keys = {
+                self._label_mapping[names_key]: names[names_key]
+                for names_key in names
+            }
+            return [names_with_mapped_keys[i] for i in range(len(names))]
         elif isinstance(names, list):
             return names
         raise InvalidAnnotationError("Failed to parse names from config")
@@ -403,10 +432,7 @@ class YOLOv8SegmentationExtractor(YOLOv8Extractor):
     def _load_segmentation_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Polygon:
-        label_id = self._parse_field(parts[0], int, "Polygon label id")
-        if label_id not in self._categories[AnnotationType.label]:
-            raise UndeclaredLabelError(str(label_id))
-
+        label_id = self._map_label_id(parts[0])
         points = [
             self._parse_field(
                 value, float, f"polygon point {idx // 2} {'x' if idx % 2 == 0 else 'y'}"
@@ -454,9 +480,7 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
                 f"Unexpected field count {len(parts)} in the bbox description. "
                 "Expected 9 fields (label, x1, y1, x2, y2, x3, y3, x4, y4)."
             )
-        label_id = self._parse_field(parts[0], int, "bbox label id")
-        if label_id not in self._categories[AnnotationType.label]:
-            raise UndeclaredLabelError(str(label_id))
+        label_id = self._map_label_id(parts[0])
         points = [
             (
                 self._parse_field(x, float, f"bbox point {idx} x") * image_width,
@@ -591,6 +615,13 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
 
         return categories
 
+    def _map_label_id(self, ann_label_id):
+        skeleton_id = super()._map_label_id(ann_label_id)
+        label_id = self._skeleton_id_to_label_id.get(skeleton_id, -1)
+        if self._categories[AnnotationType.label][label_id].parent != "":
+            raise InvalidAnnotationError("WTF")
+        return label_id
+
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -602,12 +633,7 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
                 f"and then {values_per_point} for each of {number_of_points} points"
             )
 
-        skeleton_id = self._parse_field(parts[0], int, "skeleton label id")
-        label_id = self._skeleton_id_to_label_id.get(skeleton_id, -1)
-        if label_id not in self._categories[AnnotationType.label]:
-            raise UndeclaredLabelError(str(skeleton_id))
-        if self._categories[AnnotationType.label][label_id].parent != "":
-            raise InvalidAnnotationError("WTF")
+        label_id = self._map_label_id(parts[0])
 
         point_labels = self._categories[AnnotationType.points][label_id].labels
         point_label_ids = [

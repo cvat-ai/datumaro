@@ -12,9 +12,9 @@ from datumaro.components.media import Image
 from datumaro.components.project import Dataset
 from datumaro.plugins.sampler.random_sampler import LabelRandomSampler, RandomSampler
 
-from tests.utils.test_utils import compare_datasets, compare_datasets_strict
-
 from .conftest import ASSETS_DIR
+
+from tests.utils.test_utils import compare_datasets, compare_datasets_strict
 
 try:
     import pandas as pd

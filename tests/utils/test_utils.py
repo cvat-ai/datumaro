@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: MIT
 
 import contextlib
-import inspect
 import os
 import os.path as osp
 import tempfile
@@ -20,17 +19,13 @@ from typing_extensions import Literal
 from datumaro.components.annotation import AnnotationType
 from datumaro.components.dataset import Dataset, IDataset
 from datumaro.components.media import Image, MultiframeImage, PointCloud
-from datumaro.util import filter_dict, find
+from datumaro.util import current_function_name, filter_dict, find
 from datumaro.util.os_util import rmfile, rmtree
 
 
 class Dimensions(Enum):
     dim_2d = auto()
     dim_3d = auto()
-
-
-def current_function_name(depth=1):
-    return inspect.getouterframes(inspect.currentframe())[depth].function
 
 
 class FileRemover:

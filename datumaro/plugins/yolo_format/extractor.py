@@ -250,7 +250,7 @@ class YoloExtractor(SourceExtractor):
 
         return annotations
 
-    def _map_label_id(self, label_id):
+    def _map_label_id(self, label_id: str) -> int:
         label_id = self._parse_field(label_id, int, "bbox label id")
         if label_id not in self._categories[AnnotationType.label]:
             raise UndeclaredLabelError(str(label_id))
@@ -339,7 +339,7 @@ class YOLOv8Extractor(YoloExtractor):
                 raise InvalidAnnotationError("Failed to parse config file")
 
     @cached_property
-    def _label_mapping(self):
+    def _label_mapping(self) -> Dict[int, int]:
         names = self._config["names"]
         if isinstance(names, list):
             return {index: index for index in range(len(names))}
@@ -347,7 +347,7 @@ class YOLOv8Extractor(YoloExtractor):
             return {names_key: index for index, names_key in enumerate(sorted(names.keys()))}
         raise InvalidAnnotationError("Failed to parse names from config")
 
-    def _map_label_id(self, ann_label_id):
+    def _map_label_id(self, ann_label_id: str) -> int:
         names = self._config["names"]
         ann_label_id = self._parse_field(ann_label_id, int, "label id")
         if isinstance(names, list):
@@ -360,7 +360,7 @@ class YOLOv8Extractor(YoloExtractor):
                 raise UndeclaredLabelError(str(ann_label_id))
             return self._label_mapping[ann_label_id]
 
-    def _load_names_from_config_file(self):
+    def _load_names_from_config_file(self) -> list:
         names = self._config["names"]
         if isinstance(names, dict):
             names_with_mapped_keys = {
@@ -452,18 +452,25 @@ class YOLOv8SegmentationExtractor(YOLOv8Extractor):
 
 
 class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
-    @staticmethod
-    def _check_is_rectangle(p1, p2, p3, p4):
+    RECTANGLE_ANGLE_PRECISION = math.pi * 1 / 180
+
+    @classmethod
+    def _check_is_rectangle(
+        cls, p1: Tuple[int, int], p2: Tuple[int, int], p3: Tuple[int, int], p4: Tuple[int, int]
+    ) -> None:
         p12_angle = math.atan2(p2[0] - p1[0], p2[1] - p1[1])
         p23_angle = math.atan2(p3[0] - p2[0], p3[1] - p2[1])
         p43_angle = math.atan2(p3[0] - p4[0], p3[1] - p4[1])
         p14_angle = math.atan2(p4[0] - p1[0], p4[1] - p1[1])
 
-        if abs(p12_angle - p43_angle) > 0.001 or abs(p23_angle - p14_angle) > 0.001:
+        if (
+            abs(p12_angle - p43_angle) > 0.001
+            or abs(p23_angle - p14_angle) > cls.RECTANGLE_ANGLE_PRECISION
+        ):
             raise InvalidAnnotationError(
                 "Given points do not form a rectangle: opposite sides have different slope angles."
             )
-        if abs((p12_angle - p23_angle) % math.pi - math.pi / 2) > 0.02:
+        if abs((p12_angle - p23_angle) % math.pi - math.pi / 2) > cls.RECTANGLE_ANGLE_PRECISION:
             raise InvalidAnnotationError(
                 "Given points do not form a rectangle: adjacent sides are not orthogonal."
             )
@@ -518,7 +525,7 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
         super().__init__(*args, **kwargs)
 
     @cached_property
-    def _kpt_shape(self):
+    def _kpt_shape(self) -> list[int]:
         if YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME not in self._config:
             raise InvalidAnnotationError(
                 f"Failed to parse {YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME} from config"
@@ -542,7 +549,7 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
         return kpt_shape
 
     @cached_property
-    def _skeleton_id_to_label_id(self):
+    def _skeleton_id_to_label_id(self) -> Dict[int, int]:
         point_categories = self._categories.get(
             AnnotationType.points, PointsCategories.from_iterable([])
         )
@@ -611,7 +618,7 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
 
         return categories
 
-    def _map_label_id(self, ann_label_id):
+    def _map_label_id(self, ann_label_id: str) -> int:
         skeleton_id = super()._map_label_id(ann_label_id)
         label_id = self._skeleton_id_to_label_id.get(skeleton_id, -1)
         if self._categories[AnnotationType.label][label_id].parent != "":

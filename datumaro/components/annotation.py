@@ -147,12 +147,12 @@ class LabelCategories(Categories):
         self._reindex()
 
     def _reindex(self):
-        self._indices = indices = {}
+        self._indices = {}
         for index, item in enumerate(self.items):
             key = (item.parent, item.name)
-            if key in indices:
+            if key in self._indices:
                 raise KeyError(f"Item with duplicate label {item.parent!r} {item.name!r}")
-            indices[key] = index
+            self._indices[key] = index
 
     @property
     def labels(self):

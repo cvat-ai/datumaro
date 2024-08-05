@@ -344,10 +344,7 @@ class YOLOv8Extractor(YoloExtractor):
         if isinstance(names, list):
             return {index: index for index in range(len(names))}
         if isinstance(names, dict):
-            return {
-                names_key: index
-                for index, names_key in enumerate(sorted(names.keys()))
-            }
+            return {names_key: index for index, names_key in enumerate(sorted(names.keys()))}
         raise InvalidAnnotationError("Failed to parse names from config")
 
     def _map_label_id(self, ann_label_id):
@@ -367,8 +364,7 @@ class YOLOv8Extractor(YoloExtractor):
         names = self._config["names"]
         if isinstance(names, dict):
             names_with_mapped_keys = {
-                self._label_mapping[names_key]: names[names_key]
-                for names_key in names
+                self._label_mapping[names_key]: names[names_key] for names_key in names
             }
             return [names_with_mapped_keys[i] for i in range(len(names))]
         elif isinstance(names, list):

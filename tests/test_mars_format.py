@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-import os.path as osp
 from unittest.case import TestCase
 
 import numpy as np
@@ -14,10 +13,10 @@ from datumaro.components.media import Image
 from datumaro.plugins.mars_format import MarsImporter
 from datumaro.util.test_utils import compare_datasets
 
+from tests.conftest import ASSETS_DIR
 from tests.requirements import Requirements, mark_requirement
 
-ASSETS_DIR = osp.join(osp.dirname(__file__), "assets")
-DUMMY_MARS_DATASET = osp.join(ASSETS_DIR, "mars_dataset")
+DUMMY_MARS_DATASET = str(ASSETS_DIR / "mars_dataset")
 
 
 class MarsImporterTest(TestCase):

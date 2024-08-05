@@ -1,5 +1,5 @@
 # Copyright (C) 2019-2022 Intel Corporation
-# Copyright (C) 2022 CVAT.ai Corporation
+# Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -348,7 +348,7 @@ class _CocoExtractor(SourceExtractor):
                 for x, y, v in take_by(keypoints, 3):
                     sublabel = None
                     if i < len(sublabels):
-                        sublabel = label_cat.find(label_cat.items[label_id].name + sublabels[i])[0]
+                        sublabel = label_cat.find(sublabels[i], label_cat.items[label_id].name)[0]
                     points.append(Points([x, y], [v], label=sublabel))
                     i += 1
 

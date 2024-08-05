@@ -86,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TBD
 
 ### Fixed
+- Collision between parents and names in LabelCategories
+- (<https://github.com/cvat-ai/datumaro/pull/51>)
 - Detection for LFW format
   (<https://github.com/openvinotoolkit/datumaro/pull/680>)
 - Export of masks with background class with id != 0 in the VOC, KITTI and Cityscapes formats

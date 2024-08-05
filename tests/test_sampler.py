@@ -13,6 +13,8 @@ from datumaro.components.project import Dataset
 from datumaro.plugins.sampler.random_sampler import LabelRandomSampler, RandomSampler
 from datumaro.util.test_utils import compare_datasets, compare_datasets_strict
 
+from .conftest import ASSETS_DIR
+
 try:
     import pandas as pd
 
@@ -31,8 +33,8 @@ class TestRelevancySampler(TestCase):
     @staticmethod
     def _get_probs(out_range=False):
         probs = []
-        inference_file = "tests/assets/sampler/inference.csv"
-        with open(inference_file) as csv_file:
+        inference_file = ASSETS_DIR / "sampler" / "inference.csv"
+        with inference_file.open() as csv_file:
             csv_reader = csv.reader(csv_file)
             col = 0
             for row in csv_reader:

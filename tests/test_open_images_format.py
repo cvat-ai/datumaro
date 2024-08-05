@@ -17,6 +17,7 @@ from datumaro.components.media import Image
 from datumaro.plugins.open_images_format import OpenImagesConverter, OpenImagesImporter
 from datumaro.util.test_utils import TestDir, compare_datasets
 
+from tests.conftest import ASSETS_DIR
 from tests.requirements import Requirements, mark_requirement
 
 
@@ -308,10 +309,8 @@ class OpenImagesFormatTest(TestCase):
             compare_datasets(self, dataset, parsed_dataset, require_media=True)
 
 
-ASSETS_DIR = osp.join(osp.dirname(__file__), "assets")
-
-DUMMY_DATASET_DIR_V6 = osp.join(ASSETS_DIR, "open_images_dataset/v6")
-DUMMY_DATASET_DIR_V5 = osp.join(ASSETS_DIR, "open_images_dataset/v5")
+DUMMY_DATASET_DIR_V6 = str(ASSETS_DIR / "open_images_dataset" / "v6")
+DUMMY_DATASET_DIR_V5 = str(ASSETS_DIR / "open_images_dataset" / "v5")
 
 
 class OpenImagesImporterTest(TestCase):

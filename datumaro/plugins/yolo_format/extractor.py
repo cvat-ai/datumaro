@@ -223,6 +223,9 @@ class YoloExtractor(SourceExtractor):
     def _parse_annotations(
         self, anno_path: str, image: Image, *, item_id: Tuple[str, str]
     ) -> List[Annotation]:
+        if not osp.exists(anno_path) and type(self) is not YoloExtractor:
+            return []
+
         lines = []
         with open(anno_path, "r", encoding="utf-8") as f:
             for line in f:

@@ -440,15 +440,21 @@ class YOLOv8ConverterTest(YoloConverterTest):
 
         self.compare_datasets(source_dataset, parsed_dataset)
 
+    @mark_requirement(Requirements.DATUM_609)
+    def test_can_save_and_load_without_annotations(self, test_dir):
+        source_dataset = self._generate_random_dataset([{"annotations": 0}])
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+
+        assert os.listdir(osp.join(test_dir, "labels", "train")) == []
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(source_dataset, parsed_dataset)
+
     def _check_inplace_save_writes_only_updated_data(self, test_dir, expected):
         assert set(os.listdir(osp.join(test_dir, "images", "train"))) == {
             "1.jpg",
             "2.jpg",
         }
-        assert set(os.listdir(osp.join(test_dir, "labels", "train"))) == {
-            "1.txt",
-            "2.txt",
-        }
+        assert set(os.listdir(osp.join(test_dir, "labels", "train"))) == set()
         assert set(os.listdir(osp.join(test_dir, "images", "valid"))) == set()
         assert set(os.listdir(osp.join(test_dir, "labels", "valid"))) == set()
         self.compare_datasets(
@@ -1117,6 +1123,17 @@ class YOLOv8ExtractorTest(YoloExtractorTest):
 
         with pytest.raises(InvalidAnnotationError, match="subset image folder"):
             Dataset.import_from(dataset_path, self.IMPORTER.NAME).init_cache()
+
+    def test_can_report_missing_ann_file(self, test_dir):
+        pass
+
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_import_with_missing_ann_file(self, test_dir, helper_tc):
+        source_dataset = self._prepare_dataset(test_dir)
+        os.remove(osp.join(test_dir, self._get_annotation_dir(), "a.txt"))
+        actual = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        source_dataset.get("a", subset="train").annotations.clear()
+        compare_datasets(helper_tc, source_dataset, actual)
 
 
 class YOLOv8SegmentationExtractorTest(YOLOv8ExtractorTest):

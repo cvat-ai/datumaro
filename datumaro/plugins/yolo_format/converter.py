@@ -208,8 +208,9 @@ class YoloConverter(Converter):
             annotation_path = osp.join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             os.makedirs(osp.dirname(annotation_path), exist_ok=True)
 
-            with open(annotation_path, "w", encoding="utf-8") as f:
-                f.write(yolo_annotation)
+            if type(self) is YoloConverter or yolo_annotation:
+                with open(annotation_path, "w", encoding="utf-8") as f:
+                    f.write(yolo_annotation)
 
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))

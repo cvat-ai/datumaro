@@ -60,7 +60,7 @@ from datumaro.plugins.yolo_format.importer import (
     YOLOv8SegmentationImporter,
 )
 from datumaro.util.image import save_image
-from datumaro.util.test_utils import compare_datasets, compare_datasets_strict
+from datumaro.util.test_utils import compare_annotations, compare_datasets, compare_datasets_strict
 
 from ...requirements import Requirements, mark_requirement
 from ...utils.assets import get_test_asset_path
@@ -77,8 +77,9 @@ def randint(a, b):
 
 class CompareDatasetMixin:
     @pytest.fixture(autouse=True)
-    def setup(self, helper_tc):
+    def setup(self, helper_tc, monkeypatch):
         self.helper_tc = helper_tc
+        self.monkeypatch = monkeypatch
 
     def compare_datasets(self, expected, actual, **kwargs):
         compare_datasets(self.helper_tc, expected, actual, **kwargs)
@@ -86,15 +87,39 @@ class CompareDatasetMixin:
 
 class CompareDatasetsRotationMixin(CompareDatasetMixin):
     def compare_datasets(self, expected, actual, **kwargs):
-        actual_copy = copy.deepcopy(actual)
-        compare_datasets(self.helper_tc, expected, actual, ignored_attrs=["rotation"], **kwargs)
-        for item_a, item_b in zip(expected, actual_copy):
-            for ann_a, ann_b in zip(item_a.annotations, item_b.annotations):
-                assert ("rotation" in ann_a.attributes) == ("rotation" in ann_b.attributes)
-                assert (
-                    abs(ann_a.attributes.get("rotation", 0) - ann_b.attributes.get("rotation", 0))
-                    < 0.01
+        def compare_rotated_annotations(expected: Bbox, actual: Bbox, ignored_attrs=None):
+            if expected.type != AnnotationType.bbox or actual.type != AnnotationType.bbox:
+                return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
+
+            ignored_attrs = (ignored_attrs or []) + ["rotation"]
+            rotation_diff = expected.attributes.get("rotation", 0) - actual.attributes.get(
+                "rotation", 0
+            )
+            rotation_diff %= 180
+            rotation_diff = min(rotation_diff, 180 - rotation_diff)
+            assert rotation_diff < 0.01 or abs(rotation_diff - 90) < 0.01
+            if rotation_diff < 0.01:
+                return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
+            if abs(rotation_diff - 90) < 0.01:
+                x, y, w, h = actual.get_bbox()
+                center_x = x + w / 2
+                center_y = y + h / 2
+                new_width = h
+                new_height = w
+                actual = Bbox(
+                    x=center_x - new_width / 2,
+                    y=center_y - new_height / 2,
+                    w=new_width,
+                    h=new_height,
+                    label=actual.label,
+                    attributes=actual.attributes,
                 )
+                return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
+
+        self.monkeypatch.setattr(
+            "datumaro.util.test_utils.compare_annotations", compare_rotated_annotations
+        )
+        compare_datasets(self.helper_tc, expected, actual, **kwargs)
 
 
 class YoloConverterTest(CompareDatasetMixin):
@@ -1199,26 +1224,6 @@ class YOLOv8OrientedBoxesExtractorTest(YOLOv8ExtractorTest):
     )
     def test_can_report_invalid_field_type(self, field, field_name, test_dir):
         self._check_can_report_invalid_field_type(field, field_name, test_dir)
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_invalid_shape(self, test_dir):
-        self._prepare_dataset(test_dir)
-        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
-            f.write("0 0.1 0.1 0.5 0.1 0.5 0.5 0.5 0.2")
-
-        with pytest.raises(AnnotationImportError) as capture:
-            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
-        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
-        assert "Given points do not form a rectangle" in str(capture.value.__cause__)
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_invalid_shape_parallelogram(self, test_dir):
-        self._prepare_dataset(test_dir)
-        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
-            f.write("0 0.1 0.1 0.5 0.1 0.6 0.5 0.2 0.5")
-
-        with pytest.raises(AnnotationImportError, match="adjacent sides are not orthogonal"):
-            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
 
 
 class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):

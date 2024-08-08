@@ -115,7 +115,7 @@ def compare_categories(test, expected, actual):
 IGNORE_ALL = "*"
 
 
-def _compare_annotations(expected, actual, ignored_attrs=None):
+def compare_annotations(expected, actual, ignored_attrs=None):
     if not ignored_attrs:
         return expected == actual
 
@@ -188,7 +188,7 @@ def compare_datasets(
             test.assertFalse(len(ann_b_matches) == 0, "ann id: %s" % ann_a.id)
 
             ann_b = find(
-                ann_b_matches, lambda x: _compare_annotations(x, ann_a, ignored_attrs=ignored_attrs)
+                ann_b_matches, lambda x: compare_annotations(x, ann_a, ignored_attrs=ignored_attrs)
             )
             if ann_b is None:
                 test.fail(
@@ -254,7 +254,7 @@ def compare_datasets_3d(
             test.assertFalse(len(ann_b_matches) == 0, "ann id: %s" % ann_a.id)
 
             ann_b = find(
-                ann_b_matches, lambda x: _compare_annotations(x, ann_a, ignored_attrs=ignored_attrs)
+                ann_b_matches, lambda x: compare_annotations(x, ann_a, ignored_attrs=ignored_attrs)
             )
             if ann_b is None:
                 test.fail("ann %s, candidates %s" % (ann_a, ann_b_matches))

@@ -14,6 +14,8 @@ from functools import cached_property
 from itertools import cycle
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
+import cv2
+import numpy as np
 import yaml
 
 from datumaro.components.annotation import (
@@ -455,29 +457,6 @@ class YOLOv8SegmentationExtractor(YOLOv8Extractor):
 
 
 class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
-    RECTANGLE_ANGLE_PRECISION = math.pi * 1 / 180
-
-    @classmethod
-    def _check_is_rectangle(
-        cls, p1: Tuple[int, int], p2: Tuple[int, int], p3: Tuple[int, int], p4: Tuple[int, int]
-    ) -> None:
-        p12_angle = math.atan2(p2[0] - p1[0], p2[1] - p1[1])
-        p23_angle = math.atan2(p3[0] - p2[0], p3[1] - p2[1])
-        p43_angle = math.atan2(p3[0] - p4[0], p3[1] - p4[1])
-        p14_angle = math.atan2(p4[0] - p1[0], p4[1] - p1[1])
-
-        if (
-            abs(p12_angle - p43_angle) > 0.001
-            or abs(p23_angle - p14_angle) > cls.RECTANGLE_ANGLE_PRECISION
-        ):
-            raise InvalidAnnotationError(
-                "Given points do not form a rectangle: opposite sides have different slope angles."
-            )
-        if abs((p12_angle - p23_angle) % math.pi - math.pi / 2) > cls.RECTANGLE_ANGLE_PRECISION:
-            raise InvalidAnnotationError(
-                "Given points do not form a rectangle: adjacent sides are not orthogonal."
-            )
-
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -494,18 +473,11 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
             )
             for idx, (x, y) in enumerate(take_by(parts[1:], 2))
         ]
-        self._check_is_rectangle(*points)
 
-        (x1, y1), (x2, y2), (x3, y3), (x4, y4) = points
-
-        width = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
-        height = math.sqrt((x2 - x3) ** 2 + (y2 - y3) ** 2)
-        rotation = math.atan2(y2 - y1, x2 - x1)
-        if rotation < 0:
-            rotation += math.pi * 2
-
-        center_x = (x1 + x2 + x3 + x4) / 4
-        center_y = (y1 + y2 + y3 + y4) / 4
+        (center_x, center_y), (width, height), rotation = cv2.minAreaRect(
+            np.array(points, dtype=np.float32)
+        )
+        rotation = rotation % 180
 
         return Bbox(
             x=center_x - width / 2,
@@ -513,7 +485,7 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
             w=width,
             h=height,
             label=label_id,
-            attributes=(dict(rotation=math.degrees(rotation)) if abs(rotation) > 0.00001 else {}),
+            attributes=(dict(rotation=rotation) if abs(rotation) > 0.00001 else {}),
         )
 
 

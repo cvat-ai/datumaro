@@ -550,7 +550,7 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
         if has_meta_file(self._path):
             return self._load_categories_from_meta_file()
 
-        number_of_points, _ = self._kpt_shape
+        max_number_of_points, _ = self._kpt_shape
         skeleton_labels = self._load_names_from_config_file()
 
         if self._skeleton_sub_labels:
@@ -562,16 +562,17 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
             if skeletons_with_wrong_sub_labels := [
                 skeleton
                 for skeleton in skeleton_labels
-                if len(self._skeleton_sub_labels[skeleton]) != number_of_points
+                if len(self._skeleton_sub_labels[skeleton]) > max_number_of_points
             ]:
                 raise InvalidAnnotationError(
-                    f"Number of points in skeletons according to config file is {number_of_points}. "
-                    f"Following skeletons have number of sub labels which differs: {skeletons_with_wrong_sub_labels}"
+                    f"Number of points in skeletons according to config file is {max_number_of_points}. "
+                    f"Following skeletons have more sub labels: {skeletons_with_wrong_sub_labels}"
                 )
 
         children_labels = self._skeleton_sub_labels or {
             skeleton_label: [
-                f"{skeleton_label}_point_{point_index}" for point_index in range(number_of_points)
+                f"{skeleton_label}_point_{point_index}"
+                for point_index in range(max_number_of_points)
             ]
             for skeleton_label in skeleton_labels
         }
@@ -603,12 +604,12 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
-        number_of_points, values_per_point = self._kpt_shape
-        if len(parts) != 5 + number_of_points * values_per_point:
+        max_number_of_points, values_per_point = self._kpt_shape
+        if len(parts) != 5 + max_number_of_points * values_per_point:
             raise InvalidAnnotationError(
                 f"Unexpected field count {len(parts)} in the skeleton description. "
                 "Expected 5 fields (label, xc, yc, w, h)"
-                f"and then {values_per_point} for each of {number_of_points} points"
+                f"and then {values_per_point} for each of {max_number_of_points} points"
             )
 
         label_id = self._map_label_id(parts[0])
@@ -652,7 +653,4 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
                 ),
             ]
         ]
-        return Skeleton(
-            points,
-            label=label_id,
-        )
+        return Skeleton(points, label=label_id)

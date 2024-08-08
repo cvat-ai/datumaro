@@ -339,21 +339,19 @@ class YOLOv8PoseConverter(YOLOv8Converter):
         )
         return {label_id: index for index, label_id in enumerate(sorted(point_categories.items))}
 
+    @cached_property
+    def _max_number_of_points(self):
+        point_categories = self._extractor.categories().get(AnnotationType.points)
+        if point_categories is None or len(point_categories) == 0:
+            return 0
+        return max(len(category.labels) for category in point_categories.items.values())
+
     def _save_config_files(self, subset_lists: Dict[str, str]):
         extractor = self._extractor
         save_dir = self._save_dir
 
         point_categories = extractor.categories().get(
             AnnotationType.points, PointsCategories.from_iterable([])
-        )
-        if len(set(len(cat.labels) for cat in point_categories.items.values())) > 1:
-            raise DatasetExportError(
-                "Can't export: skeletons should have the same number of points"
-            )
-        n_of_points = (
-            len(next(iter(point_categories.items.values())).labels)
-            if len(point_categories) > 0
-            else 0
         )
 
         with open(osp.join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
@@ -366,7 +364,7 @@ class YOLOv8PoseConverter(YOLOv8Converter):
             data = dict(
                 path=".",
                 names=parent_categories,
-                kpt_shape=[n_of_points, 3],
+                kpt_shape=[self._max_number_of_points, 3],
                 **subset_lists,
             )
             yaml.dump(data, f)
@@ -389,7 +387,7 @@ class YOLOv8PoseConverter(YOLOv8Converter):
             .labels
         ]
 
-        points_values = [f"0.0, 0.0, {Points.Visibility.absent.value}"] * len(point_label_ids)
+        points_values = [f"0.0 0.0 {Points.Visibility.absent.value}"] * self._max_number_of_points
         for element in skeleton.elements:
             assert len(element.points) == 2 and len(element.visibility) == 1
             position = point_label_ids.index(element.label)

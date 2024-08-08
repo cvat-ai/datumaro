@@ -621,8 +621,16 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
                         [
                             Points([1.5, 2.0], [2], label=4),
                             Points([4.5, 4.0], [2], label=5),
+                            Points([6.5, 4.0], [2], label=6),
                         ],
                         label=3,
+                    ),
+                    Skeleton(
+                        [
+                            Points([1.5, 2.0], [2], label=1),
+                            Points([4.5, 4.0], [2], label=2),
+                        ],
+                        label=0,
                     ),
                 ],
             ),
@@ -638,12 +646,13 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
                         "skeleton_label_2",
                         ("point_label_3", "skeleton_label_2"),
                         ("point_label_4", "skeleton_label_2"),
+                        ("point_label_5", "skeleton_label_2"),
                     ]
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
                     [
                         (0, ["point_label_1", "point_label_2"], {(0, 1)}),
-                        (3, ["point_label_3", "point_label_4"], {}),
+                        (3, ["point_label_3", "point_label_4", "point_label_5"], {}),
                     ],
                 ),
             },
@@ -654,6 +663,7 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
         # loses point labels
         # loses edges
         # loses label ids - groups skeleton labels to the start
+        # loses info about number of points of skeletons which had less points
         source_dataset = self._make_dataset_with_edges_and_point_labels()
         expected_dataset = Dataset.from_iterable(
             [
@@ -664,10 +674,19 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
                     annotations=[
                         Skeleton(
                             [
-                                Points([1.5, 2.0], [2], label=4),
-                                Points([4.5, 4.0], [2], label=5),
+                                Points([1.5, 2.0], [2], label=5),
+                                Points([4.5, 4.0], [2], label=6),
+                                Points([6.5, 4.0], [2], label=7),
                             ],
                             label=1,
+                        ),
+                        Skeleton(
+                            [
+                                Points([1.5, 2.0], [2], label=2),
+                                Points([4.5, 4.0], [2], label=3),
+                                Points([0.0, 0.0], [0], label=4),
+                            ],
+                            label=0,
                         ),
                     ],
                 ),
@@ -679,14 +698,32 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
                         "skeleton_label_2",
                         ("skeleton_label_1_point_0", "skeleton_label_1"),
                         ("skeleton_label_1_point_1", "skeleton_label_1"),
+                        ("skeleton_label_1_point_2", "skeleton_label_1"),
                         ("skeleton_label_2_point_0", "skeleton_label_2"),
                         ("skeleton_label_2_point_1", "skeleton_label_2"),
+                        ("skeleton_label_2_point_2", "skeleton_label_2"),
                     ]
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
                     [
-                        (0, ["skeleton_label_1_point_0", "skeleton_label_1_point_1"], set()),
-                        (1, ["skeleton_label_2_point_0", "skeleton_label_2_point_1"], set()),
+                        (
+                            0,
+                            [
+                                "skeleton_label_1_point_0",
+                                "skeleton_label_1_point_1",
+                                "skeleton_label_1_point_2",
+                            ],
+                            set(),
+                        ),
+                        (
+                            1,
+                            [
+                                "skeleton_label_2_point_0",
+                                "skeleton_label_2_point_1",
+                                "skeleton_label_2_point_2",
+                            ],
+                            set(),
+                        ),
                     ],
                 ),
             },
@@ -1267,6 +1304,61 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
         dataset.export(path, self.EXTRACTOR.NAME, save_media=True)
         return dataset
 
+    def _prepare_dataset_different_skeletons(self, path: str, anno=None) -> Dataset:
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    "a",
+                    subset="train",
+                    media=Image(np.ones((5, 10, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([1, 2], [Points.Visibility.visible.value], label=2),
+                                Points([3, 6], [Points.Visibility.visible.value], label=3),
+                                Points([4, 5], [Points.Visibility.visible.value], label=4),
+                                Points([8, 7], [Points.Visibility.visible.value], label=5),
+                            ],
+                            label=0,
+                        ),
+                        Skeleton(
+                            [
+                                Points([1, 2], [Points.Visibility.visible.value], label=6),
+                                Points([3, 6], [Points.Visibility.visible.value], label=7),
+                            ],
+                            label=1,
+                        ),
+                    ],
+                )
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "test",
+                        "test2",
+                        ("test_point_0", "test"),
+                        ("test_point_1", "test"),
+                        ("test_point_2", "test"),
+                        ("test_point_3", "test"),
+                        ("test2_point_0", "test2"),
+                        ("test2_point_1", "test2"),
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (
+                            0,
+                            ["test_point_0", "test_point_1", "test_point_2", "test_point_3"],
+                            set(),
+                        ),
+                        (1, ["test2_point_0", "test2_point_1"], set()),
+                    ]
+                ),
+            },
+        )
+        dataset.export(path, self.EXTRACTOR.NAME, save_media=True)
+        return dataset
+
     @staticmethod
     def _make_some_annotation_values():
         return [0.5, 0.5, 0.5, 0.5] + [0.5, 0.5, 2] * 4
@@ -1287,21 +1379,27 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
         self._check_can_report_invalid_field_type(field, field_name, test_dir)
 
     def test_can_use_sub_labels_hint(self, test_dir, helper_tc):
-        source_dataset = self._prepare_dataset(test_dir)
+        source_dataset = self._prepare_dataset_different_skeletons(test_dir)
         expected_dataset = Dataset.from_iterable(
             source_dataset,
             categories={
                 AnnotationType.label: LabelCategories.from_iterable(
                     [
                         "test",
+                        "test2",
                         ("custom_name", "test"),
                         ("another_custom_name", "test"),
                         ("test_name", "test"),
                         ("42", "test"),
-                    ]
+                        ("custom_name_2", "test2"),
+                        ("another_custom_name_2", "test2"),
+                    ],
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
-                    [(0, ["custom_name", "another_custom_name", "test_name", "42"], set())]
+                    [
+                        (0, ["custom_name", "another_custom_name", "test_name", "42"], set()),
+                        (1, ["custom_name_2", "another_custom_name_2"], set()),
+                    ]
                 ),
             },
         )
@@ -1310,12 +1408,13 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
             self.IMPORTER.NAME,
             skeleton_sub_labels={
                 "test": ["custom_name", "another_custom_name", "test_name", "42"],
+                "test2": ["custom_name_2", "another_custom_name_2"],
             },
         )
         compare_datasets(helper_tc, expected_dataset, parsed_dataset)
 
-    def test_can_report_wrong_number_of_sub_labels_in_hint(self, test_dir):
-        self._prepare_dataset(test_dir)
+    def test_can_report_too_many_sub_labels_in_hint(self, test_dir):
+        self._prepare_dataset_different_skeletons(test_dir)
         with pytest.raises(
             InvalidAnnotationError, match="Number of points in skeletons according to config file"
         ):
@@ -1330,27 +1429,29 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
                         "42",
                         "extra_sub_label",
                     ],
+                    "test2": ["sub_label_1", "sub_label_2"],
                 },
             )
 
     def test_can_report_the_lack_of_skeleton_label_in_hint(self, test_dir):
-        self._prepare_dataset(test_dir)
+        self._prepare_dataset_different_skeletons(test_dir)
         with pytest.raises(InvalidAnnotationError, match="Labels from config file are absent"):
             Dataset.import_from(
                 test_dir,
                 self.IMPORTER.NAME,
                 skeleton_sub_labels={
-                    "no_such_name": ["custom_name", "another_custom_name", "test_name", "42"],
+                    "test2": ["sub_label_1", "sub_label_2"],
                 },
             )
 
-    def test_can_import_if_sub_label_hint_has_extra_labels(self, test_dir, helper_tc):
-        source_dataset = self._prepare_dataset(test_dir)
+    def test_can_import_if_sub_label_hint_has_extra_skeletons(self, test_dir, helper_tc):
+        source_dataset = self._prepare_dataset_different_skeletons(test_dir)
         parsed_dataset = Dataset.import_from(
             test_dir,
             self.IMPORTER.NAME,
             skeleton_sub_labels={
                 "test": ["test_point_0", "test_point_1", "test_point_2", "test_point_3"],
+                "test2": ["test2_point_0", "test2_point_1"],
                 "no_such_name": ["only_one"],
             },
         )

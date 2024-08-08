@@ -208,9 +208,8 @@ class YoloConverter(Converter):
             annotation_path = osp.join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             os.makedirs(osp.dirname(annotation_path), exist_ok=True)
 
-            if type(self) is YoloConverter or yolo_annotation:
-                with open(annotation_path, "w", encoding="utf-8") as f:
-                    f.write(yolo_annotation)
+            with open(annotation_path, "w", encoding="utf-8") as f:
+                f.write(yolo_annotation)
 
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
@@ -276,6 +275,10 @@ class YOLOv8Converter(YoloConverter):
     ) -> None:
         super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
         self._config_filename = config_file or YOLOv8Path.DEFAULT_CONFIG_FILE
+
+    def _export_item_annotation(self, item: DatasetItem, subset_dir: str) -> None:
+        if len(item.annotations) > 0:
+            super()._export_item_annotation(item, subset_dir)
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):

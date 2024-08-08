@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-import copy
 import os
 import os.path as osp
 import pickle  # nosec - disable B403:import_pickle check

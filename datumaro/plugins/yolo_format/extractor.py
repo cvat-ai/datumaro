@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import math
 import os
 import os.path as osp
 import re
@@ -225,9 +224,6 @@ class YoloExtractor(SourceExtractor):
     def _parse_annotations(
         self, anno_path: str, image: Image, *, item_id: Tuple[str, str]
     ) -> List[Annotation]:
-        if not osp.exists(anno_path) and type(self) is not YoloExtractor:
-            return []
-
         lines = []
         with open(anno_path, "r", encoding="utf-8") as f:
             for line in f:
@@ -334,6 +330,13 @@ class YOLOv8Extractor(YoloExtractor):
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
+
+    def _parse_annotations(
+        self, anno_path: str, image: Image, *, item_id: Tuple[str, str]
+    ) -> List[Annotation]:
+        if not osp.exists(anno_path):
+            return []
+        return super()._parse_annotations(anno_path, image, item_id=item_id)
 
     @cached_property
     def _config(self) -> Dict[str, Any]:

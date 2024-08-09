@@ -1186,6 +1186,7 @@ class YOLOv8DetectionExtractorTest(YoloExtractorTest):
             Dataset.import_from(dataset_path, self.IMPORTER.NAME).init_cache()
 
     def test_can_report_missing_ann_file(self, test_dir):
+        # YOLOv8 does not require annotation files
         pass
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)

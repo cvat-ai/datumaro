@@ -125,18 +125,18 @@ class YoloConverterTest(CompareDatasetMixin):
     CONVERTER = YoloConverter
     IMPORTER = YoloImporter
 
-    def _generate_random_bbox(self, n_of_labels=10, **kwargs):
+    def _generate_random_bbox(self, n_of_labels=10, label=None, **kwargs):
         return Bbox(
             x=randint(0, 4),
             y=randint(0, 4),
             w=randint(1, 4),
             h=randint(1, 4),
-            label=randint(0, n_of_labels - 1),
+            label=label if label is not None else randint(0, n_of_labels - 1),
             attributes=kwargs,
         )
 
-    def _generate_random_annotation(self, n_of_labels=10):
-        return self._generate_random_bbox(n_of_labels=n_of_labels)
+    def _generate_random_annotation(self, n_of_labels=10, label=None):
+        return self._generate_random_bbox(n_of_labels=n_of_labels, label=label)
 
     @staticmethod
     def _make_image_path(test_dir: str, subset_name: str, image_id: str):
@@ -487,15 +487,67 @@ class YOLOv8DetectionConverterTest(YoloConverterTest):
             require_media=True,
         )
 
+    def test_saves_only_parentless_labels(self, test_dir):
+        anno1 = self._generate_random_annotation(label=1)
+        anno3 = self._generate_random_annotation(label=3)
+
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[anno1, anno3],
+                ),
+            ],
+            categories=[
+                "label_wo_parent",
+                "parent_label",
+                ("child_label_1", "parent_label"),
+                "another_label_wo_parent",
+                ("child_label_2", "parent_label"),
+                ("child_label_3", "parent_label"),
+                "one_more_label_wo_parent",
+            ],
+        )
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        with open(osp.join(test_dir, "data.yaml"), "r") as f:
+            config = yaml.safe_load(f)
+            assert config["names"] == {
+                0: "label_wo_parent",
+                1: "parent_label",
+                2: "another_label_wo_parent",
+                3: "one_more_label_wo_parent",
+            }
+        anno3.label = 2
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[anno1, anno3],
+                ),
+            ],
+            categories=[
+                "label_wo_parent",
+                "parent_label",
+                "another_label_wo_parent",
+                "one_more_label_wo_parent",
+            ],
+        )
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, parsed_dataset)
+
 
 class YOLOv8SegmentationConverterTest(YOLOv8DetectionConverterTest):
     CONVERTER = YOLOv8SegmentationConverter
     IMPORTER = YOLOv8SegmentationImporter
 
-    def _generate_random_annotation(self, n_of_labels=10):
+    def _generate_random_annotation(self, n_of_labels=10, label=None):
         return Polygon(
             points=[randint(0, 6) for _ in range(randint(3, 7) * 2)],
-            label=randint(0, n_of_labels - 1),
+            label=label if label is not None else randint(0, n_of_labels - 1),
         )
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
@@ -507,8 +559,10 @@ class YOLOv8OrientedBoxesConverterTest(CompareDatasetsRotationMixin, YOLOv8Detec
     CONVERTER = YOLOv8OrientedBoxesConverter
     IMPORTER = YOLOv8OrientedBoxesImporter
 
-    def _generate_random_annotation(self, n_of_labels=10):
-        return self._generate_random_bbox(n_of_labels=n_of_labels, rotation=randint(10, 350))
+    def _generate_random_annotation(self, n_of_labels=10, label=None):
+        return self._generate_random_bbox(
+            n_of_labels=n_of_labels, label=label, rotation=randint(10, 350)
+        )
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_export_rotated_bbox(self, test_dir):
@@ -744,6 +798,81 @@ class YOLOv8PoseConverterTest(YOLOv8DetectionConverterTest):
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         assert osp.isfile(osp.join(test_dir, "dataset_meta.json"))
         self.compare_datasets(source_dataset, parsed_dataset)
+
+    def test_saves_only_parentless_labels(self, test_dir):
+        # should save only skeleton labels
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 10, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([1.5, 2.0], [2], label=2),
+                                Points([4.5, 4.0], [2], label=3),
+                            ],
+                            label=1,
+                        ),
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "not_skeleton_label_1",
+                        "skeleton",
+                        ("skeleton_point_0", "skeleton"),
+                        ("skeleton_point_1", "skeleton"),
+                        "not_skeleton_label_2",
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (1, ["skeleton_point_0", "skeleton_point_1"], set()),
+                    ],
+                ),
+            },
+        )
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 10, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([1.5, 2.0], [2], label=1),
+                                Points([4.5, 4.0], [2], label=2),
+                            ],
+                            label=0,
+                        ),
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "skeleton",
+                        ("skeleton_point_0", "skeleton"),
+                        ("skeleton_point_1", "skeleton"),
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (0, ["skeleton_point_0", "skeleton_point_1"], set()),
+                    ],
+                ),
+            },
+        )
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        with open(osp.join(test_dir, "data.yaml"), "r") as f:
+            config = yaml.safe_load(f)
+            assert config["names"] == {0: "skeleton"}
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, parsed_dataset)
 
 
 class YoloImporterTest(CompareDatasetMixin):

@@ -261,7 +261,7 @@ class YoloConverter(Converter):
                 os.remove(ann_path)
 
 
-class YOLOv8Converter(YoloConverter):
+class YOLOv8DetectionConverter(YoloConverter):
     RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
 
     def __init__(
@@ -312,7 +312,7 @@ class YOLOv8Converter(YoloConverter):
         return osp.join(save_dir, YOLOv8Path.LABELS_FOLDER_NAME, subset)
 
 
-class YOLOv8SegmentationConverter(YOLOv8Converter):
+class YOLOv8SegmentationConverter(YOLOv8DetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Polygon):
             return
@@ -321,7 +321,7 @@ class YOLOv8SegmentationConverter(YOLOv8Converter):
         return "%s %s\n" % (anno.label, string_values)
 
 
-class YOLOv8OrientedBoxesConverter(YOLOv8Converter):
+class YOLOv8OrientedBoxesConverter(YOLOv8DetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Bbox):
             return
@@ -331,7 +331,7 @@ class YOLOv8OrientedBoxesConverter(YOLOv8Converter):
         return "%s %s\n" % (anno.label, string_values)
 
 
-class YOLOv8PoseConverter(YOLOv8Converter):
+class YOLOv8PoseConverter(YOLOv8DetectionConverter):
     @cached_property
     def _map_labels_for_save(self):
         point_categories = self._extractor.categories().get(

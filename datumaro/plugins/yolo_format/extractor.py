@@ -320,7 +320,7 @@ class YoloExtractor(SourceExtractor):
         return self._subsets[name]
 
 
-class YOLOv8Extractor(YoloExtractor):
+class YOLOv8DetectionExtractor(YoloExtractor):
     RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
 
     def __init__(
@@ -432,7 +432,7 @@ class YOLOv8Extractor(YoloExtractor):
             yield from subset_images_source
 
 
-class YOLOv8SegmentationExtractor(YOLOv8Extractor):
+class YOLOv8SegmentationExtractor(YOLOv8DetectionExtractor):
     def _load_segmentation_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Polygon:
@@ -459,7 +459,7 @@ class YOLOv8SegmentationExtractor(YOLOv8Extractor):
         )
 
 
-class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
+class YOLOv8OrientedBoxesExtractor(YOLOv8DetectionExtractor):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -492,7 +492,7 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
         )
 
 
-class YOLOv8PoseExtractor(YOLOv8Extractor):
+class YOLOv8PoseExtractor(YOLOv8DetectionExtractor):
     def __init__(
         self,
         *args,

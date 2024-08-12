@@ -257,6 +257,8 @@ def extract_contours(mask: np.ndarray) -> List[np.ndarray]:
     contours, hierarchy = cv2.findContours(
         mask.astype(np.uint8), mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_TC89_KCOS
     )
+    if not contours:
+        return []
 
     parent_to_children = _group_contours_with_children(hierarchy)
 

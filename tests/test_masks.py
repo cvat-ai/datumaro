@@ -77,6 +77,31 @@ class PolygonConversionsTest(TestCase):
         self.assertTrue(_compare_polygon_groups(expected, computed))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_mask_with_hole_can_be_converted_to_polygon(self):
+        mask = np.array(
+            [
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0],
+                [0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0],
+                [0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0],
+                [0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ]
+        )
+        expected = [
+            [9, 1, 9, 3, 3, 2, 2, 7, 7, 8, 9, 3, 9, 1, 9, 9, 1, 9, 1, 1, 9, 1],
+            [4, 4, 4, 6, 6, 6, 6, 4, 4, 4],
+        ]
+
+        computed = mask_tools.mask_to_polygons(mask)
+        self.assertTrue(_compare_polygon_groups(expected, computed))
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_crop_covered_segments(self):
         image_size = [7, 7]
         initial = [

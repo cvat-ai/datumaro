@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import math
 import os
 import os.path as osp
 import re
@@ -14,6 +13,8 @@ from functools import cached_property
 from itertools import cycle
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
+import cv2
+import numpy as np
 import yaml
 
 from datumaro.components.annotation import (
@@ -319,7 +320,7 @@ class YoloExtractor(SourceExtractor):
         return self._subsets[name]
 
 
-class YOLOv8Extractor(YoloExtractor):
+class YOLOv8DetectionExtractor(YoloExtractor):
     RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
 
     def __init__(
@@ -329,6 +330,13 @@ class YOLOv8Extractor(YoloExtractor):
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
+
+    def _parse_annotations(
+        self, anno_path: str, image: Image, *, item_id: Tuple[str, str]
+    ) -> List[Annotation]:
+        if not osp.exists(anno_path):
+            return []
+        return super()._parse_annotations(anno_path, image, item_id=item_id)
 
     @cached_property
     def _config(self) -> Dict[str, Any]:
@@ -424,7 +432,7 @@ class YOLOv8Extractor(YoloExtractor):
             yield from subset_images_source
 
 
-class YOLOv8SegmentationExtractor(YOLOv8Extractor):
+class YOLOv8SegmentationExtractor(YOLOv8DetectionExtractor):
     def _load_segmentation_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Polygon:
@@ -451,30 +459,7 @@ class YOLOv8SegmentationExtractor(YOLOv8Extractor):
         )
 
 
-class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
-    RECTANGLE_ANGLE_PRECISION = math.pi * 1 / 180
-
-    @classmethod
-    def _check_is_rectangle(
-        cls, p1: Tuple[int, int], p2: Tuple[int, int], p3: Tuple[int, int], p4: Tuple[int, int]
-    ) -> None:
-        p12_angle = math.atan2(p2[0] - p1[0], p2[1] - p1[1])
-        p23_angle = math.atan2(p3[0] - p2[0], p3[1] - p2[1])
-        p43_angle = math.atan2(p3[0] - p4[0], p3[1] - p4[1])
-        p14_angle = math.atan2(p4[0] - p1[0], p4[1] - p1[1])
-
-        if (
-            abs(p12_angle - p43_angle) > 0.001
-            or abs(p23_angle - p14_angle) > cls.RECTANGLE_ANGLE_PRECISION
-        ):
-            raise InvalidAnnotationError(
-                "Given points do not form a rectangle: opposite sides have different slope angles."
-            )
-        if abs((p12_angle - p23_angle) % math.pi - math.pi / 2) > cls.RECTANGLE_ANGLE_PRECISION:
-            raise InvalidAnnotationError(
-                "Given points do not form a rectangle: adjacent sides are not orthogonal."
-            )
-
+class YOLOv8OrientedBoxesExtractor(YOLOv8DetectionExtractor):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -491,18 +476,11 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
             )
             for idx, (x, y) in enumerate(take_by(parts[1:], 2))
         ]
-        self._check_is_rectangle(*points)
 
-        (x1, y1), (x2, y2), (x3, y3), (x4, y4) = points
-
-        width = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
-        height = math.sqrt((x2 - x3) ** 2 + (y2 - y3) ** 2)
-        rotation = math.atan2(y2 - y1, x2 - x1)
-        if rotation < 0:
-            rotation += math.pi * 2
-
-        center_x = (x1 + x2 + x3 + x4) / 4
-        center_y = (y1 + y2 + y3 + y4) / 4
+        (center_x, center_y), (width, height), rotation = cv2.minAreaRect(
+            np.array(points, dtype=np.float32)
+        )
+        rotation = rotation % 180
 
         return Bbox(
             x=center_x - width / 2,
@@ -510,11 +488,11 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
             w=width,
             h=height,
             label=label_id,
-            attributes=(dict(rotation=math.degrees(rotation)) if abs(rotation) > 0.00001 else {}),
+            attributes=(dict(rotation=rotation) if abs(rotation) > 0.00001 else {}),
         )
 
 
-class YOLOv8PoseExtractor(YOLOv8Extractor):
+class YOLOv8PoseExtractor(YOLOv8DetectionExtractor):
     def __init__(
         self,
         *args,
@@ -572,7 +550,7 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
         if has_meta_file(self._path):
             return self._load_categories_from_meta_file()
 
-        number_of_points, _ = self._kpt_shape
+        max_number_of_points, _ = self._kpt_shape
         skeleton_labels = self._load_names_from_config_file()
 
         if self._skeleton_sub_labels:
@@ -584,16 +562,17 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
             if skeletons_with_wrong_sub_labels := [
                 skeleton
                 for skeleton in skeleton_labels
-                if len(self._skeleton_sub_labels[skeleton]) != number_of_points
+                if len(self._skeleton_sub_labels[skeleton]) > max_number_of_points
             ]:
                 raise InvalidAnnotationError(
-                    f"Number of points in skeletons according to config file is {number_of_points}. "
-                    f"Following skeletons have number of sub labels which differs: {skeletons_with_wrong_sub_labels}"
+                    f"Number of points in skeletons according to config file is {max_number_of_points}. "
+                    f"Following skeletons have more sub labels: {skeletons_with_wrong_sub_labels}"
                 )
 
         children_labels = self._skeleton_sub_labels or {
             skeleton_label: [
-                f"{skeleton_label}_point_{point_index}" for point_index in range(number_of_points)
+                f"{skeleton_label}_point_{point_index}"
+                for point_index in range(max_number_of_points)
             ]
             for skeleton_label in skeleton_labels
         }
@@ -625,12 +604,12 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
-        number_of_points, values_per_point = self._kpt_shape
-        if len(parts) != 5 + number_of_points * values_per_point:
+        max_number_of_points, values_per_point = self._kpt_shape
+        if len(parts) != 5 + max_number_of_points * values_per_point:
             raise InvalidAnnotationError(
                 f"Unexpected field count {len(parts)} in the skeleton description. "
                 "Expected 5 fields (label, xc, yc, w, h)"
-                f"and then {values_per_point} for each of {number_of_points} points"
+                f"and then {values_per_point} for each of {max_number_of_points} points"
             )
 
         label_id = self._map_label_id(parts[0])
@@ -674,7 +653,4 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
                 ),
             ]
         ]
-        return Skeleton(
-            points,
-            label=label_id,
-        )
+        return Skeleton(points, label=label_id)

@@ -222,7 +222,19 @@ class YoloConverter(Converter):
 
         values = _make_yolo_bbox((width, height), anno.points)
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (anno.label, string_values)
+        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
+
+    @cached_property
+    def _labels_to_save(self) -> List[int]:
+        return [
+            label_id
+            for label_id, label in enumerate(self._extractor.categories()[AnnotationType.label])
+            if label.parent == ""
+        ]
+
+    @cached_property
+    def _map_labels_for_save(self) -> Dict[int, int]:
+        return {label_id: index for index, label_id in enumerate(self._labels_to_save)}
 
     @staticmethod
     def _make_image_subset_folder(save_dir: str, subset: str) -> str:
@@ -261,7 +273,7 @@ class YoloConverter(Converter):
                 os.remove(ann_path)
 
 
-class YOLOv8Converter(YoloConverter):
+class YOLOv8DetectionConverter(YoloConverter):
     RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
 
     def __init__(
@@ -276,6 +288,10 @@ class YOLOv8Converter(YoloConverter):
         super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
         self._config_filename = config_file or YOLOv8Path.DEFAULT_CONFIG_FILE
 
+    def _export_item_annotation(self, item: DatasetItem, subset_dir: str) -> None:
+        if len(item.annotations) > 0:
+            super()._export_item_annotation(item, subset_dir)
+
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
         parser = super().build_cmdline_parser(**kwargs)
@@ -287,15 +303,19 @@ class YOLOv8Converter(YoloConverter):
         )
         return parser
 
-    def _save_config_files(self, subset_lists: Dict[str, str]):
+    def _save_config_files(self, subset_lists: Dict[str, str], **extra_config_fields):
         extractor = self._extractor
         save_dir = self._save_dir
         with open(osp.join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
             label_categories = extractor.categories()[AnnotationType.label]
             data = dict(
                 path=".",
-                names={idx: label.name for idx, label in enumerate(label_categories.items)},
+                names={
+                    index: label_categories[label_id].name
+                    for label_id, index in self._map_labels_for_save.items()
+                },
                 **subset_lists,
+                **extra_config_fields,
             )
             yaml.dump(data, f)
 
@@ -308,64 +328,46 @@ class YOLOv8Converter(YoloConverter):
         return osp.join(save_dir, YOLOv8Path.LABELS_FOLDER_NAME, subset)
 
 
-class YOLOv8SegmentationConverter(YOLOv8Converter):
+class YOLOv8SegmentationConverter(YOLOv8DetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Polygon):
             return
         values = [value / size for value, size in zip(anno.points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (anno.label, string_values)
+        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
 
 
-class YOLOv8OrientedBoxesConverter(YOLOv8Converter):
+class YOLOv8OrientedBoxesConverter(YOLOv8DetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Bbox):
             return
         points = _bbox_annotation_as_polygon(anno)
         values = [value / size for value, size in zip(points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (anno.label, string_values)
+        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
 
 
-class YOLOv8PoseConverter(YOLOv8Converter):
+class YOLOv8PoseConverter(YOLOv8DetectionConverter):
     @cached_property
-    def _map_labels_for_save(self):
+    def _labels_to_save(self) -> List[int]:
         point_categories = self._extractor.categories().get(
             AnnotationType.points, PointsCategories.from_iterable([])
         )
-        return {label_id: index for index, label_id in enumerate(sorted(point_categories.items))}
+        return sorted(point_categories.items)
 
-    def _save_config_files(self, subset_lists: Dict[str, str]):
-        extractor = self._extractor
-        save_dir = self._save_dir
+    @cached_property
+    def _max_number_of_points(self):
+        point_categories = self._extractor.categories().get(AnnotationType.points)
+        if point_categories is None or len(point_categories) == 0:
+            return 0
+        return max(len(category.labels) for category in point_categories.items.values())
 
-        point_categories = extractor.categories().get(
-            AnnotationType.points, PointsCategories.from_iterable([])
+    def _save_config_files(self, subset_lists: Dict[str, str], **extra_config_fields):
+        super()._save_config_files(
+            subset_lists=subset_lists,
+            kpt_shape=[self._max_number_of_points, 3],
+            **extra_config_fields,
         )
-        if len(set(len(cat.labels) for cat in point_categories.items.values())) > 1:
-            raise DatasetExportError(
-                "Can't export: skeletons should have the same number of points"
-            )
-        n_of_points = (
-            len(next(iter(point_categories.items.values())).labels)
-            if len(point_categories) > 0
-            else 0
-        )
-
-        with open(osp.join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
-            label_categories = extractor.categories()[AnnotationType.label]
-            parent_categories = {
-                self._map_labels_for_save[label_id]: label_categories.items[label_id].name
-                for label_id in point_categories.items
-            }
-            assert set(parent_categories.keys()) == set(range(len(parent_categories)))
-            data = dict(
-                path=".",
-                names=parent_categories,
-                kpt_shape=[n_of_points, 3],
-                **subset_lists,
-            )
-            yaml.dump(data, f)
 
     def _make_annotation_line(self, width: int, height: int, skeleton: Annotation) -> Optional[str]:
         if skeleton.label is None or not isinstance(skeleton, Skeleton):
@@ -385,7 +387,7 @@ class YOLOv8PoseConverter(YOLOv8Converter):
             .labels
         ]
 
-        points_values = [f"0.0, 0.0, {Points.Visibility.absent.value}"] * len(point_label_ids)
+        points_values = [f"0.0 0.0 {Points.Visibility.absent.value}"] * self._max_number_of_points
         for element in skeleton.elements:
             assert len(element.points) == 2 and len(element.visibility) == 1
             position = point_label_ids.index(element.label)

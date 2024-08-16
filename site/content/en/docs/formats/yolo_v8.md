@@ -22,8 +22,6 @@ Supported annotation types and formats:
   - Oriented Bounding Box,
 - `Polygon`
   - Segmentation
-- `Mask`
-  - Segmentation (only export, as a polygon)
 - `Skeleton`
   - Pose
 

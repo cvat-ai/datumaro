@@ -226,8 +226,12 @@ class YoloConverter(Converter):
         return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
 
     @cached_property
-    def _labels_to_save(self):
-        return list(range(len(self._extractor.categories()[AnnotationType.label])))
+    def _labels_to_save(self) -> List[int]:
+        return [
+            label_id
+            for label_id, label in enumerate(self._extractor.categories()[AnnotationType.label])
+            if label.parent == ""
+        ]
 
     @cached_property
     def _map_labels_for_save(self) -> Dict[int, int]:
@@ -284,14 +288,6 @@ class YOLOv8DetectionConverter(YoloConverter):
     ) -> None:
         super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
         self._config_filename = config_file or YOLOv8Path.DEFAULT_CONFIG_FILE
-
-    @cached_property
-    def _labels_to_save(self) -> List[int]:
-        return [
-            label_id
-            for label_id, label in enumerate(self._extractor.categories()[AnnotationType.label])
-            if label.parent == ""
-        ]
 
     def _export_item_annotation(self, item: DatasetItem, subset_dir: str) -> None:
         if len(item.annotations) > 0:

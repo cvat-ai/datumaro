@@ -251,7 +251,7 @@ def _group_contours_with_children(hierarchy: np.ndarray) -> Dict[int, List[int]]
     return parent_to_children
 
 
-def extract_contours(mask: np.ndarray) -> List[np.ndarray]:
+def _extract_contours(mask: np.ndarray) -> List[np.ndarray]:
     import cv2
 
     contours, hierarchy = cv2.findContours(
@@ -301,7 +301,7 @@ def mask_to_polygons(mask: BinaryMask, area_threshold=1) -> List[Polygon]:
     from pycocotools import mask as mask_utils
 
     polygons = []
-    for contour in extract_contours(mask):
+    for contour in _extract_contours(mask):
         # Check if the polygon is big enough
         rle = mask_utils.frPyObjects([contour], mask.shape[0], mask.shape[1])
         area = sum(mask_utils.area(rle))

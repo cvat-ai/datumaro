@@ -28,7 +28,6 @@ from datumaro.components.dataset import DatasetPatch, ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExtractor
 from datumaro.components.media import Image
-from datumaro.plugins.transforms import MasksToPolygons
 from datumaro.util import str_to_bool
 
 from .format import YoloPath, YOLOv8Path
@@ -330,10 +329,6 @@ class YOLOv8DetectionConverter(YoloConverter):
 
 
 class YOLOv8SegmentationConverter(YOLOv8DetectionConverter):
-    def __init__(self, extractor: IExtractor, *args, **kwargs) -> None:
-        extractor = MasksToPolygons(extractor)
-        super().__init__(extractor, *args, **kwargs)
-
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Polygon):
             return

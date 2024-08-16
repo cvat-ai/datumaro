@@ -18,7 +18,6 @@ from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
     LabelCategories,
-    Mask,
     Points,
     PointsCategories,
     Polygon,
@@ -554,44 +553,6 @@ class YOLOv8SegmentationConverterTest(YOLOv8DetectionConverterTest):
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_export_rotated_bbox(self, test_dir):
         pass
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_export_mask_and_import_back_polygon(self, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 5, 3))),
-                    annotations=[
-                        Mask(
-                            image=np.array([[0, 0, 1, 1, 1, 0, 0, 0]] * 5),
-                            label=1,
-                        ),
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=3,
-                    subset="valid",
-                    media=Image(data=np.ones((8, 5, 3))),
-                    annotations=[
-                        Polygon(
-                            points=[2, 0, 2, 4, 4, 4, 4, 0, 2, 0],
-                            label=1,
-                        )
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
-        source_dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
-        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        self.compare_datasets(expected_dataset, parsed_dataset)
 
 
 class YOLOv8OrientedBoxesConverterTest(CompareDatasetsRotationMixin, YOLOv8DetectionConverterTest):

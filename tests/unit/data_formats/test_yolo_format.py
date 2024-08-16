@@ -76,9 +76,8 @@ def randint(a, b):
 
 class CompareDatasetMixin:
     @pytest.fixture(autouse=True)
-    def setup(self, helper_tc, monkeypatch):
+    def setup(self, helper_tc):
         self.helper_tc = helper_tc
-        self.monkeypatch = monkeypatch
 
     def compare_datasets(self, expected, actual, **kwargs):
         compare_datasets(self.helper_tc, expected, actual, **kwargs)
@@ -115,10 +114,13 @@ class CompareDatasetsRotationMixin(CompareDatasetMixin):
                 )
                 return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
 
-        self.monkeypatch.setattr(
-            "datumaro.util.test_utils.compare_annotations", compare_rotated_annotations
+        compare_datasets(
+            self.helper_tc,
+            expected,
+            actual,
+            **kwargs,
+            compare_annotations_function=compare_rotated_annotations,
         )
-        compare_datasets(self.helper_tc, expected, actual, **kwargs)
 
 
 class YoloConverterTest(CompareDatasetMixin):
@@ -1316,6 +1318,7 @@ class YOLOv8DetectionExtractorTest(YoloExtractorTest):
 
     def test_can_report_missing_ann_file(self, test_dir):
         # YOLOv8 does not require annotation files
+        # This empty test is needed to not run the test with the same name from the parent class
         pass
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)

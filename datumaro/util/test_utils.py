@@ -12,7 +12,7 @@ import unittest.mock
 import warnings
 from enum import Enum, auto
 from glob import glob
-from typing import Any, Collection, Optional, Union
+from typing import Any, Callable, Collection, Optional, Union
 
 from typing_extensions import Literal
 
@@ -144,6 +144,7 @@ def compare_datasets(
     ignored_attrs: Union[None, Literal["*"], Collection[str]] = None,
     require_media: bool = False,
     require_images: bool = False,
+    compare_annotations_function: Callable = compare_annotations,
 ):
     compare_categories(test, expected.categories(), actual.categories())
 
@@ -188,7 +189,8 @@ def compare_datasets(
             test.assertFalse(len(ann_b_matches) == 0, "ann id: %s" % ann_a.id)
 
             ann_b = find(
-                ann_b_matches, lambda x: compare_annotations(x, ann_a, ignored_attrs=ignored_attrs)
+                ann_b_matches,
+                lambda x: compare_annotations_function(x, ann_a, ignored_attrs=ignored_attrs),
             )
             if ann_b is None:
                 test.fail(

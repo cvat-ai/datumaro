@@ -121,6 +121,8 @@ def compare_annotations(expected: Annotation, actual: Annotation, ignored_attrs=
     if not ignored_attrs and not is_skeleton:
         return expected == actual
 
+    ignored_attrs = ignored_attrs or {}
+
     expected = copy(expected)
     actual = copy(actual)
 

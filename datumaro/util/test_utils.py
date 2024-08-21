@@ -10,6 +10,7 @@ import tempfile
 import unittest
 import unittest.mock
 import warnings
+from copy import copy
 from enum import Enum, auto
 from glob import glob
 from typing import Any, Callable, Collection, Optional, Union
@@ -120,27 +121,24 @@ def compare_annotations(expected: Annotation, actual: Annotation, ignored_attrs=
     if not ignored_attrs and not is_skeleton:
         return expected == actual
 
+    expected = copy(expected)
+    actual = copy(actual)
+
     if ignored_attrs != IGNORE_ALL:
-        expected = expected.wrap(
-            attributes=filter_dict(expected.attributes, exclude_keys=ignored_attrs)
-        )
-        actual = actual.wrap(attributes=filter_dict(actual.attributes, exclude_keys=ignored_attrs))
+        expected.attributes = filter_dict(expected.attributes, exclude_keys=ignored_attrs)
+        actual.attributes = filter_dict(actual.attributes, exclude_keys=ignored_attrs)
     else:
-        expected = expected.wrap(attributes={})
-        actual = actual.wrap(attributes={})
+        expected.attributes = {}
+        actual.attributes = {}
 
     if is_skeleton:
-        expected = expected.wrap(
-            elements=sorted(
-                filter(lambda p: p.visibility[0] != Points.Visibility.absent, expected.elements),
-                key=lambda s: s.label,
-            )
+        expected.elements = sorted(
+            filter(lambda p: p.visibility[0] != Points.Visibility.absent, expected.elements),
+            key=lambda s: s.label,
         )
-        actual = actual.wrap(
-            elements=sorted(
-                filter(lambda p: p.visibility[0] != Points.Visibility.absent, actual.elements),
-                key=lambda s: s.label,
-            )
+        actual.elements = sorted(
+            filter(lambda p: p.visibility[0] != Points.Visibility.absent, actual.elements),
+            key=lambda s: s.label,
         )
 
     return expected == actual

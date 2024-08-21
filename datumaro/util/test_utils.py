@@ -136,11 +136,11 @@ def compare_annotations(expected: Annotation, actual: Annotation, ignored_attrs=
     if is_skeleton:
         expected.elements = sorted(
             filter(lambda p: p.visibility[0] != Points.Visibility.absent, expected.elements),
-            key=lambda s: s.label,
+            key=lambda s: s.label or -1,
         )
         actual.elements = sorted(
             filter(lambda p: p.visibility[0] != Points.Visibility.absent, actual.elements),
-            key=lambda s: s.label,
+            key=lambda s: s.label or -1,
         )
 
     return expected == actual

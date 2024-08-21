@@ -302,7 +302,7 @@ class ExactComparatorTest(TestCase):
                     annotations=[
                         Skeleton(
                             [
-                                Points([0, 1], [2], label=1),
+                                Points([0, 1], [2]),
                                 Points([1, 2], [1], label=2),
                                 Points([2, 3], [0], label=3),
                             ],
@@ -348,7 +348,7 @@ class ExactComparatorTest(TestCase):
                         Skeleton(
                             [
                                 Points([1, 2], [1], label=2),
-                                Points([0, 1], [2], label=1),
+                                Points([0, 1], [2]),
                             ],
                             label=0,
                         )

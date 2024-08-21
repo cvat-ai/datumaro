@@ -37,6 +37,7 @@ from datumaro.components.annotation import (
     Label,
     LabelCategories,
     MaskCategories,
+    Points,
     PointsCategories,
 )
 from datumaro.components.cli_plugin import CliPlugin
@@ -1856,7 +1857,7 @@ class ExactComparator:
             except AssertionError as e:
                 errors.append({"type": "points", "message": str(e)})
 
-    def _compare_annotations(self, a, b):
+    def _compare_annotations(self, a: Annotation, b: Annotation):
         ignored_fields = self.ignored_fields
         ignored_attrs = self.ignored_attrs
 
@@ -1865,6 +1866,16 @@ class ExactComparator:
         if "attributes" not in ignored_fields:
             a_fields["attributes"] = filter_dict(a.attributes, ignored_attrs)
             b_fields["attributes"] = filter_dict(b.attributes, ignored_attrs)
+
+        if a.type == b.type == AnnotationType.skeleton and "elements" not in ignored_fields:
+            a_fields["elements"] = sorted(
+                filter(lambda p: p.visibility[0] != Points.Visibility.absent, a.elements),
+                key=lambda s: s.label,
+            )
+            b_fields["elements"] = sorted(
+                filter(lambda p: p.visibility[0] != Points.Visibility.absent, b.elements),
+                key=lambda s: s.label,
+            )
 
         result = a.wrap(**a_fields) == b.wrap(**b_fields)
 

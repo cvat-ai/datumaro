@@ -2,7 +2,17 @@ from unittest import TestCase
 
 import numpy as np
 
-from datumaro.components.annotation import Bbox, Caption, Label, Mask, Points
+from datumaro.components.annotation import (
+    AnnotationType,
+    Bbox,
+    Caption,
+    Label,
+    LabelCategories,
+    Mask,
+    Points,
+    PointsCategories,
+    Skeleton,
+)
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem
 from datumaro.components.media import Image
 from datumaro.components.operations import DistanceComparator, ExactComparator
@@ -267,6 +277,146 @@ class ExactComparatorTest(TestCase):
         self.assertEqual(6, len(matched), matched)
         self.assertEqual(2, len(unmatched), unmatched)
         self.assertEqual(0, len(errors), errors)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_skeleton_annotation_comparison(self):
+        categories = {
+            AnnotationType.label: LabelCategories.from_iterable(
+                [
+                    "skeleton",
+                    ("point1", "skeleton"),
+                    ("point2", "skeleton"),
+                    ("point3", "skeleton"),
+                ]
+            ),
+            AnnotationType.points: PointsCategories.from_iterable(
+                [
+                    (0, ["point1", "point2", "point3"], set()),
+                ]
+            ),
+        }
+        a = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([0, 1], [2], label=1),
+                                Points([1, 2], [1], label=2),
+                                Points([2, 3], [0], label=3),
+                            ],
+                            label=0,
+                        )
+                    ],
+                ),
+                DatasetItem(
+                    id=2,
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([4, 5], [2], label=1),
+                                Points([5, 6], [1], label=2),
+                                Points([6, 7], [0], label=3),
+                            ],
+                            label=0,
+                        )
+                    ],
+                ),
+                DatasetItem(
+                    id=3,
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([7, 8], [2], label=1),
+                                Points([8, 9], [1], label=2),
+                                Points([9, 10], [0], label=3),
+                            ],
+                            label=0,
+                        )
+                    ],
+                ),
+            ],
+            categories=categories,
+        )
+
+        b = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([1, 2], [1], label=2),
+                                Points([0, 1], [2], label=1),
+                            ],
+                            label=0,
+                        )
+                    ],
+                ),  # matched, even though absent point is removed and order differs
+                DatasetItem(
+                    id=2,
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([4, 5], [2], label=1),
+                                Points([5, 6], [1], label=2),
+                                Points([6, 8], [0], label=3),
+                            ],
+                            label=0,
+                        )
+                    ],
+                ),  # matched, even though absent point has different coordinates
+                DatasetItem(
+                    id=3,
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([7, 8], [2], label=1),
+                                Points([8, 10], [1], label=2),
+                                Points([9, 10], [0], label=3),
+                            ],
+                            label=0,
+                        )
+                    ],
+                ),  # not matched, not-absent point has changed coordinates
+            ],
+            categories=categories,
+        )
+
+        comp = ExactComparator()
+        _, unmatched, _, _, _ = comp.compare_datasets(a, b)
+
+        assert unmatched == [
+            {
+                "item": ("3", "default"),
+                "source": "a",
+                "ann": repr(
+                    Skeleton(
+                        [
+                            Points([7, 8], [2], label=1),
+                            Points([8, 9], [1], label=2),
+                            Points([9, 10], [0], label=3),
+                        ],
+                        label=0,
+                    )
+                ),
+            },
+            {
+                "item": ("3", "default"),
+                "source": "b",
+                "ann": repr(
+                    Skeleton(
+                        [
+                            Points([7, 8], [2], label=1),
+                            Points([8, 10], [1], label=2),
+                            Points([9, 10], [0], label=3),
+                        ],
+                        label=0,
+                    )
+                ),
+            },
+        ]
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_image_comparison(self):

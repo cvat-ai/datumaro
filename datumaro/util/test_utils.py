@@ -16,7 +16,7 @@ from typing import Any, Callable, Collection, Optional, Union
 
 from typing_extensions import Literal
 
-from datumaro.components.annotation import AnnotationType
+from datumaro.components.annotation import Annotation, AnnotationType, Points
 from datumaro.components.dataset import Dataset, IDataset
 from datumaro.components.media import Image, MultiframeImage, PointCloud
 from datumaro.util import filter_dict, find
@@ -115,26 +115,35 @@ def compare_categories(test, expected, actual):
 IGNORE_ALL = "*"
 
 
-def compare_annotations(expected, actual, ignored_attrs=None):
-    if not ignored_attrs:
+def compare_annotations(expected: Annotation, actual: Annotation, ignored_attrs=None):
+    is_skeleton = expected.type == actual.type == AnnotationType.skeleton
+    if not ignored_attrs and not is_skeleton:
         return expected == actual
 
-    a_attr = expected.attributes
-    b_attr = actual.attributes
-
     if ignored_attrs != IGNORE_ALL:
-        expected.attributes = filter_dict(a_attr, exclude_keys=ignored_attrs)
-        actual.attributes = filter_dict(b_attr, exclude_keys=ignored_attrs)
+        expected = expected.wrap(
+            attributes=filter_dict(expected.attributes, exclude_keys=ignored_attrs)
+        )
+        actual = actual.wrap(attributes=filter_dict(actual.attributes, exclude_keys=ignored_attrs))
     else:
-        expected.attributes = {}
-        actual.attributes = {}
+        expected = expected.wrap(attributes={})
+        actual = actual.wrap(attributes={})
 
-    r = expected == actual
+    if is_skeleton:
+        expected = expected.wrap(
+            elements=sorted(
+                filter(lambda p: p.visibility[0] != Points.Visibility.absent, expected.elements),
+                key=lambda s: s.label,
+            )
+        )
+        actual = actual.wrap(
+            elements=sorted(
+                filter(lambda p: p.visibility[0] != Points.Visibility.absent, actual.elements),
+                key=lambda s: s.label,
+            )
+        )
 
-    expected.attributes = a_attr
-    actual.attributes = b_attr
-
-    return r
+    return expected == actual
 
 
 def compare_datasets(

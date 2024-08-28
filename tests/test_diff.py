@@ -348,7 +348,7 @@ class ExactComparatorTest(TestCase):
                         Skeleton(
                             [
                                 Points([1, 2], [Points.Visibility.hidden], label=2),
-                                Points([0, 1], [Points.Visibility.absent]),
+                                Points([0, 1], [Points.Visibility.visible]),
                             ],
                             label=0,
                         )

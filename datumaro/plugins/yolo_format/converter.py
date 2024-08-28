@@ -194,6 +194,10 @@ class YoloConverter(Converter):
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
+    def _save_annotation_file(self, annotation_path, yolo_annotation):
+        with open(annotation_path, "w", encoding="utf-8") as f:
+            f.write(yolo_annotation)
+
     def _export_item_annotation(self, item: DatasetItem, subset_dir: str) -> None:
         try:
             height, width = item.media.size
@@ -208,8 +212,7 @@ class YoloConverter(Converter):
             annotation_path = osp.join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             os.makedirs(osp.dirname(annotation_path), exist_ok=True)
 
-            with open(annotation_path, "w", encoding="utf-8") as f:
-                f.write(yolo_annotation)
+            self._save_annotation_file(annotation_path, yolo_annotation)
 
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
@@ -288,9 +291,9 @@ class YOLOv8DetectionConverter(YoloConverter):
         super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
         self._config_filename = config_file or YOLOv8Path.DEFAULT_CONFIG_FILE
 
-    def _export_item_annotation(self, item: DatasetItem, subset_dir: str) -> None:
-        if len(item.annotations) > 0:
-            super()._export_item_annotation(item, subset_dir)
+    def _save_annotation_file(self, annotation_path, yolo_annotation):
+        if yolo_annotation:
+            super()._save_annotation_file(annotation_path, yolo_annotation)
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):

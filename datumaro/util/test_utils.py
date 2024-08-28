@@ -10,13 +10,14 @@ import tempfile
 import unittest
 import unittest.mock
 import warnings
+from copy import copy
 from enum import Enum, auto
 from glob import glob
 from typing import Any, Callable, Collection, Optional, Union
 
 from typing_extensions import Literal
 
-from datumaro.components.annotation import AnnotationType
+from datumaro.components.annotation import Annotation, AnnotationType, Points
 from datumaro.components.dataset import Dataset, IDataset
 from datumaro.components.media import Image, MultiframeImage, PointCloud
 from datumaro.util import filter_dict, find
@@ -115,26 +116,34 @@ def compare_categories(test, expected, actual):
 IGNORE_ALL = "*"
 
 
-def compare_annotations(expected, actual, ignored_attrs=None):
-    if not ignored_attrs:
+def compare_annotations(expected: Annotation, actual: Annotation, ignored_attrs=None):
+    is_skeleton = expected.type == actual.type == AnnotationType.skeleton
+    if not ignored_attrs and not is_skeleton:
         return expected == actual
 
-    a_attr = expected.attributes
-    b_attr = actual.attributes
+    ignored_attrs = ignored_attrs or []
+
+    expected = copy(expected)
+    actual = copy(actual)
 
     if ignored_attrs != IGNORE_ALL:
-        expected.attributes = filter_dict(a_attr, exclude_keys=ignored_attrs)
-        actual.attributes = filter_dict(b_attr, exclude_keys=ignored_attrs)
+        expected.attributes = filter_dict(expected.attributes, exclude_keys=ignored_attrs)
+        actual.attributes = filter_dict(actual.attributes, exclude_keys=ignored_attrs)
     else:
         expected.attributes = {}
         actual.attributes = {}
 
-    r = expected == actual
+    if is_skeleton:
+        expected.elements = sorted(
+            filter(lambda p: p.visibility[0] != Points.Visibility.absent, expected.elements),
+            key=lambda p: p.label if p.label is not None else -1,
+        )
+        actual.elements = sorted(
+            filter(lambda p: p.visibility[0] != Points.Visibility.absent, actual.elements),
+            key=lambda p: p.label if p.label is not None else -1,
+        )
 
-    expected.attributes = a_attr
-    actual.attributes = b_attr
-
-    return r
+    return expected == actual
 
 
 def compare_datasets(

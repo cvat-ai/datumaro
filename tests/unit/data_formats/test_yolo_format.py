@@ -18,6 +18,7 @@ from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
     LabelCategories,
+    Mask,
     Points,
     PointsCategories,
     Polygon,
@@ -466,14 +467,37 @@ class YOLOv8DetectionConverterTest(YoloConverterTest):
 
         self.compare_datasets(source_dataset, parsed_dataset)
 
-    @mark_requirement(Requirements.DATUM_609)
-    def test_can_save_and_load_without_annotations(self, test_dir):
-        source_dataset = self._generate_random_dataset([{"annotations": 0}])
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_without_creating_annotation_file_and_load(self, test_dir):
+        categories = self._generate_random_dataset([]).categories()
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[
+                        # Mask annotation is not supported by yolo8 formats, so should be omitted
+                        Mask(np.array([[0, 1, 1, 1, 0]]), label=0),
+                    ],
+                )
+            ],
+            categories=categories,
+        )
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((8, 8, 3))),
+                )
+            ],
+            categories=categories,
+        )
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
-
         assert os.listdir(osp.join(test_dir, "labels", "train")) == []
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        self.compare_datasets(source_dataset, parsed_dataset)
+        self.compare_datasets(expected_dataset, parsed_dataset)
 
     def _check_inplace_save_writes_only_updated_data(self, test_dir, expected):
         assert set(os.listdir(osp.join(test_dir, "images", "train"))) == {

@@ -469,6 +469,7 @@ class YOLOv8DetectionConverterTest(YoloConverterTest):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_without_creating_annotation_file_and_load(self, test_dir):
+        categories = self._generate_random_dataset([]).categories()
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -481,7 +482,7 @@ class YOLOv8DetectionConverterTest(YoloConverterTest):
                     ],
                 )
             ],
-            categories=["label_" + str(i) for i in range(5)],
+            categories=categories,
         )
         expected_dataset = Dataset.from_iterable(
             [
@@ -491,7 +492,7 @@ class YOLOv8DetectionConverterTest(YoloConverterTest):
                     media=Image(data=np.ones((8, 8, 3))),
                 )
             ],
-            categories=["label_" + str(i) for i in range(5)],
+            categories=categories,
         )
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
         assert os.listdir(osp.join(test_dir, "labels", "train")) == []
@@ -896,37 +897,6 @@ class YOLOv8PoseConverterTest(YOLOv8DetectionConverterTest):
         with open(osp.join(test_dir, "data.yaml"), "r") as f:
             config = yaml.safe_load(f)
             assert config["names"] == {0: "skeleton"}
-        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        self.compare_datasets(expected_dataset, parsed_dataset)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_without_creating_annotation_file_and_load(self, test_dir):
-        source_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=1,
-                    subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
-                    annotations=[
-                        # Mask annotation is not supported by yolo8 formats, so should be omitted
-                        Mask(np.array([[0, 1, 1, 1, 0]]), label=0),
-                    ],
-                )
-            ],
-            categories=["label_" + str(i) for i in range(5)],
-        )
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id=1,
-                    subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
-                )
-            ],
-            categories=[],
-        )
-        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
-        assert os.listdir(osp.join(test_dir, "labels", "train")) == []
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         self.compare_datasets(expected_dataset, parsed_dataset)
 

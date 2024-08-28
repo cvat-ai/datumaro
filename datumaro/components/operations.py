@@ -1870,11 +1870,11 @@ class ExactComparator:
         if a.type == b.type == AnnotationType.skeleton and "elements" not in ignored_fields:
             a_fields["elements"] = sorted(
                 filter(lambda p: p.visibility[0] != Points.Visibility.absent, a.elements),
-                key=lambda s: s.label or -1,
+                key=lambda p: p.label if p.label is not None else -1,
             )
             b_fields["elements"] = sorted(
                 filter(lambda p: p.visibility[0] != Points.Visibility.absent, b.elements),
-                key=lambda s: s.label or -1,
+                key=lambda p: p.label if p.label is not None else -1,
             )
 
         result = a.wrap(**a_fields) == b.wrap(**b_fields)

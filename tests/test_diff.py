@@ -302,9 +302,9 @@ class ExactComparatorTest(TestCase):
                     annotations=[
                         Skeleton(
                             [
-                                Points([0, 1], [2]),
-                                Points([1, 2], [1], label=2),
-                                Points([2, 3], [0], label=3),
+                                Points([0, 1], [Points.Visibility.visible]),
+                                Points([1, 2], [Points.Visibility.hidden], label=2),
+                                Points([2, 3], [Points.Visibility.absent], label=3),
                             ],
                             label=0,
                         )
@@ -315,9 +315,9 @@ class ExactComparatorTest(TestCase):
                     annotations=[
                         Skeleton(
                             [
-                                Points([4, 5], [2], label=1),
-                                Points([5, 6], [1], label=2),
-                                Points([6, 7], [0], label=3),
+                                Points([4, 5], [Points.Visibility.visible], label=1),
+                                Points([5, 6], [Points.Visibility.hidden], label=2),
+                                Points([6, 7], [Points.Visibility.absent], label=3),
                             ],
                             label=0,
                         )
@@ -328,9 +328,9 @@ class ExactComparatorTest(TestCase):
                     annotations=[
                         Skeleton(
                             [
-                                Points([7, 8], [2], label=1),
-                                Points([8, 9], [1], label=2),
-                                Points([9, 10], [0], label=3),
+                                Points([7, 8], [Points.Visibility.visible], label=1),
+                                Points([8, 9], [Points.Visibility.hidden], label=2),
+                                Points([9, 10], [Points.Visibility.absent], label=3),
                             ],
                             label=0,
                         )
@@ -347,8 +347,8 @@ class ExactComparatorTest(TestCase):
                     annotations=[
                         Skeleton(
                             [
-                                Points([1, 2], [1], label=2),
-                                Points([0, 1], [2]),
+                                Points([1, 2], [Points.Visibility.hidden], label=2),
+                                Points([0, 1], [Points.Visibility.absent]),
                             ],
                             label=0,
                         )
@@ -359,9 +359,9 @@ class ExactComparatorTest(TestCase):
                     annotations=[
                         Skeleton(
                             [
-                                Points([4, 5], [2], label=1),
-                                Points([5, 6], [1], label=2),
-                                Points([6, 8], [0], label=3),
+                                Points([4, 5], [Points.Visibility.visible], label=1),
+                                Points([5, 6], [Points.Visibility.hidden], label=2),
+                                Points([6, 8], [Points.Visibility.absent], label=3),
                             ],
                             label=0,
                         )
@@ -372,9 +372,9 @@ class ExactComparatorTest(TestCase):
                     annotations=[
                         Skeleton(
                             [
-                                Points([7, 8], [2], label=1),
-                                Points([8, 10], [1], label=2),
-                                Points([9, 10], [0], label=3),
+                                Points([7, 8], [Points.Visibility.visible], label=1),
+                                Points([8, 10], [Points.Visibility.hidden], label=2),
+                                Points([9, 10], [Points.Visibility.absent], label=3),
                             ],
                             label=0,
                         )

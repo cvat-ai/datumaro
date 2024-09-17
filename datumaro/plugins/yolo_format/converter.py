@@ -29,8 +29,9 @@ from datumaro.components.errors import DatasetExportError, MediaTypeError
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExtractor
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
+from datumaro.util.os_util import split_path
 
-from .format import YoloPath, YOLOv8Path
+from .format import YoloPath, YOLOv8ClassificationFormat, YOLOv8Path
 
 
 def _make_yolo_bbox(img_size, box):
@@ -399,3 +400,66 @@ class YOLOv8PoseConverter(YOLOv8DetectionConverter):
             points_values[position] = f"{x:.6f} {y:.6f} {element.visibility[0].value}"
 
         return f"{self._map_labels_for_save[skeleton.label]} {bbox_string_values} {' '.join(points_values)}\n"
+
+
+class YOLOv8ClassificationConverter(Converter):
+    # https://github.com/AlexeyAB/darknet#how-to-train-to-detect-your-custom-objects
+    DEFAULT_IMAGE_EXT = ".jpg"
+
+    def apply(self):
+        save_dir = self._save_dir
+
+        if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
+            raise MediaTypeError("Media type is not an image")
+
+        os.makedirs(save_dir, exist_ok=True)
+
+        if self._save_dataset_meta:
+            self._save_meta_file(self._save_dir)
+
+        labels = self._extractor.categories()[AnnotationType.label]
+
+        subsets = self._extractor.subsets()
+        pbars = self._ctx.progress_reporter.split(len(subsets))
+        for (subset_name, subset), pbar in zip(subsets.items(), pbars):
+            if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
+                subset_name = YoloPath.DEFAULT_SUBSET_NAME
+
+            for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
+                assert len(item.annotations) <= 1
+                try:
+                    if len(item.annotations) == 0:
+                        self._export_media_for_label(
+                            item, YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
+                        )
+                    else:
+                        for anno in item.annotations:
+                            if anno.type != AnnotationType.label:
+                                continue
+                            self._export_media_for_label(item, labels[anno.label].name)
+
+                except Exception as e:
+                    self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
+
+    def _export_media_for_label(self, item: DatasetItem, label_name: str):
+        try:
+            if not item.media or not (item.media.has_data or item.media.has_size):
+                raise DatasetExportError(
+                    "Failed to export item '%s': " "item has no image info" % item.id
+                )
+            label_folder_path = osp.join(self._save_dir, item.subset, label_name)
+            os.makedirs(label_folder_path, exist_ok=True)
+
+            image_name = self._make_image_filename(item)
+            if (split_image_name := split_path(image_name))[0] == label_name:
+                image_fpath = osp.join(label_folder_path, *split_image_name[1:])
+            else:
+                image_fpath = osp.join(label_folder_path, image_name)
+
+            if self._save_media:
+                if item.media:
+                    self._save_image(item, image_fpath)
+                else:
+                    log.warning("Item '%s' has no image" % item.id)
+        except Exception as e:
+            self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))

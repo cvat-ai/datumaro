@@ -178,7 +178,10 @@ List of supported formats:
     - [Format specification](https://docs.ultralytics.com/datasets/obb/)
     - [Dataset example](https://docs.ultralytics.com/datasets/obb/dota8/)
     - [Format documentation](/docs/formats/yolo_v8)
-
+  - Classification
+    - [Format specification](https://docs.ultralytics.com/datasets/classify/)
+    - [Dataset example](https://github.com/cvat-ai/datumaro/tree/develop/tests/assets/yolo_dataset/yolov8_classification)
+    - [Format documentation](/docs/formats/yolo_v8_classification)
 <a id="annotation-types"></a>
 ### Supported annotation types
 

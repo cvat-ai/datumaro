@@ -452,6 +452,13 @@ class YOLOv8ClassificationConverter(Converter):
                 with open(osp.join(save_dir, image_list_path), "w", encoding="utf-8") as f:
                     f.writelines(image_list)
 
+    def _make_image_filename(self, item, *, name=None, subdir=None):
+        if split_path(item.id)[0] == split_path(subdir)[-1]:
+            # item.id contains label
+            subdir = osp.join(self._save_dir, item.subset)
+
+        return super()._make_image_filename(item, subdir=subdir)
+
     def _export_media_for_label(self, item: DatasetItem, label_name: str) -> str:
         try:
             if not item.media or not (item.media.has_data or item.media.has_size):
@@ -461,11 +468,7 @@ class YOLOv8ClassificationConverter(Converter):
             label_folder_path = osp.join(self._save_dir, item.subset, label_name)
             os.makedirs(label_folder_path, exist_ok=True)
 
-            image_name = self._make_image_filename(item)
-            if (split_image_name := split_path(image_name))[0] == label_name:
-                image_fpath = osp.join(label_folder_path, *split_image_name[1:])
-            else:
-                image_fpath = osp.join(label_folder_path, image_name)
+            image_fpath = self._make_image_filename(item, subdir=label_folder_path)
 
             if self._save_media:
                 if item.media:

@@ -30,3 +30,4 @@ class YOLOv8PoseFormat:
 
 class YOLOv8ClassificationFormat:
     IMAGE_DIR_NO_LABEL = "no_label"
+    IMAGE_NAMES_FILE = "image_names.txt"

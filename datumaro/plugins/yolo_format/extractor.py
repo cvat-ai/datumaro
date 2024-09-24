@@ -688,6 +688,15 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
             if osp.isdir(osp.join(self._path, subset_name))
         ]
 
+    @staticmethod
+    def _get_image_paths_from_category_folder(category_folder: str) -> list[str]:
+        image_list_path = osp.join(category_folder, YOLOv8ClassificationFormat.IMAGE_NAMES_FILE)
+        if osp.isfile(image_list_path):
+            with open(image_list_path, "r", encoding="utf-8") as f:
+                yield from (osp.join(category_folder, line.strip()) for line in f)
+
+        yield from find_images(category_folder, recursive=True)
+
     def _get_lazy_subset_items(self, subset_name: str):
         subset_path = osp.join(self._path, subset_name)
         return OrderedDict(
@@ -697,7 +706,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
             )
             for category_name in os.listdir(subset_path)
             if osp.isdir(category_path := osp.join(subset_path, category_name))
-            for image_path in find_images(category_path, recursive=True)
+            for image_path in self._get_image_paths_from_category_folder(category_path)
         )
 
     def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:

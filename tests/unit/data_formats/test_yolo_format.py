@@ -932,7 +932,8 @@ class YOLOv8ClassificationConverterTest(YoloConverterTest):
         )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_relative_paths(self, test_dir):  # pylint: disable=arguments-differ
+    @pytest.mark.parametrize("save_media", [True, False])
+    def test_relative_paths(self, test_dir, save_media):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(id="1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
@@ -970,7 +971,7 @@ class YOLOv8ClassificationConverterTest(YoloConverterTest):
             categories=["label_0", "label_1"],
         )
 
-        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=save_media)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         self.compare_datasets(expected_dataset, parsed_dataset)
 
@@ -1005,9 +1006,6 @@ class YOLOv8ClassificationConverterTest(YoloConverterTest):
         pass
 
     def test_inplace_save_writes_only_updated_data(self):  # pylint: disable=arguments-differ
-        pass
-
-    def test_can_load_dataset_with_exact_image_info(self):  # pylint: disable=arguments-differ
         pass
 
     def test_can_save_and_load_without_path_prefix(self):  # pylint: disable=arguments-differ

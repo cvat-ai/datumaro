@@ -701,7 +701,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
         subset_path = osp.join(self._path, subset_name)
         return OrderedDict(
             (
-                osp.splitext(osp.relpath(image_path, subset_path))[0],
+                self.name_from_path(image_path),
                 osp.relpath(image_path, self._path),
             )
             for category_name in os.listdir(subset_path)
@@ -731,3 +731,9 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
                 if label_dir_name != YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL:
                     categories.add(label_dir_name)
         return {AnnotationType.label: LabelCategories.from_iterable(sorted(categories))}
+
+    def name_from_path(self, path: str) -> str:
+        path_from_root = osp.relpath(path, self._path)
+        subset_folder = split_path(path_from_root)[0]
+        path_from_subset_folder = osp.relpath(path_from_root, subset_folder)
+        return osp.splitext(path_from_subset_folder)[0]

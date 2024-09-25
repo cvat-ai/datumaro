@@ -937,6 +937,7 @@ class YOLOv8ClassificationConverterTest(YoloConverterTest):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(id="1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
+                DatasetItem(id="2", subset="train", media=Image(data=np.ones((4, 2, 3)))),
                 DatasetItem(
                     id="subdir1/1",
                     subset="train",
@@ -955,6 +956,7 @@ class YOLOv8ClassificationConverterTest(YoloConverterTest):
         expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(id="no_label/1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
+                DatasetItem(id="no_label/2", subset="train", media=Image(data=np.ones((4, 2, 3)))),
                 DatasetItem(
                     id="label_0/subdir1/1",
                     subset="train",

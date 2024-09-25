@@ -451,7 +451,7 @@ class YOLOv8ClassificationConverter(Converter):
                     YOLOv8ClassificationFormat.IMAGE_NAMES_FILE,
                 )
                 with open(image_list_path, "w", encoding="utf-8") as f:
-                    f.writelines(image_list)
+                    f.writelines(f"{image_path}\n" for image_path in image_list)
 
     def _make_image_path_without_duplicated_label(
         self, item: DatasetItem, subset_name: str, label_name: str

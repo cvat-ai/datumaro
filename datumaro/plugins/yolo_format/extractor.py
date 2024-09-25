@@ -688,25 +688,25 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
             if osp.isdir(osp.join(self._path, subset_name))
         ]
 
-    @staticmethod
-    def _get_image_paths_from_category_folder(category_folder: str) -> list[str]:
+    def _get_image_paths_for_subset_and_label(self, subset_name: str, label_name: str) -> list[str]:
+        category_folder = osp.join(self._path, subset_name, label_name)
         image_list_path = osp.join(category_folder, YOLOv8ClassificationFormat.IMAGE_NAMES_FILE)
         if osp.isfile(image_list_path):
             with open(image_list_path, "r", encoding="utf-8") as f:
-                yield from (osp.join(category_folder, line.strip()) for line in f)
+                yield from (osp.join(subset_name, label_name, line.strip()) for line in f)
 
-        yield from find_images(category_folder, recursive=True)
+        yield from (
+            osp.relpath(image_path, self._path)
+            for image_path in find_images(category_folder, recursive=True)
+        )
 
     def _get_lazy_subset_items(self, subset_name: str):
         subset_path = osp.join(self._path, subset_name)
         return OrderedDict(
-            (
-                self.name_from_path(image_path),
-                osp.relpath(image_path, self._path),
-            )
+            (self.name_from_path(image_path), image_path)
             for category_name in os.listdir(subset_path)
-            if osp.isdir(category_path := osp.join(subset_path, category_name))
-            for image_path in self._get_image_paths_from_category_folder(category_path)
+            if osp.isdir(osp.join(subset_path, category_name))
+            for image_path in self._get_image_paths_for_subset_and_label(subset_name, category_name)
         )
 
     def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:
@@ -732,8 +732,8 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
                     categories.add(label_dir_name)
         return {AnnotationType.label: LabelCategories.from_iterable(sorted(categories))}
 
-    def name_from_path(self, path: str) -> str:
-        path_from_root = osp.relpath(path, self._path)
+    @classmethod
+    def name_from_path(self, path_from_root: str) -> str:
         subset_folder = split_path(path_from_root)[0]
         path_from_subset_folder = osp.relpath(path_from_root, subset_folder)
         return osp.splitext(path_from_subset_folder)[0]

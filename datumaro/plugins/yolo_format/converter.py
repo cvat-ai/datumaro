@@ -435,7 +435,9 @@ class YOLOv8ClassificationConverter(Converter):
                         if anno.type == AnnotationType.label
                     ] or [YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL]
                     for label_name in label_names:
-                        image_path_in_label_folder = self._export_media_for_label(item, label_name)
+                        image_path_in_label_folder = self._export_media_for_label(
+                            item, subset_name, label_name
+                        )
                         image_list_for_label[label_name].append(image_path_in_label_folder)
 
                 except Exception as e:
@@ -448,26 +450,31 @@ class YOLOv8ClassificationConverter(Converter):
                     label_name,
                     YOLOv8ClassificationFormat.IMAGE_NAMES_FILE,
                 )
-                with open(osp.join(save_dir, image_list_path), "w", encoding="utf-8") as f:
+                with open(image_list_path, "w", encoding="utf-8") as f:
                     f.writelines(image_list)
 
-    def _make_image_filename(self, item, *, name=None, subdir=None):
-        if split_path(item.id)[0] == split_path(subdir)[-1]:
-            # item.id contains label
-            subdir = osp.join(self._save_dir, item.subset)
+    def _make_image_path_without_duplicated_label(
+        self, item: DatasetItem, subset_name: str, label_name: str
+    ) -> str:
+        if split_path(item.id)[0] == label_name:
+            subdir = subset_name
+        else:
+            subdir = osp.join(subset_name, label_name)
 
-        return super()._make_image_filename(item, subdir=subdir)
+        return self._make_image_filename(item, subdir=osp.join(self._save_dir, subdir))
 
-    def _export_media_for_label(self, item: DatasetItem, label_name: str) -> str:
+    def _export_media_for_label(self, item: DatasetItem, subset_name: str, label_name: str) -> str:
         try:
             if not item.media or not (item.media.has_data or item.media.has_size):
                 raise DatasetExportError(
                     "Failed to export item '%s': " "item has no image info" % item.id
                 )
-            label_folder_path = osp.join(self._save_dir, item.subset, label_name)
+            label_folder_path = osp.join(self._save_dir, subset_name, label_name)
             os.makedirs(label_folder_path, exist_ok=True)
 
-            image_fpath = self._make_image_filename(item, subdir=label_folder_path)
+            image_fpath = self._make_image_path_without_duplicated_label(
+                item, subset_name, label_name
+            )
 
             if self._save_media:
                 if item.media:

@@ -428,7 +428,6 @@ class YOLOv8ClassificationConverter(Converter):
             image_list_for_label = defaultdict(list)
 
             for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
-                assert len(item.annotations) <= 1
                 try:
                     label_names = [
                         labels[anno.label].name

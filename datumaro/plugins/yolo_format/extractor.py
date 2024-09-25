@@ -127,7 +127,7 @@ class YoloBaseExtractor(SourceExtractor):
                     id=item_id, subset=subset_name, media=image, annotations=annotations
                 )
                 subset.items[item_id] = item
-            except (FileNotFoundError, IOError, InvalidAnnotationError, DatasetImportError) as e:
+            except (FileNotFoundError, IOError, DatasetImportError) as e:
                 self._ctx.error_policy.report_item_error(e, item_id=(item_id, subset_name))
                 subset.items.pop(item_id)
                 item = None

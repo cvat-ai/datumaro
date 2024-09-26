@@ -38,14 +38,13 @@ should has the following structure:
 ```bash
 dataset/
 ├── train
+│    ├── labels.json  # optional datumaro extension. Contains original ids and labels
 │    ├── label_0
-│    │      ├── image_names.txt  # optional, datumaro extension. Contains list of images
 │    │      ├── <image_name_0>.jpg
 │    │      ├── <image_name_1>.jpg
 │    │      ├── <image_name_2>.jpg
 │    │      ├── ...
 │    ├── label_1
-│    │      ├── image_names.txt  # optional, datumaro extension. Contains list of images
 │    │      ├── <image_name_0>.jpg
 │    │      ├── <image_name_1>.jpg
 │    │      ├── <image_name_2>.jpg

@@ -197,6 +197,7 @@ class YoloConverterTest(CompareDatasetMixin):
         )
 
         self.CONVERTER.convert(source_dataset, test_dir)
+        os.makedirs(osp.join(test_dir, "train", "label_0"), exist_ok=True)
         save_image(
             self._make_image_path(test_dir, "train", f"{list(source_dataset)[0].id}.jpg"),
             np.ones((10, 15, 3)),

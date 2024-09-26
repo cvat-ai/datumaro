@@ -425,6 +425,8 @@ class YOLOv8ClassificationConverter(Converter):
             if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
                 subset_name = YoloPath.DEFAULT_SUBSET_NAME
 
+            os.makedirs(osp.join(self._save_dir, subset_name), exist_ok=True)
+
             items_info = defaultdict(dict)
 
             for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
@@ -469,7 +471,6 @@ class YOLOv8ClassificationConverter(Converter):
                 )
             subset_path = osp.join(self._save_dir, subset_name)
             label_folder_path = osp.join(subset_path, label_name)
-            os.makedirs(label_folder_path, exist_ok=True)
 
             image_fpath = self._make_image_path_without_duplicated_label(
                 item, subset_name, label_name
@@ -477,6 +478,7 @@ class YOLOv8ClassificationConverter(Converter):
 
             if self._save_media:
                 if item.media:
+                    os.makedirs(label_folder_path, exist_ok=True)
                     self._save_image(item, image_fpath)
                 else:
                     log.warning("Item '%s' has no image" % item.id)

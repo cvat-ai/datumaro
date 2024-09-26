@@ -742,6 +742,11 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
             subset_path = osp.join(self._path, subset)
             if not osp.isdir(subset_path):
                 continue
+
+            if item_info := self._get_item_info_from_labels_file(subset):
+                for item_id in item_info:
+                    categories.update(item_info[item_id]["labels"])
+
             for label_dir_name in os.listdir(subset_path):
                 if not osp.isdir(osp.join(subset_path, label_dir_name)):
                     continue

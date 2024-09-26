@@ -953,29 +953,9 @@ class YOLOv8ClassificationConverterTest(YoloConverterTest):
             ],
             categories=["label_0", "label_1"],
         )
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(id="no_label/1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
-                DatasetItem(id="no_label/2", subset="train", media=Image(data=np.ones((4, 2, 3)))),
-                DatasetItem(
-                    id="label_0/subdir1/1",
-                    subset="train",
-                    media=Image(data=np.ones((2, 6, 3))),
-                    annotations=[Label(label=0)],
-                ),
-                DatasetItem(
-                    id="label_1/subdir2/1",
-                    subset="train",
-                    media=Image(data=np.ones((5, 4, 3))),
-                    annotations=[Label(label=1)],
-                ),
-            ],
-            categories=["label_0", "label_1"],
-        )
-
         self.CONVERTER.convert(source_dataset, test_dir, save_media=save_media)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
-        self.compare_datasets(expected_dataset, parsed_dataset)
+        self.compare_datasets(source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_image_with_arbitrary_extension(self, test_dir):
@@ -995,6 +975,30 @@ class YOLOv8ClassificationConverterTest(YoloConverterTest):
                 ),
             ],
             categories=["label_0"],
+        )
+
+        self.CONVERTER.convert(dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(dataset, parsed_dataset, require_media=True)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_arbitrary_number_of_labels(self, test_dir):
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    "1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 4, 3))),
+                    annotations=[Label(label=0), Label(label=1), Label(label=2)],
+                ),
+                DatasetItem(
+                    "2",
+                    subset="train",
+                    media=Image(data=np.ones((5, 4, 3))),
+                    annotations=[],
+                ),
+            ],
+            categories=["label_0", "label_1", "label_2"],
         )
 
         self.CONVERTER.convert(dataset, test_dir, save_media=True)

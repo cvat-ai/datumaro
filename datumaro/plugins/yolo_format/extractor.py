@@ -690,7 +690,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
 
     def _get_image_paths_for_subset_and_label(self, subset_name: str, label_name: str) -> list[str]:
         category_folder = osp.join(self._path, subset_name, label_name)
-        image_list_path = osp.join(category_folder, YOLOv8ClassificationFormat.IMAGE_NAMES_FILE)
+        image_list_path = osp.join(category_folder, YOLOv8ClassificationFormat.LABELS_FILE)
         if osp.isfile(image_list_path):
             with open(image_list_path, "r", encoding="utf-8") as f:
                 yield from (osp.join(subset_name, label_name, line.strip()) for line in f)
@@ -700,8 +700,20 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
             for image_path in find_images(category_folder, recursive=True)
         )
 
+    def _get_item_info_from_labels_file(self, subset_name: str) -> Optional[Dict]:
+        subset_path = osp.join(self._path, subset_name)
+        labels_file_path = osp.join(subset_path, YOLOv8ClassificationFormat.LABELS_FILE)
+        if osp.isfile(labels_file_path):
+            return parse_json_file(labels_file_path)
+
     def _get_lazy_subset_items(self, subset_name: str):
         subset_path = osp.join(self._path, subset_name)
+
+        if item_info := self._get_item_info_from_labels_file(subset_name):
+            return OrderedDict(
+                (id, osp.join(subset_name, item_info[id]["path"])) for id in item_info
+            )
+
         return OrderedDict(
             (self.name_from_path(image_path), image_path)
             for category_name in os.listdir(subset_path)
@@ -710,16 +722,19 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
         )
 
     def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:
-        _, subset_name = item_id
-        subset_path = osp.join(self._path, subset_name)
-        relative_image_path = osp.relpath(image.path, subset_path)
-        label = split_path(relative_image_path)[0]
+        item_id, subset_name = item_id
+        if item_info := self._get_item_info_from_labels_file(subset_name):
+            label_names = item_info[item_id]["labels"]
+        else:
+            subset_path = osp.join(self._path, subset_name)
+            relative_image_path = osp.relpath(image.path, subset_path)
+            label_names = [split_path(relative_image_path)[0]]
 
-        result = []
-        if label != YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL:
-            label = self._categories[AnnotationType.label].find(label)[0]
-            result.append(Label(label=label))
-        return result
+        return [
+            Label(label=self._categories[AnnotationType.label].find(label)[0])
+            for label in label_names
+            if label != YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
+        ]
 
     def _load_categories(self) -> CategoriesInfo:
         categories = set()
@@ -728,8 +743,11 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
             if not osp.isdir(subset_path):
                 continue
             for label_dir_name in os.listdir(subset_path):
-                if label_dir_name != YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL:
-                    categories.add(label_dir_name)
+                if not osp.isdir(osp.join(subset_path, label_dir_name)):
+                    continue
+                if label_dir_name == YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL:
+                    continue
+                categories.add(label_dir_name)
         return {AnnotationType.label: LabelCategories.from_iterable(sorted(categories))}
 
     @classmethod

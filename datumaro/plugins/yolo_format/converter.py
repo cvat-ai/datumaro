@@ -28,7 +28,7 @@ from datumaro.components.dataset import DatasetPatch, ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExtractor
 from datumaro.components.media import Image
-from datumaro.util import str_to_bool
+from datumaro.util import dump_json_file, str_to_bool
 from datumaro.util.os_util import split_path
 
 from .format import YoloPath, YOLOv8ClassificationFormat, YOLOv8Path
@@ -425,33 +425,31 @@ class YOLOv8ClassificationConverter(Converter):
             if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
                 subset_name = YoloPath.DEFAULT_SUBSET_NAME
 
-            image_list_for_label = defaultdict(list)
+            items_info = defaultdict(dict)
 
             for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
                 try:
-                    label_names = [
+                    items_info[item.id]["labels"] = [
                         labels[anno.label].name
                         for anno in item.annotations
                         if anno.type == AnnotationType.label
-                    ] or [YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL]
-                    for label_name in label_names:
-                        image_path_in_label_folder = self._export_media_for_label(
+                    ]
+                    for label_name in items_info[item.id]["labels"] or [
+                        YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
+                    ]:
+                        items_info[item.id]["path"] = self._export_media_for_label(
                             item, subset_name, label_name
                         )
-                        image_list_for_label[label_name].append(image_path_in_label_folder)
 
                 except Exception as e:
                     self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
-            for label_name, image_list in image_list_for_label.items():
-                image_list_path = osp.join(
-                    self._save_dir,
-                    subset_name,
-                    label_name,
-                    YOLOv8ClassificationFormat.IMAGE_NAMES_FILE,
-                )
-                with open(image_list_path, "w", encoding="utf-8") as f:
-                    f.writelines(f"{image_path}\n" for image_path in image_list)
+            labels_path = osp.join(
+                self._save_dir,
+                subset_name,
+                YOLOv8ClassificationFormat.LABELS_FILE,
+            )
+            dump_json_file(labels_path, items_info)
 
     def _make_image_path_without_duplicated_label(
         self, item: DatasetItem, subset_name: str, label_name: str
@@ -469,7 +467,8 @@ class YOLOv8ClassificationConverter(Converter):
                 raise DatasetExportError(
                     "Failed to export item '%s': " "item has no image info" % item.id
                 )
-            label_folder_path = osp.join(self._save_dir, subset_name, label_name)
+            subset_path = osp.join(self._save_dir, subset_name)
+            label_folder_path = osp.join(subset_path, label_name)
             os.makedirs(label_folder_path, exist_ok=True)
 
             image_fpath = self._make_image_path_without_duplicated_label(
@@ -482,6 +481,6 @@ class YOLOv8ClassificationConverter(Converter):
                 else:
                     log.warning("Item '%s' has no image" % item.id)
 
-            return osp.relpath(image_fpath, label_folder_path)
+            return osp.relpath(image_fpath, subset_path)
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))

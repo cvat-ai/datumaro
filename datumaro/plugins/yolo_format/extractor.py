@@ -741,8 +741,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
                 continue
 
             if item_info := self._get_item_info_from_labels_file(subset):
-                for item_id in item_info:
-                    categories.update(item_info[item_id]["labels"])
+                categories.update(*[item_info[item_id]["labels"] for item_id in item_info])
 
             for label_dir_name in os.listdir(subset_path):
                 if not osp.isdir(osp.join(subset_path, label_dir_name)):
@@ -753,7 +752,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
         return {AnnotationType.label: LabelCategories.from_iterable(sorted(categories))}
 
     @classmethod
-    def name_from_path(self, path_from_root: str) -> str:
+    def name_from_path(cls, path_from_root: str) -> str:
         subset_folder = split_path(path_from_root)[0]
         path_from_subset_folder = osp.relpath(path_from_root, subset_folder)
         return osp.splitext(path_from_subset_folder)[0]

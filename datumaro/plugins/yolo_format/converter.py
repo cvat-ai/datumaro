@@ -436,9 +436,10 @@ class YOLOv8ClassificationConverter(Converter):
                         for anno in item.annotations
                         if anno.type == AnnotationType.label
                     ]
-                    for label_name in items_info[item.id]["labels"] or [
+                    label_folders = items_info[item.id]["labels"] or [
                         YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
-                    ]:
+                    ]
+                    for label_name in label_folders:
                         items_info[item.id]["path"] = self._export_media_for_label(
                             item, subset_name, label_name
                         )

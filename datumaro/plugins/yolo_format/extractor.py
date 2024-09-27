@@ -709,10 +709,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
         subset_path = osp.join(self._path, subset_name)
 
         if item_info := self._get_item_info_from_labels_file(subset_name):
-            return {
-                id: osp.join(subset_name, item_info[id]["path"])
-                for id in item_info
-            }
+            return {id: osp.join(subset_name, item_info[id]["path"]) for id in item_info}
 
         return {
             self.name_from_path(image_path): image_path

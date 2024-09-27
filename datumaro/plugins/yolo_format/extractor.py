@@ -8,7 +8,6 @@ from __future__ import annotations
 import os
 import os.path as osp
 import re
-from collections import OrderedDict
 from functools import cached_property
 from itertools import cycle
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
@@ -57,7 +56,7 @@ class YoloBaseExtractor(SourceExtractor):
             super().__init__()
             self._name = name
             self._parent = parent
-            self.items: Dict[str, Union[str, DatasetItem]] = OrderedDict()
+            self.items: Dict[str, Union[str, DatasetItem]] = {}
 
         def __iter__(self):
             for item_id in self.items:
@@ -189,10 +188,10 @@ class YoloExtractor(YoloBaseExtractor):
         return [k for k in self._config if k not in self.RESERVED_CONFIG_KEYS]
 
     def _get_lazy_subset_items(self, subset_name: str):
-        return OrderedDict(
-            (self.name_from_path(p), self.localize_path(p))
+        return {
+            self.name_from_path(p): self.localize_path(p)
             for p in self._get_subset_image_paths(subset_name)
-        )
+        }
 
     def _get_subset_image_paths(self, subset_name: str):
         list_path = osp.join(self._path, self.localize_path(self._config[subset_name]))
@@ -710,16 +709,17 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
         subset_path = osp.join(self._path, subset_name)
 
         if item_info := self._get_item_info_from_labels_file(subset_name):
-            return OrderedDict(
-                (id, osp.join(subset_name, item_info[id]["path"])) for id in item_info
-            )
+            return {
+                id: osp.join(subset_name, item_info[id]["path"])
+                for id in item_info
+            }
 
-        return OrderedDict(
-            (self.name_from_path(image_path), image_path)
+        return {
+            self.name_from_path(image_path): image_path
             for category_name in os.listdir(subset_path)
             if osp.isdir(osp.join(subset_path, category_name))
             for image_path in self._get_image_paths_for_subset_and_label(subset_name, category_name)
-        )
+        }
 
     def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:
         item_id, subset_name = item_id

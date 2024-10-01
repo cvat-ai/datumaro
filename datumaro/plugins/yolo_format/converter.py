@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import itertools
 import logging as log
 import math
 import os
@@ -413,6 +414,7 @@ class YOLOv8ClassificationConverter(Converter):
             raise MediaTypeError("Media type is not an image")
 
         os.makedirs(save_dir, exist_ok=True)
+        self._used_paths = defaultdict(set)
 
         if self._save_dataset_meta:
             self._save_meta_file(self._save_dir)
@@ -436,10 +438,9 @@ class YOLOv8ClassificationConverter(Converter):
                         for anno in item.annotations
                         if anno.type == AnnotationType.label
                     ]
-                    label_folders = items_info[item.id]["labels"] or [
+                    for label_name in items_info[item.id]["labels"] or [
                         YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
-                    ]
-                    for label_name in label_folders:
+                    ]:
                         items_info[item.id]["path"] = self._export_media_for_label(
                             item, subset_name, label_name
                         )
@@ -454,15 +455,15 @@ class YOLOv8ClassificationConverter(Converter):
             )
             dump_json_file(labels_path, items_info)
 
-    def _make_image_path_without_duplicated_label(
-        self, item: DatasetItem, subset_name: str, label_name: str
-    ) -> str:
-        if split_path(item.id)[0] == label_name:
-            subdir = subset_name
-        else:
-            subdir = osp.join(subset_name, label_name)
-
-        return self._make_image_filename(item, subdir=osp.join(self._save_dir, subdir))
+    def _generate_path_for_item(self, item: DatasetItem, label_folder_path: str) -> str:
+        item_name = base_item_name = split_path(item.id)[-1]
+        if item_name in self._used_paths[label_folder_path]:
+            for index in itertools.count():
+                item_name = f"{base_item_name}.{index}"
+                if item_name not in self._used_paths[label_folder_path]:
+                    break
+        self._used_paths[label_folder_path].add(item_name)
+        return self._make_image_filename(item, name=item_name, subdir=label_folder_path)
 
     def _export_media_for_label(self, item: DatasetItem, subset_name: str, label_name: str) -> str:
         try:
@@ -473,9 +474,7 @@ class YOLOv8ClassificationConverter(Converter):
             subset_path = osp.join(self._save_dir, subset_name)
             label_folder_path = osp.join(subset_path, label_name)
 
-            image_fpath = self._make_image_path_without_duplicated_label(
-                item, subset_name, label_name
-            )
+            image_fpath = self._generate_path_for_item(item, label_folder_path)
 
             if self._save_media:
                 if item.media:

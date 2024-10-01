@@ -946,9 +946,15 @@ class YOLOv8ClassificationConverterTest(YoloConverterTest):
                     annotations=[Label(label=0)],
                 ),
                 DatasetItem(
-                    id="label_1/subdir2/1",
+                    id="label_1/1",
                     subset="train",
                     media=Image(data=np.ones((5, 4, 3))),
+                    annotations=[Label(label=1)],
+                ),
+                DatasetItem(
+                    id="label_1/subdir2/1",
+                    subset="train",
+                    media=Image(data=np.ones((6, 5, 3))),
                     annotations=[Label(label=1)],
                 ),
             ],
@@ -957,6 +963,41 @@ class YOLOv8ClassificationConverterTest(YoloConverterTest):
         self.CONVERTER.convert(source_dataset, test_dir, save_media=save_media)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         self.compare_datasets(source_dataset, parsed_dataset)
+
+        if save_media:
+            # check that relative paths were discarded
+            os.remove(osp.join(test_dir, "train", "labels.json"))
+            expected_dataset = Dataset.from_iterable(
+                [
+                    DatasetItem(
+                        id="no_label/1", subset="train", media=Image(data=np.ones((4, 2, 3)))
+                    ),
+                    DatasetItem(
+                        id="no_label/2", subset="train", media=Image(data=np.ones((4, 2, 3)))
+                    ),
+                    DatasetItem(
+                        id="label_0/1",
+                        subset="train",
+                        media=Image(data=np.ones((2, 6, 3))),
+                        annotations=[Label(label=0)],
+                    ),
+                    DatasetItem(
+                        id="label_1/1",
+                        subset="train",
+                        media=Image(data=np.ones((5, 4, 3))),
+                        annotations=[Label(label=1)],
+                    ),
+                    DatasetItem(
+                        id="label_1/1.0",
+                        subset="train",
+                        media=Image(data=np.ones((6, 5, 3))),
+                        annotations=[Label(label=1)],
+                    ),
+                ],
+                categories=["label_0", "label_1"],
+            )
+            parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+            self.compare_datasets(expected_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_image_with_arbitrary_extension(self, test_dir):
@@ -1333,7 +1374,7 @@ class YOLOv8ClassificationImporterTest(YoloImporterTest):
         return Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="label_0/subfolder/1",
+                    id="label_0/1",
                     subset="train",
                     media=Image(data=np.ones((10, 15, 3))),
                     annotations=[Label(label=0)],

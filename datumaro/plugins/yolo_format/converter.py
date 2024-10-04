@@ -404,7 +404,6 @@ class YOLOv8PoseConverter(YOLOv8DetectionConverter):
 
 
 class YOLOv8ClassificationConverter(Converter):
-    # https://github.com/AlexeyAB/darknet#how-to-train-to-detect-your-custom-objects
     DEFAULT_IMAGE_EXT = ".jpg"
 
     def apply(self):

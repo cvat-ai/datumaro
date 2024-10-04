@@ -3,11 +3,12 @@
 #
 # SPDX-License-Identifier: MIT
 
+import itertools
 import logging as log
 import math
 import os
 import os.path as osp
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from functools import cached_property
 from itertools import cycle
 from typing import Dict, List, Optional
@@ -28,9 +29,10 @@ from datumaro.components.dataset import DatasetPatch, ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExtractor
 from datumaro.components.media import Image
-from datumaro.util import str_to_bool
+from datumaro.util import dump_json_file, str_to_bool
+from datumaro.util.os_util import split_path
 
-from .format import YoloPath, YOLOv8Path
+from .format import YoloPath, YOLOv8ClassificationFormat, YOLOv8Path
 
 
 def _make_yolo_bbox(img_size, box):
@@ -399,3 +401,87 @@ class YOLOv8PoseConverter(YOLOv8DetectionConverter):
             points_values[position] = f"{x:.6f} {y:.6f} {element.visibility[0].value}"
 
         return f"{self._map_labels_for_save[skeleton.label]} {bbox_string_values} {' '.join(points_values)}\n"
+
+
+class YOLOv8ClassificationConverter(Converter):
+    DEFAULT_IMAGE_EXT = ".jpg"
+
+    def apply(self):
+        save_dir = self._save_dir
+
+        if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
+            raise MediaTypeError("Media type is not an image")
+
+        os.makedirs(save_dir, exist_ok=True)
+        self._used_paths = defaultdict(set)
+
+        if self._save_dataset_meta:
+            self._save_meta_file(self._save_dir)
+
+        labels = self._extractor.categories()[AnnotationType.label]
+
+        subsets = self._extractor.subsets()
+        pbars = self._ctx.progress_reporter.split(len(subsets))
+        for (subset_name, subset), pbar in zip(subsets.items(), pbars):
+            if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
+                subset_name = YoloPath.DEFAULT_SUBSET_NAME
+
+            os.makedirs(osp.join(self._save_dir, subset_name), exist_ok=True)
+
+            items_info = defaultdict(dict)
+
+            for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
+                try:
+                    items_info[item.id]["labels"] = [
+                        labels[anno.label].name
+                        for anno in item.annotations
+                        if anno.type == AnnotationType.label
+                    ]
+                    for label_name in items_info[item.id]["labels"] or [
+                        YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
+                    ]:
+                        items_info[item.id]["path"] = self._export_media_for_label(
+                            item, subset_name, label_name
+                        )
+
+                except Exception as e:
+                    self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
+
+            labels_path = osp.join(
+                self._save_dir,
+                subset_name,
+                YOLOv8ClassificationFormat.LABELS_FILE,
+            )
+            dump_json_file(labels_path, items_info)
+
+    def _generate_path_for_item(self, item: DatasetItem, label_folder_path: str) -> str:
+        item_name = base_item_name = split_path(item.id)[-1]
+        if item_name in self._used_paths[label_folder_path]:
+            for index in itertools.count():
+                item_name = f"{base_item_name}.{index}"
+                if item_name not in self._used_paths[label_folder_path]:
+                    break
+        self._used_paths[label_folder_path].add(item_name)
+        return self._make_image_filename(item, name=item_name, subdir=label_folder_path)
+
+    def _export_media_for_label(self, item: DatasetItem, subset_name: str, label_name: str) -> str:
+        try:
+            if not item.media or not (item.media.has_data or item.media.has_size):
+                raise DatasetExportError(
+                    "Failed to export item '%s': " "item has no image info" % item.id
+                )
+            subset_path = osp.join(self._save_dir, subset_name)
+            label_folder_path = osp.join(subset_path, label_name)
+
+            image_fpath = self._generate_path_for_item(item, label_folder_path)
+
+            if self._save_media:
+                if item.media:
+                    os.makedirs(label_folder_path, exist_ok=True)
+                    self._save_image(item, image_fpath)
+                else:
+                    log.warning("Item '%s' has no image" % item.id)
+
+            return osp.relpath(image_fpath, subset_path)
+        except Exception as e:
+            self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))

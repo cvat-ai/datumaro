@@ -17,6 +17,7 @@ from PIL import Image as PILImage
 from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
+    Label,
     LabelCategories,
     Mask,
     Points,
@@ -40,6 +41,7 @@ from datumaro.components.format_detection import FormatDetectionContext, FormatR
 from datumaro.components.media import Image
 from datumaro.plugins.yolo_format.converter import (
     YoloConverter,
+    YOLOv8ClassificationConverter,
     YOLOv8DetectionConverter,
     YOLOv8OrientedBoxesConverter,
     YOLOv8PoseConverter,
@@ -47,6 +49,7 @@ from datumaro.plugins.yolo_format.converter import (
 )
 from datumaro.plugins.yolo_format.extractor import (
     YoloExtractor,
+    YOLOv8ClassificationExtractor,
     YOLOv8DetectionExtractor,
     YOLOv8OrientedBoxesExtractor,
     YOLOv8PoseExtractor,
@@ -54,6 +57,7 @@ from datumaro.plugins.yolo_format.extractor import (
 )
 from datumaro.plugins.yolo_format.importer import (
     YoloImporter,
+    YOLOv8ClassificationImporter,
     YOLOv8DetectionImporter,
     YOLOv8OrientedBoxesImporter,
     YOLOv8PoseImporter,
@@ -193,9 +197,10 @@ class YoloConverterTest(CompareDatasetMixin):
         )
 
         self.CONVERTER.convert(source_dataset, test_dir)
-
+        os.makedirs(osp.join(test_dir, "train", "label_0"), exist_ok=True)
         save_image(
-            self._make_image_path(test_dir, "train", "1.jpg"), np.ones((10, 15, 3))
+            self._make_image_path(test_dir, "train", f"{list(source_dataset)[0].id}.jpg"),
+            np.ones((10, 15, 3)),
         )  # put the image for dataset
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
 
@@ -214,7 +219,7 @@ class YoloConverterTest(CompareDatasetMixin):
 
         self.CONVERTER.convert(source_dataset, test_dir)
         parsed_dataset = Dataset.import_from(
-            test_dir, self.IMPORTER.NAME, image_info={"1": (10, 15)}
+            test_dir, self.IMPORTER.NAME, image_info={list(source_dataset)[0].id: (10, 15)}
         )
         self.compare_datasets(source_dataset, parsed_dataset)
 
@@ -901,6 +906,160 @@ class YOLOv8PoseConverterTest(YOLOv8DetectionConverterTest):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
 
+class YOLOv8ClassificationConverterTest(YoloConverterTest):
+    CONVERTER = YOLOv8ClassificationConverter
+    IMPORTER = YOLOv8ClassificationImporter
+
+    @staticmethod
+    def _make_image_path(test_dir: str, subset_name: str, image_id: str):
+        return osp.join(test_dir, subset_name, image_id)
+
+    def _generate_random_dataset(self, recipes, n_of_labels=10):
+        items = [
+            DatasetItem(
+                id=f'label_{index}/{recipe.get("id", index + 1)}',
+                subset=recipe.get("subset", "train"),
+                media=recipe.get(
+                    "media",
+                    Image(data=np.ones((randint(8, 10), randint(8, 10), 3))),
+                ),
+                annotations=[Label(label=index)],
+            )
+            for index, recipe in enumerate(recipes)
+        ]
+        return Dataset.from_iterable(
+            items,
+            categories=["label_" + str(i) for i in range(len(recipes))],
+        )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    @pytest.mark.parametrize("save_media", [True, False])
+    def test_relative_paths(self, test_dir, save_media):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(id="1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
+                DatasetItem(id="2", subset="train", media=Image(data=np.ones((4, 2, 3)))),
+                DatasetItem(
+                    id="subdir1/1",
+                    subset="train",
+                    media=Image(data=np.ones((2, 6, 3))),
+                    annotations=[Label(label=0)],
+                ),
+                DatasetItem(
+                    id="label_1/1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 4, 3))),
+                    annotations=[Label(label=1)],
+                ),
+                DatasetItem(
+                    id="label_1/subdir2/1",
+                    subset="train",
+                    media=Image(data=np.ones((6, 5, 3))),
+                    annotations=[Label(label=1)],
+                ),
+            ],
+            categories=["label_0", "label_1"],
+        )
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=save_media)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(source_dataset, parsed_dataset)
+
+        if save_media:
+            # check that relative paths were discarded
+            os.remove(osp.join(test_dir, "train", "labels.json"))
+            expected_dataset = Dataset.from_iterable(
+                [
+                    DatasetItem(
+                        id="no_label/1", subset="train", media=Image(data=np.ones((4, 2, 3)))
+                    ),
+                    DatasetItem(
+                        id="no_label/2", subset="train", media=Image(data=np.ones((4, 2, 3)))
+                    ),
+                    DatasetItem(
+                        id="label_0/1",
+                        subset="train",
+                        media=Image(data=np.ones((2, 6, 3))),
+                        annotations=[Label(label=0)],
+                    ),
+                    DatasetItem(
+                        id="label_1/1",
+                        subset="train",
+                        media=Image(data=np.ones((5, 4, 3))),
+                        annotations=[Label(label=1)],
+                    ),
+                    DatasetItem(
+                        id="label_1/1.0",
+                        subset="train",
+                        media=Image(data=np.ones((6, 5, 3))),
+                        annotations=[Label(label=1)],
+                    ),
+                ],
+                categories=["label_0", "label_1"],
+            )
+            parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+            self.compare_datasets(expected_dataset, parsed_dataset)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_image_with_arbitrary_extension(self, test_dir):
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    "label_0/q/1",
+                    subset="train",
+                    media=Image(path="label_0/q/1.JPEG", data=np.zeros((4, 3, 3))),
+                    annotations=[Label(label=0)],
+                ),
+                DatasetItem(
+                    "label_0/a/b/c/2",
+                    subset="valid",
+                    media=Image(path="label_0/a/b/c/2.bmp", data=np.zeros((3, 4, 3))),
+                    annotations=[Label(label=0)],
+                ),
+            ],
+            categories=["label_0"],
+        )
+
+        self.CONVERTER.convert(dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(dataset, parsed_dataset, require_media=True)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_arbitrary_number_of_labels(self, test_dir):
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    "1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 4, 3))),
+                    annotations=[Label(label=0), Label(label=1), Label(label=2)],
+                ),
+                DatasetItem(
+                    "2",
+                    subset="train",
+                    media=Image(data=np.ones((5, 4, 3))),
+                    annotations=[],
+                ),
+            ],
+            categories=["label_0", "label_1", "label_2"],
+        )
+
+        self.CONVERTER.convert(dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(dataset, parsed_dataset, require_media=True)
+
+    def test_export_rotated_bbox(self):  # pylint: disable=arguments-differ
+        pass
+
+    def test_cant_save_with_reserved_subset_name(self):  # pylint: disable=arguments-differ
+        pass
+
+    def test_inplace_save_writes_only_updated_data(self):  # pylint: disable=arguments-differ
+        pass
+
+    def test_can_save_and_load_without_path_prefix(self):  # pylint: disable=arguments-differ
+        pass
+
+
 class YoloImporterTest(CompareDatasetMixin):
     IMPORTER = YoloImporter
     ASSETS = ["yolo"]
@@ -1199,6 +1358,79 @@ class YOLOv8PoseImporterTest(YOLOv8DetectionImporterTest):
                 ),
             },
         )
+
+
+class YOLOv8ClassificationImporterTest(YoloImporterTest):
+    IMPORTER = YOLOv8ClassificationImporter
+    ASSETS = ["yolov8_classification"]
+
+    def test_can_detect(self):
+        dataset_dir = get_test_asset_path("yolo_dataset", "yolov8_classification")
+        detected_formats = Environment().detect_dataset(dataset_dir)
+        assert self.IMPORTER.NAME in detected_formats
+
+    @staticmethod
+    def _asset_dataset():
+        return Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="label_0/1",
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[Label(label=0)],
+                ),
+                DatasetItem(
+                    id="label_0/2",
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[Label(label=0)],
+                ),
+                DatasetItem(
+                    id="label_1/3",
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[Label(label=1)],
+                ),
+            ],
+            categories=["label_0", "label_1"],
+        )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_with_exif_rotated_images(self, test_dir):
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="label_1/3",
+                    subset="train",
+                    media=Image(data=np.ones((15, 10, 3))),
+                    annotations=[Label(label=0)],
+                ),
+            ],
+            categories=["label_1"],
+        )
+
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", "yolov8_classification"), dataset_path)
+        shutil.rmtree(osp.join(dataset_path, "train", "label_0"))
+
+        # Add exif rotation for image
+        image_path = osp.join(dataset_path, "train", "label_1", "3.jpg")
+        img = PILImage.open(image_path)
+        exif = img.getexif()
+        exif.update(
+            [
+                (ExifTags.Base.ResolutionUnit, 3),
+                (ExifTags.Base.XResolution, 28.0),
+                (ExifTags.Base.YCbCrPositioning, 1),
+                (ExifTags.Base.Orientation, 6),
+                (ExifTags.Base.YResolution, 28.0),
+            ]
+        )
+        img.save(image_path, exif=exif)
+
+        dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+
+        self.compare_datasets(expected_dataset, dataset, require_media=True)
 
 
 class YoloExtractorTest:
@@ -1613,3 +1845,22 @@ class YOLOv8PoseExtractorTest(YOLOv8DetectionExtractorTest):
             },
         )
         compare_datasets(helper_tc, source_dataset, parsed_dataset)
+
+
+class YOLOv8ClassificationExtractorTest:
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_parse(self, helper_tc, test_dir):
+        expected = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    "test_label/a",
+                    subset="train",
+                    media=Image(np.ones((5, 10, 3))),
+                    annotations=[Label(0)],
+                )
+            ],
+            categories=["test_label"],
+        )
+        expected.export(test_dir, YOLOv8ClassificationExtractor.NAME, save_media=True)
+        actual = Dataset.import_from(test_dir, YOLOv8ClassificationImporter.NAME)
+        compare_datasets(helper_tc, expected, actual)

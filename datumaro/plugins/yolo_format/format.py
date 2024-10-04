@@ -26,3 +26,8 @@ class YOLOv8Path(YoloPath):
 
 class YOLOv8PoseFormat:
     KPT_SHAPE_FIELD_NAME = "kpt_shape"
+
+
+class YOLOv8ClassificationFormat:
+    IMAGE_DIR_NO_LABEL = "no_label"
+    LABELS_FILE = "labels.json"

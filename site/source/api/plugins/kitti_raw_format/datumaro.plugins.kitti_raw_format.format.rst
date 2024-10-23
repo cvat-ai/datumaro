@@ -1,7 +1,7 @@
 format module
 -------------
 
-.. automodule:: datumaro.plugins.kitti_raw_format.format
+.. automodule:: datumaro.plugins.data_formats.kitti_raw.format
    :members:
    :undoc-members:
    :private-members:

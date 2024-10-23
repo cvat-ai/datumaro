@@ -1,7 +1,7 @@
 format module
 -------------
 
-.. automodule:: datumaro.plugins.voc_format.format
+.. automodule:: datumaro.plugins.data_formats.voc.format
    :members:
    :undoc-members:
    :private-members:

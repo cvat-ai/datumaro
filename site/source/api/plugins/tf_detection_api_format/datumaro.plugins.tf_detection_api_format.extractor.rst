@@ -1,7 +1,7 @@
 extractor module
 ----------------
 
-.. automodule:: datumaro.plugins.tf_detection_api_format.extractor
+.. automodule:: datumaro.plugins.data_formats.tf_detection_api.extractor
    :members:
    :undoc-members:
    :private-members:

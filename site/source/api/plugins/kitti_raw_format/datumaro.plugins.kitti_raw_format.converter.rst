@@ -1,7 +1,7 @@
 converter module
 ----------------
 
-.. automodule:: datumaro.plugins.kitti_raw_format.converter
+.. automodule:: datumaro.plugins.data_formats.kitti_raw.converter
    :members:
    :undoc-members:
    :private-members:

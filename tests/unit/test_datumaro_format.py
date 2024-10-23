@@ -25,12 +25,13 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
-from datumaro.plugins.datumaro_format.converter import DatumaroConverter
-from datumaro.plugins.datumaro_format.extractor import DatumaroImporter
+from datumaro.plugins.data_formats.datumaro.converter import DatumaroConverter
+from datumaro.plugins.data_formats.datumaro.extractor import DatumaroImporter
 from datumaro.util import parse_json_file
 from datumaro.util.mask_tools import generate_colormap
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import (
     Dimensions,
     TestDir,
@@ -202,7 +203,7 @@ class DatumaroConverterTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_pcd_dataset(self):
-        dataset_path = str(Path(__file__).parent / "assets" / "datumaro_dataset" / "with_pcd")
+        dataset_path = get_test_asset_path("datumaro_dataset", "with_pcd")
 
         label_categories = LabelCategories(attributes={"occluded"})
         label_categories.add("cat")
@@ -253,7 +254,7 @@ class DatumaroConverterTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_skeleton_dataset(self):
-        dataset_path = str(Path(__file__).parent / "assets" / "datumaro_dataset" / "with_skeleton")
+        dataset_path = get_test_asset_path("datumaro_dataset", "with_skeleton")
 
         label_categories = LabelCategories.from_iterable(
             [

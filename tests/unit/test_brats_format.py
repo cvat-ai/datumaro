@@ -8,12 +8,13 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import MultiframeImage
-from datumaro.plugins.brats_format import BratsImporter
+from datumaro.plugins.data_formats.brats import BratsImporter
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "brats_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("brats_dataset")
 
 
 class BratsImporterTest(TestCase):

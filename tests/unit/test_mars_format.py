@@ -10,7 +10,7 @@ from datumaro.components.annotation import Label
 from datumaro.components.dataset import Dataset, DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.media import Image
-from datumaro.plugins.mars_format import MarsImporter
+from datumaro.plugins.data_formats.mars import MarsImporter
 
 from tests.conftest import ASSETS_DIR
 from tests.requirements import Requirements, mark_requirement

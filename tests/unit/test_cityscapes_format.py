@@ -6,13 +6,13 @@ from unittest import TestCase
 
 import numpy as np
 
-import datumaro.plugins.cityscapes_format as Cityscapes
+import datumaro.plugins.data_formats.cityscapes as Cityscapes
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, MaskCategories
 from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem, Extractor
 from datumaro.components.media import Image
-from datumaro.plugins.cityscapes_format import (
+from datumaro.plugins.data_formats.cityscapes import (
     TRAIN_CITYSCAPES_LABEL_MAP,
     CityscapesConverter,
     CityscapesImporter,
@@ -20,12 +20,11 @@ from datumaro.plugins.cityscapes_format import (
 from datumaro.util.meta_file_util import parse_meta_file
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import IGNORE_ALL, TestDir, check_save_and_load, compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "cityscapes_dataset", "dataset")
-DUMMY_TRAIN_DATASET_DIR = osp.join(
-    osp.dirname(__file__), "assets", "cityscapes_dataset", "train_dataset"
-)
+DUMMY_DATASET_DIR = get_test_asset_path("cityscapes_dataset", "dataset")
+DUMMY_TRAIN_DATASET_DIR = get_test_asset_path("cityscapes_dataset", "train_dataset")
 
 
 class CityscapesFormatTest(TestCase):

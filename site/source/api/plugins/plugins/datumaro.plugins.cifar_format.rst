@@ -1,7 +1,7 @@
 cifar\_format module
 --------------------
 
-.. automodule:: datumaro.plugins.cifar_format
+.. automodule:: datumaro.plugins.data_formats.cifar
    :members:
    :undoc-members:
    :private-members:

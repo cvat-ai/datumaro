@@ -1,7 +1,7 @@
 converter module
 ----------------
 
-.. automodule:: datumaro.plugins.cvat_format.converter
+.. automodule:: datumaro.plugins.data_formats.cvat.converter
    :members:
    :undoc-members:
    :private-members:

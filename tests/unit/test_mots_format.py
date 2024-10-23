@@ -9,12 +9,13 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.mots_format import MotsImporter, MotsPngConverter
+from datumaro.plugins.data_formats.mots import MotsImporter, MotsPngConverter
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "mots_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("mots_dataset")
 
 
 class MotsPngConverterTest(TestCase):

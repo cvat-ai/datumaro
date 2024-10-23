@@ -1,7 +1,7 @@
 format module
 -------------
 
-.. automodule:: datumaro.plugins.tf_detection_api_format.format
+.. automodule:: datumaro.plugins.data_formats.tf_detection_api.format
    :members:
    :undoc-members:
    :private-members:

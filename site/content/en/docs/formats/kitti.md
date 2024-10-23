@@ -217,7 +217,7 @@ datum export -p project -f cityscapes -- --save-media
 import numpy as np
 import datumaro as dm
 
-import datumaro.plugins.kitti_format as KITTI
+import datumaro.plugins.data_formats.kitti as KITTI
 
 label_map = {}
 label_map['background'] = (0, 0, 0)

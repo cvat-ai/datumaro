@@ -3,14 +3,15 @@ from unittest import TestCase
 
 from datumaro.components.media import Video
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "kinetics_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("kinetics_dataset")
 
 from datumaro.components.annotation import Label
 from datumaro.components.dataset import Dataset, DatasetItem
 from datumaro.components.environment import Environment
-from datumaro.plugins.kinetics_format import KineticsImporter
+from datumaro.plugins.data_formats.kinetics import KineticsImporter
 
 from tests.requirements import Requirements, mark_requirement
 

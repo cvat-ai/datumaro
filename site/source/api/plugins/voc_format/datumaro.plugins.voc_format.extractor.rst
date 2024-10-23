@@ -1,7 +1,7 @@
 extractor module
 ----------------
 
-.. automodule:: datumaro.plugins.voc_format.extractor
+.. automodule:: datumaro.plugins.data_formats.voc.extractor
    :members:
    :undoc-members:
    :private-members:

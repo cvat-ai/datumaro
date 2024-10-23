@@ -1,7 +1,7 @@
 market1501\_format module
 -------------------------
 
-.. automodule:: datumaro.plugins.market1501_format
+.. automodule:: datumaro.plugins.data_formats.market1501
    :members:
    :undoc-members:
    :private-members:

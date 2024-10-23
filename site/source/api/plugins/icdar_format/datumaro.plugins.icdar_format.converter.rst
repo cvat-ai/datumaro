@@ -1,7 +1,7 @@
 converter module
 ----------------
 
-.. automodule:: datumaro.plugins.icdar_format.converter
+.. automodule:: datumaro.plugins.data_formats.icdar.converter
    :members:
    :undoc-members:
    :private-members:

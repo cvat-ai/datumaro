@@ -1,7 +1,7 @@
 extractor module
 ----------------
 
-.. automodule:: datumaro.plugins.kitti_raw_format.extractor
+.. automodule:: datumaro.plugins.data_formats.kitti_raw.extractor
 
    .. autoclass:: KittiRawExtractor
       :members:

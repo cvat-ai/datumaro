@@ -9,21 +9,22 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.components.project import Dataset
-from datumaro.plugins.icdar_format.converter import (
+from datumaro.plugins.data_formats.icdar.converter import (
     IcdarTextLocalizationConverter,
     IcdarTextSegmentationConverter,
     IcdarWordRecognitionConverter,
 )
-from datumaro.plugins.icdar_format.extractor import (
+from datumaro.plugins.data_formats.icdar.extractor import (
     IcdarTextLocalizationImporter,
     IcdarTextSegmentationImporter,
     IcdarWordRecognitionImporter,
 )
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "icdar_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("icdar_dataset")
 
 
 class IcdarImporterTest(TestCase):

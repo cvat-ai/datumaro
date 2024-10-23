@@ -1,7 +1,7 @@
 mots\_format module
 -------------------
 
-.. automodule:: datumaro.plugins.mots_format
+.. automodule:: datumaro.plugins.data_formats.mots
    :members:
    :undoc-members:
    :private-members:

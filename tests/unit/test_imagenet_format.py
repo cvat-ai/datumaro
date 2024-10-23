@@ -9,9 +9,10 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.imagenet_format import ImagenetConverter, ImagenetImporter
+from datumaro.plugins.data_formats.imagenet import ImagenetConverter, ImagenetImporter
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, compare_datasets, compare_datasets_strict
 
 
@@ -115,7 +116,7 @@ class ImagenetFormatTest(TestCase):
             compare_datasets(self, dataset, parsed_dataset, require_media=True)
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "imagenet_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("imagenet_dataset")
 
 
 class ImagenetImporterTest(TestCase):

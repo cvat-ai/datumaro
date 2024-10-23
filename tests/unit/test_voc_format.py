@@ -29,7 +29,7 @@ from datumaro.components.errors import (
 )
 from datumaro.components.extractor import DatasetItem, Extractor
 from datumaro.components.media import Image
-from datumaro.plugins.voc_format.converter import (
+from datumaro.plugins.data_formats.voc.converter import (
     VocActionConverter,
     VocClassificationConverter,
     VocConverter,
@@ -37,11 +37,12 @@ from datumaro.plugins.voc_format.converter import (
     VocLayoutConverter,
     VocSegmentationConverter,
 )
-from datumaro.plugins.voc_format.importer import VocImporter
+from datumaro.plugins.data_formats.voc.importer import VocImporter
 from datumaro.util.image import save_image
 from datumaro.util.mask_tools import load_mask
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import (
     TestDir,
     check_save_and_load,
@@ -148,9 +149,9 @@ class TestExtractorBase(Extractor):
         return VOC.make_voc_categories()
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "voc_dataset", "voc_dataset1")
-DUMMY_DATASET2_DIR = osp.join(osp.dirname(__file__), "assets", "voc_dataset", "voc_dataset2")
-DUMMY_DATASET3_DIR = osp.join(osp.dirname(__file__), "assets", "voc_dataset", "voc_dataset3")
+DUMMY_DATASET_DIR = get_test_asset_path("voc_dataset", "voc_dataset1")
+DUMMY_DATASET2_DIR = get_test_asset_path("voc_dataset", "voc_dataset2")
+DUMMY_DATASET3_DIR = get_test_asset_path("voc_dataset", "voc_dataset3")
 
 
 class VocImportTest(TestCase):

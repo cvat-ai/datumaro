@@ -10,8 +10,8 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem, Extractor
 from datumaro.components.media import Image
-from datumaro.plugins.kitti_format.converter import KittiConverter
-from datumaro.plugins.kitti_format.format import (
+from datumaro.plugins.data_formats.kitti.converter import KittiConverter
+from datumaro.plugins.data_formats.kitti.format import (
     KittiLabelMap,
     KittiPath,
     KittiTask,
@@ -19,7 +19,7 @@ from datumaro.plugins.kitti_format.format import (
     parse_label_map,
     write_label_map,
 )
-from datumaro.plugins.kitti_format.importer import (
+from datumaro.plugins.data_formats.kitti.importer import (
     KittiDetectionImporter,
     KittiImporter,
     KittiSegmentationImporter,
@@ -27,9 +27,10 @@ from datumaro.plugins.kitti_format.importer import (
 from datumaro.util.meta_file_util import parse_meta_file
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "kitti_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("kitti_dataset")
 
 
 class KittiFormatTest(TestCase):

@@ -9,6 +9,7 @@ from datumaro.plugins.synthetic_data import FractalImageGenerator
 from datumaro.util.image import load_image
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir
 
 
@@ -33,7 +34,7 @@ class FractalImageGeneratorTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_677)
     def test_can_generate_image(self):
-        ref_dir = osp.join(osp.dirname(__file__), "assets", "synthetic_dataset", "images")
+        ref_dir = get_test_asset_path("synthetic_dataset", "images")
         with TestDir() as test_dir:
             dataset_size = 3
             FractalImageGenerator(test_dir, dataset_size, shape=[24, 36]).generate_dataset()

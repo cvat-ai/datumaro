@@ -8,13 +8,14 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
-from datumaro.plugins.sly_pointcloud_format.converter import SuperviselyPointCloudConverter
-from datumaro.plugins.sly_pointcloud_format.extractor import SuperviselyPointCloudImporter
+from datumaro.plugins.data_formats.sly_pointcloud.converter import SuperviselyPointCloudConverter
+from datumaro.plugins.data_fromats.sly_pointcloud.extractor import SuperviselyPointCloudImporter
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import Dimensions, TestDir, check_save_and_load, compare_datasets_3d
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "sly_pointcloud_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("sly_pointcloud_dataset")
 
 
 class SuperviselyPointcloudImporterTest(TestCase):

@@ -1,7 +1,7 @@
 labelme\_format module
 ----------------------
 
-.. automodule:: datumaro.plugins.labelme_format
+.. automodule:: datumaro.plugins.data_formats.labelme
    :members:
    :undoc-members:
    :private-members:

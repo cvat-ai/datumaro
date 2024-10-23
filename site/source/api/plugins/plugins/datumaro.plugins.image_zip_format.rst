@@ -1,7 +1,7 @@
 image\_zip\_format module
 -------------------------
 
-.. automodule:: datumaro.plugins.image_zip_format
+.. automodule:: datumaro.plugins.data_formats.image_zip
    :members:
    :undoc-members:
    :private-members:

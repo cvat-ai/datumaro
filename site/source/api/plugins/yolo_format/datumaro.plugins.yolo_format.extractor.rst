@@ -1,7 +1,7 @@
 extractor module
 ----------------
 
-.. automodule:: datumaro.plugins.yolo_format.extractor
+.. automodule:: datumaro.plugins.data_formats.yolo.extractor
    :members:
    :undoc-members:
    :private-members:

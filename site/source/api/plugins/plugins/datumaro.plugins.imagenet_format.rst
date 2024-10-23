@@ -1,7 +1,7 @@
 imagenet\_format module
 -----------------------
 
-.. automodule:: datumaro.plugins.imagenet_format
+.. automodule:: datumaro.plugins.data_formats.imagenet
    :members:
    :undoc-members:
    :private-members:

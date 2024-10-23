@@ -8,20 +8,21 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import AnnotationType, DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.mpii_format.mpii_json import (
+from datumaro.plugins.data_formats.mpii.mpii_json import (
     MPII_POINTS_JOINTS,
     MPII_POINTS_LABELS,
     MpiiJsonImporter,
 )
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
-DUMMY_DATASET_DIR_WITH_NUMPY_FILES = osp.join(
-    osp.dirname(__file__), "assets", "mpii_json_dataset", "dataset_with_numpy_files"
+DUMMY_DATASET_DIR_WITH_NUMPY_FILES = get_test_asset_path(
+    "mpii_json_dataset", "dataset_with_numpy_files"
 )
-DUMMY_DATASET_DIR_WO_NUMPY_FILES = osp.join(
-    osp.dirname(__file__), "assets", "mpii_json_dataset", "dataset_wo_numpy_files"
+DUMMY_DATASET_DIR_WO_NUMPY_FILES = get_test_asset_path(
+    "mpii_json_dataset", "dataset_wo_numpy_files"
 )
 
 

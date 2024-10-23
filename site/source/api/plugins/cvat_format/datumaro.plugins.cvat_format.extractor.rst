@@ -1,7 +1,7 @@
 extractor module
 ----------------
 
-.. automodule:: datumaro.plugins.cvat_format.extractor
+.. automodule:: datumaro.plugins.data_formats.cvat.extractor
    :members:
    :undoc-members:
    :private-members:

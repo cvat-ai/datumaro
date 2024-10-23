@@ -32,6 +32,7 @@ from datumaro.components.project import DiffStatus, Project
 from datumaro.util.scope import scope_add, scoped
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, compare_datasets, compare_dirs
 
 
@@ -1347,9 +1348,7 @@ class BackwardCompatibilityTests_v0_1(TestCase):
         test_dir = scope_add(TestDir())
         old_proj_dir = osp.join(test_dir, "old_proj")
         new_proj_dir = osp.join(test_dir, "new_proj")
-        shutil.copytree(
-            osp.join(osp.dirname(__file__), "assets", "compat", "v0.1", "project"), old_proj_dir
-        )
+        shutil.copytree(get_test_asset_path("compat", "v0.1", "project"), old_proj_dir)
 
         with self.assertLogs(None) as logs:
             Project.migrate_from_v1_to_v2(old_proj_dir, new_proj_dir, skip_import_errors=True)
@@ -1365,9 +1364,7 @@ class BackwardCompatibilityTests_v0_1(TestCase):
     def test_cant_load_old_project(self):
         test_dir = scope_add(TestDir())
         proj_dir = osp.join(test_dir, "old_proj")
-        shutil.copytree(
-            osp.join(osp.dirname(__file__), "assets", "compat", "v0.1", "project"), proj_dir
-        )
+        shutil.copytree(get_test_asset_path("compat", "v0.1", "project"), proj_dir)
 
         with self.assertRaises(OldProjectError):
             scope_add(Project(proj_dir))

@@ -1,7 +1,7 @@
 format module
 -------------
 
-.. automodule:: datumaro.plugins.cvat_format.format
+.. automodule:: datumaro.plugins.data_formats.cvat.format
    :members:
    :undoc-members:
    :private-members:

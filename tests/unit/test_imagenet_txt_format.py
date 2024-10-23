@@ -8,7 +8,7 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.imagenet_txt_format import ImagenetTxtConverter, ImagenetTxtImporter
+from datumaro.plugins.data_formats.imagenet_txt import ImagenetTxtConverter, ImagenetTxtImporter
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir, compare_datasets

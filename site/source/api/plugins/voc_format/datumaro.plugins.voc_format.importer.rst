@@ -1,7 +1,7 @@
 importer module
 ---------------
 
-.. automodule:: datumaro.plugins.voc_format.importer
+.. automodule:: datumaro.plugins.data_formats.voc.importer
    :members:
    :undoc-members:
    :private-members:

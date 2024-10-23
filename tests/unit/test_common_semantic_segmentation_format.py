@@ -9,21 +9,18 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.common_semantic_segmentation_format import (
+from datumaro.plugins.data_formats.common_semantic_segmentation import (
     CommonSemanticSegmentationImporter,
     make_categories,
 )
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(
-    osp.dirname(__file__), "assets", "common_semantic_segmentation_dataset", "dataset"
-)
+DUMMY_DATASET_DIR = get_test_asset_path("common_semantic_segmentation_dataset", "dataset")
 
-DUMMY_NON_STANDARD_DATASET_DIR = osp.join(
-    osp.dirname(__file__),
-    "assets",
+DUMMY_NON_STANDARD_DATASET_DIR = get_test_asset_path(
     "common_semantic_segmentation_dataset",
     "non_standard_dataset",
 )

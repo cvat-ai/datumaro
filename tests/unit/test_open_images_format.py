@@ -14,7 +14,7 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.open_images_format import OpenImagesConverter, OpenImagesImporter
+from datumaro.plugins.data_formats.open_images import OpenImagesConverter, OpenImagesImporter
 
 from tests.conftest import ASSETS_DIR
 from tests.requirements import Requirements, mark_requirement

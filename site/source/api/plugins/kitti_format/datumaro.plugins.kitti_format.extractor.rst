@@ -1,7 +1,7 @@
 extractor module
 ----------------
 
-.. automodule:: datumaro.plugins.kitti_format.extractor
+.. automodule:: datumaro.plugins.data_formats.kitti.extractor
    :members:
    :undoc-members:
    :private-members:

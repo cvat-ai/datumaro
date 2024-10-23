@@ -1,7 +1,7 @@
 converter module
 ----------------
 
-.. automodule:: datumaro.plugins.datumaro_format.converter
+.. automodule:: datumaro.plugins.data_formats.datumaro.converter
    :members:
    :undoc-members:
    :private-members:

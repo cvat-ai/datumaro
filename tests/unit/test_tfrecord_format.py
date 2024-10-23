@@ -17,8 +17,8 @@ from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 try:
-    from datumaro.plugins.tf_detection_api_format.converter import TfDetectionApiConverter
-    from datumaro.plugins.tf_detection_api_format.extractor import (
+    from datumaro.plugins.data_formats.tf_detection_api.converter import TfDetectionApiConverter
+    from datumaro.plugins.data_formats.tf_detection_api.extractor import (
         TfDetectionApiExtractor,
         TfDetectionApiImporter,
     )
@@ -306,7 +306,7 @@ class TfrecordConverterTest(TestCase):
         self.assertEqual(expected, parsed)
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "tf_detection_api_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("tf_detection_api_dataset")
 
 
 @skipIf(import_failed, "Failed to import tensorflow")

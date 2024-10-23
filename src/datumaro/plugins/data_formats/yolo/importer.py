@@ -13,14 +13,14 @@ import yaml
 
 from datumaro import Importer
 from datumaro.components.format_detection import FormatDetectionContext
-from datumaro.plugins.yolo_format.extractor import (
+from datumaro.plugins.data_formats.yolo.extractor import (
     YOLOv8ClassificationExtractor,
     YOLOv8DetectionExtractor,
     YOLOv8OrientedBoxesExtractor,
     YOLOv8PoseExtractor,
     YOLOv8SegmentationExtractor,
 )
-from datumaro.plugins.yolo_format.format import YOLOv8Path, YOLOv8PoseFormat
+from datumaro.plugins.data_formats.yolo.format import YOLOv8Path, YOLOv8PoseFormat
 
 
 class YoloImporter(Importer):

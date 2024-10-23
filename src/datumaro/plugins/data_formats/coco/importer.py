@@ -9,7 +9,7 @@ from glob import glob
 from datumaro.components.errors import DatasetNotFoundError
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, Importer
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
-from datumaro.plugins.coco_format.extractor import (
+from datumaro.plugins.data_formats.coco.extractor import (
     CocoCaptionsExtractor,
     CocoImageInfoExtractor,
     CocoInstancesExtractor,

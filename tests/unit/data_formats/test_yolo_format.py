@@ -39,7 +39,7 @@ from datumaro.components.errors import (
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.format_detection import FormatDetectionContext, FormatRequirementsUnmet
 from datumaro.components.media import Image
-from datumaro.plugins.yolo_format.converter import (
+from datumaro.plugins.data_formats.yolo.converter import (
     YoloConverter,
     YOLOv8ClassificationConverter,
     YOLOv8DetectionConverter,
@@ -47,7 +47,7 @@ from datumaro.plugins.yolo_format.converter import (
     YOLOv8PoseConverter,
     YOLOv8SegmentationConverter,
 )
-from datumaro.plugins.yolo_format.extractor import (
+from datumaro.plugins.data_formats.yolo.extractor import (
     YoloExtractor,
     YOLOv8ClassificationExtractor,
     YOLOv8DetectionExtractor,
@@ -55,7 +55,7 @@ from datumaro.plugins.yolo_format.extractor import (
     YOLOv8PoseExtractor,
     YOLOv8SegmentationExtractor,
 )
-from datumaro.plugins.yolo_format.importer import (
+from datumaro.plugins.data_formats.yolo.importer import (
     YoloImporter,
     YOLOv8ClassificationImporter,
     YOLOv8DetectionImporter,

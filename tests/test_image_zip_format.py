@@ -7,9 +7,10 @@ from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image, save_image
 from datumaro.components.project import Dataset
 from datumaro.plugins.image_zip_format import ImageZipConverter, ImageZipPath
-from datumaro.util.test_utils import TestDir, compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, compare_datasets
 
 
 class ImageZipConverterTest(TestCase):

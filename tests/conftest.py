@@ -4,10 +4,8 @@
 # SPDX-License-Identifier: MIT
 from pathlib import Path
 
-from datumaro.util.test_utils import TestDir
-
 from .fixtures import *
-from .utils.test_utils import TestCaseHelper
+from .utils.test_utils import TestCaseHelper, TestDir
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 

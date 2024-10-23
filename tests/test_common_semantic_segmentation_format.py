@@ -13,9 +13,10 @@ from datumaro.plugins.common_semantic_segmentation_format import (
     CommonSemanticSegmentationImporter,
     make_categories,
 )
-from datumaro.util.test_utils import compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(
     osp.dirname(__file__), "assets", "common_semantic_segmentation_dataset", "dataset"

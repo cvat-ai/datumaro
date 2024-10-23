@@ -31,9 +31,10 @@ from datumaro.components.operations import (
     match_segments,
     mean_std,
 )
-from datumaro.util.test_utils import compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import compare_datasets
 
 
 class TestOperations(TestCase):

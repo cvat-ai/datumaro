@@ -5,10 +5,11 @@ from datumaro.components.annotation import AnnotationType, Cuboid3d, LabelCatego
 from datumaro.components.dataset import Dataset
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image, PointCloud
-from datumaro.util.test_utils import TestDir, compare_datasets_3d
-from datumaro.util.test_utils import run_datum as run
 
 from ..requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, compare_datasets_3d
+from tests.utils.test_utils import run_datum as run
 
 DUMMY_DATASET_DIR = osp.join(
     __file__[: __file__.rfind(osp.join("tests", ""))],

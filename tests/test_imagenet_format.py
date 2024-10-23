@@ -10,9 +10,10 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.plugins.imagenet_format import ImagenetConverter, ImagenetImporter
-from datumaro.util.test_utils import TestDir, compare_datasets, compare_datasets_strict
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, compare_datasets, compare_datasets_strict
 
 
 class ImagenetFormatTest(TestCase):

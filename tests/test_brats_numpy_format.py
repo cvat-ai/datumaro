@@ -9,9 +9,10 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import MultiframeImage
 from datumaro.plugins.brats_numpy_format import BratsNumpyImporter
-from datumaro.util.test_utils import compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "brats_numpy_dataset")
 

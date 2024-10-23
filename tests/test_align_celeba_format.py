@@ -15,9 +15,10 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.plugins.align_celeba_format import AlignCelebaImporter
-from datumaro.util.test_utils import compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import compare_datasets
 
 DUMMY_ALIGN_DATASET_DIR = osp.join(
     osp.dirname(__file__), "assets", "align_celeba_dataset", "dataset"

@@ -29,15 +29,16 @@ from datumaro.plugins.datumaro_format.converter import DatumaroConverter
 from datumaro.plugins.datumaro_format.extractor import DatumaroImporter
 from datumaro.util import parse_json_file
 from datumaro.util.mask_tools import generate_colormap
-from datumaro.util.test_utils import (
+
+from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import (
     Dimensions,
     TestDir,
     check_save_and_load,
     compare_datasets,
     compare_datasets_strict,
 )
-
-from .requirements import Requirements, mark_requirement
 
 
 class DatumaroConverterTest(TestCase):

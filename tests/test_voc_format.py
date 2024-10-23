@@ -40,14 +40,15 @@ from datumaro.plugins.voc_format.converter import (
 from datumaro.plugins.voc_format.importer import VocImporter
 from datumaro.util.image import save_image
 from datumaro.util.mask_tools import load_mask
-from datumaro.util.test_utils import (
+
+from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import (
     TestDir,
     check_save_and_load,
     compare_datasets,
     compare_datasets_strict,
 )
-
-from .requirements import Requirements, mark_requirement
 
 
 class VocFormatTest(TestCase):

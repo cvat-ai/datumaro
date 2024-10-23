@@ -9,9 +9,10 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.plugins.mnist_format import MnistConverter, MnistImporter
-from datumaro.util.test_utils import TestDir, compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, compare_datasets
 
 
 class MnistFormatTest(TestCase):

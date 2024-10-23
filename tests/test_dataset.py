@@ -52,9 +52,10 @@ from datumaro.components.extractor import (
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement, Video
 from datumaro.components.progress_reporting import NullProgressReporter
-from datumaro.util.test_utils import TestDir, compare_datasets, compare_datasets_strict
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, compare_datasets, compare_datasets_strict
 
 
 class DatasetTest(TestCase):

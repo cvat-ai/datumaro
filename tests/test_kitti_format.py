@@ -25,9 +25,10 @@ from datumaro.plugins.kitti_format.importer import (
     KittiSegmentationImporter,
 )
 from datumaro.util.meta_file_util import parse_meta_file
-from datumaro.util.test_utils import TestDir, check_save_and_load, compare_datasets
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "kitti_dataset")
 

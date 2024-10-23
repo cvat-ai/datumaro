@@ -10,9 +10,9 @@ from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
 from datumaro.plugins.kitti_raw_format.converter import KittiRawConverter
 from datumaro.plugins.kitti_raw_format.extractor import KittiRawImporter
-from datumaro.util.test_utils import Dimensions, TestDir, check_save_and_load, compare_datasets_3d
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.test_utils import Dimensions, TestDir, check_save_and_load, compare_datasets_3d
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "kitti_dataset", "kitti_raw")
 

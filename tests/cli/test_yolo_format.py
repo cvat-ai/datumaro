@@ -8,10 +8,11 @@ from datumaro.components.annotation import AnnotationType, Bbox
 from datumaro.components.dataset import Dataset
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.util.test_utils import TestDir, compare_datasets
-from datumaro.util.test_utils import run_datum as run
 
 from ..requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, compare_datasets
+from tests.utils.test_utils import run_datum as run
 
 
 class YoloIntegrationScenarios(TestCase):

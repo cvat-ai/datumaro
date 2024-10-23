@@ -30,9 +30,10 @@ from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image
 from datumaro.components.project import DiffStatus, Project
 from datumaro.util.scope import scope_add, scoped
-from datumaro.util.test_utils import TestDir, compare_datasets, compare_dirs
 
 from .requirements import Requirements, mark_requirement
+
+from tests.utils.test_utils import TestDir, compare_datasets, compare_dirs
 
 
 class ProjectTest(TestCase):

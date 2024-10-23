@@ -2,7 +2,7 @@
 # Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
-
+import inspect
 from functools import wraps
 from inspect import isclass
 from itertools import islice
@@ -195,3 +195,7 @@ def dump_json_file(
                 append_newline=append_newline,
             )
         )
+
+
+def current_function_name(depth=1):
+    return inspect.getouterframes(inspect.currentframe())[depth].function

@@ -12,9 +12,9 @@ from datumaro.components.dataset import Dataset, DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.media import Image
 from datumaro.plugins.ade20k2017_format import Ade20k2017Importer
-from datumaro.util.test_utils import compare_datasets
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "ade20k2017_dataset", "dataset")
 

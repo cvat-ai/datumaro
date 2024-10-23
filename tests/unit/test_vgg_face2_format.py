@@ -11,7 +11,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.vgg_face2_format import VggFace2Converter, VggFace2Importer
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets
 
 

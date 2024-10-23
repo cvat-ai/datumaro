@@ -12,7 +12,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.widerface_format import WiderFaceConverter, WiderFaceImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import IGNORE_ALL, TestDir, compare_datasets
 
 

@@ -10,7 +10,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.market1501_format import Market1501Converter, Market1501Importer
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets
 
 

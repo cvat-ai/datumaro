@@ -11,7 +11,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.common_super_resolution_format import CommonSuperResolutionImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "common_super_resolution_dataset")

@@ -54,7 +54,6 @@ from datumaro.components.media import Image, MediaElement, Video
 from datumaro.components.progress_reporting import NullProgressReporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets, compare_datasets_strict
 
 

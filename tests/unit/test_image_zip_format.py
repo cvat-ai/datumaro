@@ -9,7 +9,6 @@ from datumaro.components.project import Dataset
 from datumaro.plugins.image_zip_format import ImageZipConverter, ImageZipPath
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets
 
 

@@ -32,7 +32,6 @@ from datumaro.components.project import DiffStatus, Project
 from datumaro.util.scope import scope_add, scoped
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets, compare_dirs
 
 

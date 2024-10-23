@@ -13,7 +13,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.labelme_format import LabelMeConverter, LabelMeImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 

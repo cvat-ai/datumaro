@@ -20,7 +20,6 @@ from datumaro.plugins.cityscapes_format import (
 from datumaro.util.meta_file_util import parse_meta_file
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import IGNORE_ALL, TestDir, check_save_and_load, compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "cityscapes_dataset", "dataset")

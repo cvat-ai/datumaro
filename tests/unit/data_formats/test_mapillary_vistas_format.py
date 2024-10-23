@@ -19,7 +19,6 @@ from datumaro.plugins.mapillary_vistas_format.format import (
 )
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets
 
 DUMMY_DATASET_V1_2 = osp.join(osp.dirname(__file__), "assets", "mapillary_vistas_dataset", "v1.2")

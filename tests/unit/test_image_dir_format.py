@@ -8,7 +8,6 @@ from datumaro.components.project import Dataset
 from datumaro.plugins.image_dir_format import ImageDirConverter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, check_save_and_load
 
 

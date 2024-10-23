@@ -12,7 +12,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.imagenet_format import ImagenetConverter, ImagenetImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets, compare_datasets_strict
 
 

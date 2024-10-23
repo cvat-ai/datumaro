@@ -17,7 +17,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.align_celeba_format import AlignCelebaImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import compare_datasets
 
 DUMMY_ALIGN_DATASET_DIR = osp.join(

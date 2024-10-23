@@ -13,7 +13,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.lfw_format import LfwConverter, LfwImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets
 
 

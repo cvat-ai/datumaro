@@ -15,7 +15,6 @@ from datumaro.plugins.mpii_format.mpii_json import (
 )
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR_WITH_NUMPY_FILES = osp.join(

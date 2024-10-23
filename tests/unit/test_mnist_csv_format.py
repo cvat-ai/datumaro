@@ -11,7 +11,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.mnist_csv_format import MnistCsvConverter, MnistCsvImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets
 
 

@@ -7,7 +7,6 @@ import numpy as np
 import datumaro.util.image as image_module
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir
 
 

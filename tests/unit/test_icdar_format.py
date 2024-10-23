@@ -21,7 +21,6 @@ from datumaro.plugins.icdar_format.extractor import (
 )
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "icdar_dataset")

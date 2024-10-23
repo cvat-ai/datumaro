@@ -11,7 +11,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.vott_csv_format import VottCsvImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "vott_csv_dataset", "dataset")

@@ -15,7 +15,6 @@ from datumaro.plugins.common_semantic_segmentation_format import (
 )
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(

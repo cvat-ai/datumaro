@@ -31,7 +31,6 @@ from datumaro.util import parse_json_file
 from datumaro.util.mask_tools import generate_colormap
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import (
     Dimensions,
     TestDir,

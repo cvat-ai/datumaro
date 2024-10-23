@@ -13,7 +13,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.cifar_format import CifarConverter, CifarImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, compare_datasets
 
 

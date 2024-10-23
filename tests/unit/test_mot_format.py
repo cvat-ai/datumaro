@@ -12,7 +12,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.mot_format import MotSeqGtConverter, MotSeqImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 

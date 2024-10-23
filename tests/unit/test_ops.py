@@ -33,7 +33,6 @@ from datumaro.components.operations import (
 )
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import compare_datasets
 
 

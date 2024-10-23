@@ -18,7 +18,6 @@ from datumaro.components.media import Image
 from datumaro.plugins.celeba_format import CelebaImporter
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import compare_datasets
 
 DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "celeba_dataset", "dataset")

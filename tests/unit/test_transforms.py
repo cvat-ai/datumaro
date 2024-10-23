@@ -27,7 +27,6 @@ from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 
 from tests.requirements import Requirements, mark_bug, mark_requirement
-
 from tests.utils.test_utils import compare_datasets
 
 

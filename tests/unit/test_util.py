@@ -8,7 +8,6 @@ from datumaro.util.os_util import walk
 from datumaro.util.scope import Scope, on_error_do, on_exit_do, scoped
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import TestDir
 
 

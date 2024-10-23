@@ -42,7 +42,6 @@ from datumaro.util.image import save_image
 from datumaro.util.mask_tools import load_mask
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import (
     TestDir,
     check_save_and_load,

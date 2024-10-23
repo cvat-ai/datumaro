@@ -11,7 +11,6 @@ from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import compare_datasets
 
 DUMMY_LABELS_SEGM_DATASET_DIR = osp.join(

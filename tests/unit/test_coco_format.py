@@ -48,7 +48,6 @@ from datumaro.plugins.coco_format.importer import CocoImporter
 from datumaro.util import dump_json_file
 
 from tests.requirements import Requirements, mark_requirement
-
 from tests.utils.test_utils import (
     TestDir,
     check_save_and_load,

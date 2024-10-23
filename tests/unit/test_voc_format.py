@@ -8,7 +8,7 @@ from unittest import TestCase
 import numpy as np
 from lxml import etree as ElementTree  # nosec
 
-import datumaro.plugins.voc_format.format as VOC
+import datumaro.plugins.data_formats.voc.format as VOC
 from datumaro.components.annotation import (
     AnnotationType,
     Bbox,

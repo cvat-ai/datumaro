@@ -5,7 +5,7 @@
 from pathlib import Path
 
 from .fixtures import *
-from .utils.test_utils import TestCaseHelper, TestDir
+from tests.utils.test_utils import TestCaseHelper, TestDir
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 

@@ -222,5 +222,5 @@ class YoloIntegrationScenarios(TestCase):
 
 
 class YOLOv8IntegrationScenarios(YoloIntegrationScenarios):
-    ASSET_PATH = ["yolo_dataset", "yolov8"]
-    FORMAT_NAME = "yolov8"
+    ASSET_PATH = ["yolo_dataset", "yolov8_detection"]
+    FORMAT_NAME = "yolov8_detection"

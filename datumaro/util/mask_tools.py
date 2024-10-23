@@ -4,7 +4,7 @@
 
 from functools import partial
 from itertools import chain, repeat
-from typing import List, NamedTuple, NewType, Optional, Sequence, Tuple, TypedDict, Union
+from typing import Dict, List, NamedTuple, NewType, Optional, Sequence, Tuple, TypedDict, Union
 
 import numpy as np
 
@@ -197,6 +197,94 @@ def mask_to_rle(binary_mask: BinaryMask) -> CompressedRle:
     return {"counts": counts, "size": list(binary_mask.shape)}
 
 
+def _is_contour_clockwise(contour: np.ndarray) -> bool:
+    area = sum(
+        (p2[0] - p1[0]) * (p2[1] + p1[1])  # doubled area under the line, (x2-x1)*((y2+y1)/2)
+        for p1, p2 in zip(contour, np.concatenate((contour[1:], contour[:1])))
+    )
+    return area < 0
+
+
+def _merge_contour_with_parent(contour_parent: np.ndarray, contour_child: np.ndarray) -> np.ndarray:
+    import scipy
+
+    if not _is_contour_clockwise(contour_parent):
+        contour_parent = contour_parent[::-1]
+    if _is_contour_clockwise(contour_child):
+        contour_child = contour_child[::-1]
+
+    distances = scipy.spatial.distance.cdist(contour_parent, contour_child)
+    idx_parent, idx_child = np.unravel_index(distances.argmin(), distances.shape)
+
+    contour = np.concatenate(
+        (
+            contour_parent[: idx_parent + 1],
+            contour_child[idx_child:],
+            contour_child[: idx_child + 1],
+            contour_parent[idx_parent:],
+        )
+    )
+    return contour
+
+
+def _group_contours_with_children(hierarchy: np.ndarray) -> Dict[int, List[int]]:
+    is_outside_contour_list = [None] * len(hierarchy[0])
+
+    def is_outside_contour(index):
+        if is_outside_contour_list[index] is None:
+            parent_index = hierarchy[0][index][3]
+            is_outside_contour_list[index] = (
+                True if parent_index == -1 else not is_outside_contour(parent_index)
+            )
+        return is_outside_contour_list[index]
+
+    parent_to_children = {
+        contour_index: []
+        for contour_index in range(len(hierarchy[0]))
+        if is_outside_contour(contour_index)
+    }
+    for contour_index in range(len(hierarchy[0])):
+        if not is_outside_contour(contour_index):
+            parent_index = hierarchy[0][contour_index][3]
+            parent_to_children[parent_index].append(contour_index)
+
+    return parent_to_children
+
+
+def _extract_contours(mask: np.ndarray) -> List[np.ndarray]:
+    import cv2
+
+    contours, hierarchy = cv2.findContours(
+        mask.astype(np.uint8), mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_TC89_KCOS
+    )
+    if not contours:
+        return []
+
+    parent_to_children = _group_contours_with_children(hierarchy)
+
+    processed_contours = []
+    for parent_index, children_indexes in parent_to_children.items():
+        contour = contours[parent_index].reshape((-1, 2))
+        if len(contour) <= 2:
+            continue
+
+        for child_index in children_indexes:
+            child = contours[child_index].reshape((-1, 2))
+            if len(child) <= 2:
+                continue
+            contour = _merge_contour_with_parent(contour, child)
+
+        processed_contours.append(contour)
+
+    results = []
+    for contour in processed_contours:
+        if not np.array_equal(contour[0], contour[-1]):
+            contour = np.vstack((contour, contour[0]))
+        results.append(contour.flatten().clip(0))
+
+    return results
+
+
 def mask_to_polygons(mask: BinaryMask, area_threshold=1) -> List[Polygon]:
     """
     Convert an instance mask to polygons
@@ -210,25 +298,10 @@ def mask_to_polygons(mask: BinaryMask, area_threshold=1) -> List[Polygon]:
     Returns:
         A list of polygons like [[x1,y1, x2,y2 ...], [...]]
     """
-    import cv2
     from pycocotools import mask as mask_utils
 
     polygons = []
-
-    contours, _ = cv2.findContours(
-        mask.astype(np.uint8), mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_TC89_KCOS
-    )
-
-    for contour in contours:
-        if len(contour) <= 2:
-            continue
-
-        contour = contour.reshape((-1, 2))
-
-        if not np.array_equal(contour[0], contour[-1]):
-            contour = np.vstack((contour, contour[0]))  # make polygon closed
-        contour = contour.flatten().clip(0)  # [x0, y0, ...]
-
+    for contour in _extract_contours(mask):
         # Check if the polygon is big enough
         rle = mask_utils.frPyObjects([contour], mask.shape[0], mask.shape[1])
         area = sum(mask_utils.area(rle))

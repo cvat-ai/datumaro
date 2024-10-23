@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import os
 from os import path as osp
 from typing import Any, Dict, List
 
@@ -13,7 +14,8 @@ import yaml
 from datumaro import Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.plugins.yolo_format.extractor import (
-    YOLOv8Extractor,
+    YOLOv8ClassificationExtractor,
+    YOLOv8DetectionExtractor,
     YOLOv8OrientedBoxesExtractor,
     YOLOv8PoseExtractor,
     YOLOv8SegmentationExtractor,
@@ -31,8 +33,8 @@ class YoloImporter(Importer):
         return cls._find_sources_recursive(path, ".data", "yolo")
 
 
-class YOLOv8Importer(Importer):
-    EXTRACTOR = YOLOv8Extractor
+class YOLOv8DetectionImporter(Importer):
+    EXTRACTOR = YOLOv8DetectionExtractor
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -84,15 +86,15 @@ class YOLOv8Importer(Importer):
         ]
 
 
-class YOLOv8SegmentationImporter(YOLOv8Importer):
+class YOLOv8SegmentationImporter(YOLOv8DetectionImporter):
     EXTRACTOR = YOLOv8SegmentationExtractor
 
 
-class YOLOv8OrientedBoxesImporter(YOLOv8Importer):
+class YOLOv8OrientedBoxesImporter(YOLOv8DetectionImporter):
     EXTRACTOR = YOLOv8OrientedBoxesExtractor
 
 
-class YOLOv8PoseImporter(YOLOv8Importer):
+class YOLOv8PoseImporter(YOLOv8DetectionImporter):
     EXTRACTOR = YOLOv8PoseExtractor
 
     @classmethod
@@ -107,3 +109,15 @@ class YOLOv8PoseImporter(YOLOv8Importer):
                     raise Exception
             except yaml.YAMLError:
                 raise Exception
+
+
+class YOLOv8ClassificationImporter(Importer):
+    @classmethod
+    def find_sources(cls, path):
+        if not osp.isdir(path):
+            return []
+        if not [
+            subfolder for name in os.listdir(path) if osp.isdir(subfolder := osp.join(path, name))
+        ]:
+            return []
+        return [{"url": path, "format": YOLOv8ClassificationExtractor.NAME}]

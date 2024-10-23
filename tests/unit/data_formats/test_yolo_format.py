@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-import copy
 import os
 import os.path as osp
 import pickle  # nosec - disable B403:import_pickle check
@@ -18,7 +17,9 @@ from PIL import Image as PILImage
 from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
+    Label,
     LabelCategories,
+    Mask,
     Points,
     PointsCategories,
     Polygon,
@@ -40,21 +41,24 @@ from datumaro.components.format_detection import FormatDetectionContext, FormatR
 from datumaro.components.media import Image
 from datumaro.plugins.yolo_format.converter import (
     YoloConverter,
-    YOLOv8Converter,
+    YOLOv8ClassificationConverter,
+    YOLOv8DetectionConverter,
     YOLOv8OrientedBoxesConverter,
     YOLOv8PoseConverter,
     YOLOv8SegmentationConverter,
 )
 from datumaro.plugins.yolo_format.extractor import (
     YoloExtractor,
-    YOLOv8Extractor,
+    YOLOv8ClassificationExtractor,
+    YOLOv8DetectionExtractor,
     YOLOv8OrientedBoxesExtractor,
     YOLOv8PoseExtractor,
     YOLOv8SegmentationExtractor,
 )
 from datumaro.plugins.yolo_format.importer import (
     YoloImporter,
-    YOLOv8Importer,
+    YOLOv8ClassificationImporter,
+    YOLOv8DetectionImporter,
     YOLOv8OrientedBoxesImporter,
     YOLOv8PoseImporter,
     YOLOv8SegmentationImporter,
@@ -64,7 +68,7 @@ from datumaro.util.image import save_image
 from ...requirements import Requirements, mark_requirement
 from ...utils.assets import get_test_asset_path
 
-from tests.utils.test_utils import compare_datasets, compare_datasets_strict
+from tests.utils.test_utils import compare_annotations, compare_datasets, compare_datasets_strict
 
 
 @pytest.fixture(autouse=True)
@@ -87,33 +91,60 @@ class CompareDatasetMixin:
 
 class CompareDatasetsRotationMixin(CompareDatasetMixin):
     def compare_datasets(self, expected, actual, **kwargs):
-        actual_copy = copy.deepcopy(actual)
-        compare_datasets(self.helper_tc, expected, actual, ignored_attrs=["rotation"], **kwargs)
-        for item_a, item_b in zip(expected, actual_copy):
-            for ann_a, ann_b in zip(item_a.annotations, item_b.annotations):
-                assert ("rotation" in ann_a.attributes) == ("rotation" in ann_b.attributes)
-                assert (
-                    abs(ann_a.attributes.get("rotation", 0) - ann_b.attributes.get("rotation", 0))
-                    < 0.01
+        def compare_rotated_annotations(expected: Bbox, actual: Bbox, ignored_attrs=None):
+            if expected.type != AnnotationType.bbox or actual.type != AnnotationType.bbox:
+                return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
+
+            ignored_attrs = (ignored_attrs or []) + ["rotation"]
+            rotation_diff = expected.attributes.get("rotation", 0) - actual.attributes.get(
+                "rotation", 0
+            )
+            rotation_diff %= 180
+            rotation_diff = min(rotation_diff, 180 - rotation_diff)
+            assert rotation_diff < 0.01 or abs(rotation_diff - 90) < 0.01
+            if rotation_diff < 0.01:
+                return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
+            if abs(rotation_diff - 90) < 0.01:
+                x, y, w, h = actual.get_bbox()
+                center_x = x + w / 2
+                center_y = y + h / 2
+                new_width = h
+                new_height = w
+                actual = Bbox(
+                    x=center_x - new_width / 2,
+                    y=center_y - new_height / 2,
+                    w=new_width,
+                    h=new_height,
+                    label=actual.label,
+                    attributes=actual.attributes,
                 )
+                return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
+
+        compare_datasets(
+            self.helper_tc,
+            expected,
+            actual,
+            **kwargs,
+            compare_annotations_function=compare_rotated_annotations,
+        )
 
 
 class YoloConverterTest(CompareDatasetMixin):
     CONVERTER = YoloConverter
     IMPORTER = YoloImporter
 
-    def _generate_random_bbox(self, n_of_labels=10, **kwargs):
+    def _generate_random_bbox(self, n_of_labels=10, label=None, **kwargs):
         return Bbox(
             x=randint(0, 4),
             y=randint(0, 4),
             w=randint(1, 4),
             h=randint(1, 4),
-            label=randint(0, n_of_labels - 1),
+            label=label if label is not None else randint(0, n_of_labels - 1),
             attributes=kwargs,
         )
 
-    def _generate_random_annotation(self, n_of_labels=10):
-        return self._generate_random_bbox(n_of_labels=n_of_labels)
+    def _generate_random_annotation(self, n_of_labels=10, label=None):
+        return self._generate_random_bbox(n_of_labels=n_of_labels, label=label)
 
     @staticmethod
     def _make_image_path(test_dir: str, subset_name: str, image_id: str):
@@ -167,9 +198,10 @@ class YoloConverterTest(CompareDatasetMixin):
         )
 
         self.CONVERTER.convert(source_dataset, test_dir)
-
+        os.makedirs(osp.join(test_dir, "train", "label_0"), exist_ok=True)
         save_image(
-            self._make_image_path(test_dir, "train", "1.jpg"), np.ones((10, 15, 3))
+            self._make_image_path(test_dir, "train", f"{list(source_dataset)[0].id}.jpg"),
+            np.ones((10, 15, 3)),
         )  # put the image for dataset
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
 
@@ -188,7 +220,7 @@ class YoloConverterTest(CompareDatasetMixin):
 
         self.CONVERTER.convert(source_dataset, test_dir)
         parsed_dataset = Dataset.import_from(
-            test_dir, self.IMPORTER.NAME, image_info={"1": (10, 15)}
+            test_dir, self.IMPORTER.NAME, image_info={list(source_dataset)[0].id: (10, 15)}
         )
         self.compare_datasets(source_dataset, parsed_dataset)
 
@@ -389,9 +421,9 @@ class YoloConverterTest(CompareDatasetMixin):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
 
-class YOLOv8ConverterTest(YoloConverterTest):
-    CONVERTER = YOLOv8Converter
-    IMPORTER = YOLOv8Importer
+class YOLOv8DetectionConverterTest(YoloConverterTest):
+    CONVERTER = YOLOv8DetectionConverter
+    IMPORTER = YOLOv8DetectionImporter
 
     @staticmethod
     def _make_image_path(test_dir: str, subset_name: str, image_id: str):
@@ -441,15 +473,44 @@ class YOLOv8ConverterTest(YoloConverterTest):
 
         self.compare_datasets(source_dataset, parsed_dataset)
 
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_without_creating_annotation_file_and_load(self, test_dir):
+        categories = self._generate_random_dataset([]).categories()
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[
+                        # Mask annotation is not supported by yolo8 formats, so should be omitted
+                        Mask(np.array([[0, 1, 1, 1, 0]]), label=0),
+                    ],
+                )
+            ],
+            categories=categories,
+        )
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=1,
+                    subset="train",
+                    media=Image(data=np.ones((8, 8, 3))),
+                )
+            ],
+            categories=categories,
+        )
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        assert os.listdir(osp.join(test_dir, "labels", "train")) == []
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, parsed_dataset)
+
     def _check_inplace_save_writes_only_updated_data(self, test_dir, expected):
         assert set(os.listdir(osp.join(test_dir, "images", "train"))) == {
             "1.jpg",
             "2.jpg",
         }
-        assert set(os.listdir(osp.join(test_dir, "labels", "train"))) == {
-            "1.txt",
-            "2.txt",
-        }
+        assert set(os.listdir(osp.join(test_dir, "labels", "train"))) == set()
         assert set(os.listdir(osp.join(test_dir, "images", "valid"))) == set()
         assert set(os.listdir(osp.join(test_dir, "labels", "valid"))) == set()
         self.compare_datasets(
@@ -458,15 +519,67 @@ class YOLOv8ConverterTest(YoloConverterTest):
             require_media=True,
         )
 
+    def test_saves_only_parentless_labels(self, test_dir):
+        anno1 = self._generate_random_annotation(label=1)
+        anno3 = self._generate_random_annotation(label=3)
 
-class YOLOv8SegmentationConverterTest(YOLOv8ConverterTest):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[anno1, anno3],
+                ),
+            ],
+            categories=[
+                "label_wo_parent",
+                "parent_label",
+                ("child_label_1", "parent_label"),
+                "another_label_wo_parent",
+                ("child_label_2", "parent_label"),
+                ("child_label_3", "parent_label"),
+                "one_more_label_wo_parent",
+            ],
+        )
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        with open(osp.join(test_dir, "data.yaml"), "r") as f:
+            config = yaml.safe_load(f)
+            assert config["names"] == {
+                0: "label_wo_parent",
+                1: "parent_label",
+                2: "another_label_wo_parent",
+                3: "one_more_label_wo_parent",
+            }
+        anno3.label = 2
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=3,
+                    subset="valid",
+                    media=Image(data=np.ones((8, 8, 3))),
+                    annotations=[anno1, anno3],
+                ),
+            ],
+            categories=[
+                "label_wo_parent",
+                "parent_label",
+                "another_label_wo_parent",
+                "one_more_label_wo_parent",
+            ],
+        )
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, parsed_dataset)
+
+
+class YOLOv8SegmentationConverterTest(YOLOv8DetectionConverterTest):
     CONVERTER = YOLOv8SegmentationConverter
     IMPORTER = YOLOv8SegmentationImporter
 
-    def _generate_random_annotation(self, n_of_labels=10):
+    def _generate_random_annotation(self, n_of_labels=10, label=None):
         return Polygon(
             points=[randint(0, 6) for _ in range(randint(3, 7) * 2)],
-            label=randint(0, n_of_labels - 1),
+            label=label if label is not None else randint(0, n_of_labels - 1),
         )
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
@@ -474,12 +587,14 @@ class YOLOv8SegmentationConverterTest(YOLOv8ConverterTest):
         pass
 
 
-class YOLOv8OrientedBoxesConverterTest(CompareDatasetsRotationMixin, YOLOv8ConverterTest):
+class YOLOv8OrientedBoxesConverterTest(CompareDatasetsRotationMixin, YOLOv8DetectionConverterTest):
     CONVERTER = YOLOv8OrientedBoxesConverter
     IMPORTER = YOLOv8OrientedBoxesImporter
 
-    def _generate_random_annotation(self, n_of_labels=10):
-        return self._generate_random_bbox(n_of_labels=n_of_labels, rotation=randint(10, 350))
+    def _generate_random_annotation(self, n_of_labels=10, label=None):
+        return self._generate_random_bbox(
+            n_of_labels=n_of_labels, label=label, rotation=randint(10, 350)
+        )
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_export_rotated_bbox(self, test_dir):
@@ -502,7 +617,7 @@ class YOLOv8OrientedBoxesConverterTest(CompareDatasetsRotationMixin, YOLOv8Conve
         self.compare_datasets(source_dataset, parsed_dataset)
 
 
-class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
+class YOLOv8PoseConverterTest(YOLOv8DetectionConverterTest):
     CONVERTER = YOLOv8PoseConverter
     IMPORTER = YOLOv8PoseImporter
 
@@ -592,8 +707,16 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
                         [
                             Points([1.5, 2.0], [2], label=4),
                             Points([4.5, 4.0], [2], label=5),
+                            Points([6.5, 4.0], [2], label=6),
                         ],
                         label=3,
+                    ),
+                    Skeleton(
+                        [
+                            Points([1.5, 2.0], [2], label=1),
+                            Points([4.5, 4.0], [2], label=2),
+                        ],
+                        label=0,
                     ),
                 ],
             ),
@@ -609,12 +732,13 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
                         "skeleton_label_2",
                         ("point_label_3", "skeleton_label_2"),
                         ("point_label_4", "skeleton_label_2"),
+                        ("point_label_5", "skeleton_label_2"),
                     ]
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
                     [
                         (0, ["point_label_1", "point_label_2"], {(0, 1)}),
-                        (3, ["point_label_3", "point_label_4"], {}),
+                        (3, ["point_label_3", "point_label_4", "point_label_5"], {}),
                     ],
                 ),
             },
@@ -625,6 +749,7 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
         # loses point labels
         # loses edges
         # loses label ids - groups skeleton labels to the start
+        # loses info about number of points of skeletons which had less points
         source_dataset = self._make_dataset_with_edges_and_point_labels()
         expected_dataset = Dataset.from_iterable(
             [
@@ -635,10 +760,19 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
                     annotations=[
                         Skeleton(
                             [
-                                Points([1.5, 2.0], [2], label=4),
-                                Points([4.5, 4.0], [2], label=5),
+                                Points([1.5, 2.0], [2], label=5),
+                                Points([4.5, 4.0], [2], label=6),
+                                Points([6.5, 4.0], [2], label=7),
                             ],
                             label=1,
+                        ),
+                        Skeleton(
+                            [
+                                Points([1.5, 2.0], [2], label=2),
+                                Points([4.5, 4.0], [2], label=3),
+                                Points([0.0, 0.0], [0], label=4),
+                            ],
+                            label=0,
                         ),
                     ],
                 ),
@@ -650,14 +784,32 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
                         "skeleton_label_2",
                         ("skeleton_label_1_point_0", "skeleton_label_1"),
                         ("skeleton_label_1_point_1", "skeleton_label_1"),
+                        ("skeleton_label_1_point_2", "skeleton_label_1"),
                         ("skeleton_label_2_point_0", "skeleton_label_2"),
                         ("skeleton_label_2_point_1", "skeleton_label_2"),
+                        ("skeleton_label_2_point_2", "skeleton_label_2"),
                     ]
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
                     [
-                        (0, ["skeleton_label_1_point_0", "skeleton_label_1_point_1"], set()),
-                        (1, ["skeleton_label_2_point_0", "skeleton_label_2_point_1"], set()),
+                        (
+                            0,
+                            [
+                                "skeleton_label_1_point_0",
+                                "skeleton_label_1_point_1",
+                                "skeleton_label_1_point_2",
+                            ],
+                            set(),
+                        ),
+                        (
+                            1,
+                            [
+                                "skeleton_label_2_point_0",
+                                "skeleton_label_2_point_1",
+                                "skeleton_label_2_point_2",
+                            ],
+                            set(),
+                        ),
                     ],
                 ),
             },
@@ -678,6 +830,235 @@ class YOLOv8PoseConverterTest(YOLOv8ConverterTest):
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         assert osp.isfile(osp.join(test_dir, "dataset_meta.json"))
         self.compare_datasets(source_dataset, parsed_dataset)
+
+    def test_saves_only_parentless_labels(self, test_dir):
+        # should save only skeleton labels
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 10, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([1.5, 2.0], [2], label=2),
+                                Points([4.5, 4.0], [2], label=3),
+                            ],
+                            label=1,
+                        ),
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "not_skeleton_label_1",
+                        "skeleton",
+                        ("skeleton_point_0", "skeleton"),
+                        ("skeleton_point_1", "skeleton"),
+                        "not_skeleton_label_2",
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (1, ["skeleton_point_0", "skeleton_point_1"], set()),
+                    ],
+                ),
+            },
+        )
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 10, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([1.5, 2.0], [2], label=1),
+                                Points([4.5, 4.0], [2], label=2),
+                            ],
+                            label=0,
+                        ),
+                    ],
+                ),
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "skeleton",
+                        ("skeleton_point_0", "skeleton"),
+                        ("skeleton_point_1", "skeleton"),
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (0, ["skeleton_point_0", "skeleton_point_1"], set()),
+                    ],
+                ),
+            },
+        )
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        with open(osp.join(test_dir, "data.yaml"), "r") as f:
+            config = yaml.safe_load(f)
+            assert config["names"] == {0: "skeleton"}
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, parsed_dataset)
+
+
+class YOLOv8ClassificationConverterTest(YoloConverterTest):
+    CONVERTER = YOLOv8ClassificationConverter
+    IMPORTER = YOLOv8ClassificationImporter
+
+    @staticmethod
+    def _make_image_path(test_dir: str, subset_name: str, image_id: str):
+        return osp.join(test_dir, subset_name, image_id)
+
+    def _generate_random_dataset(self, recipes, n_of_labels=10):
+        items = [
+            DatasetItem(
+                id=f'label_{index}/{recipe.get("id", index + 1)}',
+                subset=recipe.get("subset", "train"),
+                media=recipe.get(
+                    "media",
+                    Image(data=np.ones((randint(8, 10), randint(8, 10), 3))),
+                ),
+                annotations=[Label(label=index)],
+            )
+            for index, recipe in enumerate(recipes)
+        ]
+        return Dataset.from_iterable(
+            items,
+            categories=["label_" + str(i) for i in range(len(recipes))],
+        )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    @pytest.mark.parametrize("save_media", [True, False])
+    def test_relative_paths(self, test_dir, save_media):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(id="1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
+                DatasetItem(id="2", subset="train", media=Image(data=np.ones((4, 2, 3)))),
+                DatasetItem(
+                    id="subdir1/1",
+                    subset="train",
+                    media=Image(data=np.ones((2, 6, 3))),
+                    annotations=[Label(label=0)],
+                ),
+                DatasetItem(
+                    id="label_1/1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 4, 3))),
+                    annotations=[Label(label=1)],
+                ),
+                DatasetItem(
+                    id="label_1/subdir2/1",
+                    subset="train",
+                    media=Image(data=np.ones((6, 5, 3))),
+                    annotations=[Label(label=1)],
+                ),
+            ],
+            categories=["label_0", "label_1"],
+        )
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=save_media)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(source_dataset, parsed_dataset)
+
+        if save_media:
+            # check that relative paths were discarded
+            os.remove(osp.join(test_dir, "train", "labels.json"))
+            expected_dataset = Dataset.from_iterable(
+                [
+                    DatasetItem(
+                        id="no_label/1", subset="train", media=Image(data=np.ones((4, 2, 3)))
+                    ),
+                    DatasetItem(
+                        id="no_label/2", subset="train", media=Image(data=np.ones((4, 2, 3)))
+                    ),
+                    DatasetItem(
+                        id="label_0/1",
+                        subset="train",
+                        media=Image(data=np.ones((2, 6, 3))),
+                        annotations=[Label(label=0)],
+                    ),
+                    DatasetItem(
+                        id="label_1/1",
+                        subset="train",
+                        media=Image(data=np.ones((5, 4, 3))),
+                        annotations=[Label(label=1)],
+                    ),
+                    DatasetItem(
+                        id="label_1/1.0",
+                        subset="train",
+                        media=Image(data=np.ones((6, 5, 3))),
+                        annotations=[Label(label=1)],
+                    ),
+                ],
+                categories=["label_0", "label_1"],
+            )
+            parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+            self.compare_datasets(expected_dataset, parsed_dataset)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_image_with_arbitrary_extension(self, test_dir):
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    "label_0/q/1",
+                    subset="train",
+                    media=Image(path="label_0/q/1.JPEG", data=np.zeros((4, 3, 3))),
+                    annotations=[Label(label=0)],
+                ),
+                DatasetItem(
+                    "label_0/a/b/c/2",
+                    subset="valid",
+                    media=Image(path="label_0/a/b/c/2.bmp", data=np.zeros((3, 4, 3))),
+                    annotations=[Label(label=0)],
+                ),
+            ],
+            categories=["label_0"],
+        )
+
+        self.CONVERTER.convert(dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(dataset, parsed_dataset, require_media=True)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_arbitrary_number_of_labels(self, test_dir):
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    "1",
+                    subset="train",
+                    media=Image(data=np.ones((5, 4, 3))),
+                    annotations=[Label(label=0), Label(label=1), Label(label=2)],
+                ),
+                DatasetItem(
+                    "2",
+                    subset="train",
+                    media=Image(data=np.ones((5, 4, 3))),
+                    annotations=[],
+                ),
+            ],
+            categories=["label_0", "label_1", "label_2"],
+        )
+
+        self.CONVERTER.convert(dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(dataset, parsed_dataset, require_media=True)
+
+    def test_export_rotated_bbox(self):  # pylint: disable=arguments-differ
+        pass
+
+    def test_cant_save_with_reserved_subset_name(self):  # pylint: disable=arguments-differ
+        pass
+
+    def test_inplace_save_writes_only_updated_data(self):  # pylint: disable=arguments-differ
+        pass
+
+    def test_can_save_and_load_without_path_prefix(self):  # pylint: disable=arguments-differ
+        pass
 
 
 class YoloImporterTest(CompareDatasetMixin):
@@ -762,13 +1143,13 @@ class YoloImporterTest(CompareDatasetMixin):
             compare_datasets_strict(helper_tc, source, parsed)
 
 
-class YOLOv8ImporterTest(YoloImporterTest):
-    IMPORTER = YOLOv8Importer
+class YOLOv8DetectionImporterTest(YoloImporterTest):
+    IMPORTER = YOLOv8DetectionImporter
     ASSETS = [
-        "yolov8",
-        "yolov8_with_list_of_imgs",
-        "yolov8_with_subset_txt",
-        "yolov8_with_list_of_names",
+        "yolov8_detection",
+        "yolov8_detection_with_list_of_imgs",
+        "yolov8_detection_with_subset_txt",
+        "yolov8_detection_with_list_of_names",
     ]
 
     def test_can_detect(self):
@@ -776,7 +1157,7 @@ class YOLOv8ImporterTest(YoloImporterTest):
             dataset_dir = get_test_asset_path("yolo_dataset", asset)
             detected_formats = Environment().detect_dataset(dataset_dir)
             assert set(detected_formats) == {
-                YOLOv8Importer.NAME,
+                YOLOv8DetectionImporter.NAME,
                 YOLOv8SegmentationImporter.NAME,
                 YOLOv8OrientedBoxesImporter.NAME,
             }
@@ -841,7 +1222,7 @@ class YOLOv8ImporterTest(YoloImporterTest):
         self.compare_datasets(expected_dataset, dataset)
 
     def test_can_import_if_names_dict_has_non_sequential_keys(self, test_dir):
-        if self.IMPORTER.NAME != YOLOv8Importer.NAME:
+        if self.IMPORTER.NAME != YOLOv8DetectionImporter.NAME:
             return
         expected_dataset = Dataset.from_iterable(
             [
@@ -860,7 +1241,7 @@ class YOLOv8ImporterTest(YoloImporterTest):
         )
 
         dataset_path = osp.join(test_dir, "dataset")
-        shutil.copytree(get_test_asset_path("yolo_dataset", "yolov8"), dataset_path)
+        shutil.copytree(get_test_asset_path("yolo_dataset", "yolov8_detection"), dataset_path)
 
         with open(osp.join(dataset_path, "data.yaml"), "r+") as f:
             config = yaml.safe_load(f)
@@ -875,7 +1256,7 @@ class YOLOv8ImporterTest(YoloImporterTest):
         self.compare_datasets(expected_dataset, dataset)
 
 
-class YOLOv8SegmentationImporterTest(YOLOv8ImporterTest):
+class YOLOv8SegmentationImporterTest(YOLOv8DetectionImporterTest):
     IMPORTER = YOLOv8SegmentationImporter
     ASSETS = [
         "yolov8_segmentation",
@@ -899,7 +1280,7 @@ class YOLOv8SegmentationImporterTest(YOLOv8ImporterTest):
         )
 
 
-class YOLOv8OrientedBoxesImporterTest(CompareDatasetsRotationMixin, YOLOv8ImporterTest):
+class YOLOv8OrientedBoxesImporterTest(CompareDatasetsRotationMixin, YOLOv8DetectionImporterTest):
     IMPORTER = YOLOv8OrientedBoxesImporter
     ASSETS = ["yolov8_oriented_boxes"]
 
@@ -921,7 +1302,7 @@ class YOLOv8OrientedBoxesImporterTest(CompareDatasetsRotationMixin, YOLOv8Import
         )
 
 
-class YOLOv8PoseImporterTest(YOLOv8ImporterTest):
+class YOLOv8PoseImporterTest(YOLOv8DetectionImporterTest):
     IMPORTER = YOLOv8PoseImporter
     ASSETS = [
         "yolov8_pose",
@@ -978,6 +1359,79 @@ class YOLOv8PoseImporterTest(YOLOv8ImporterTest):
                 ),
             },
         )
+
+
+class YOLOv8ClassificationImporterTest(YoloImporterTest):
+    IMPORTER = YOLOv8ClassificationImporter
+    ASSETS = ["yolov8_classification"]
+
+    def test_can_detect(self):
+        dataset_dir = get_test_asset_path("yolo_dataset", "yolov8_classification")
+        detected_formats = Environment().detect_dataset(dataset_dir)
+        assert self.IMPORTER.NAME in detected_formats
+
+    @staticmethod
+    def _asset_dataset():
+        return Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="label_0/1",
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[Label(label=0)],
+                ),
+                DatasetItem(
+                    id="label_0/2",
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[Label(label=0)],
+                ),
+                DatasetItem(
+                    id="label_1/3",
+                    subset="train",
+                    media=Image(data=np.ones((10, 15, 3))),
+                    annotations=[Label(label=1)],
+                ),
+            ],
+            categories=["label_0", "label_1"],
+        )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_with_exif_rotated_images(self, test_dir):
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="label_1/3",
+                    subset="train",
+                    media=Image(data=np.ones((15, 10, 3))),
+                    annotations=[Label(label=0)],
+                ),
+            ],
+            categories=["label_1"],
+        )
+
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", "yolov8_classification"), dataset_path)
+        shutil.rmtree(osp.join(dataset_path, "train", "label_0"))
+
+        # Add exif rotation for image
+        image_path = osp.join(dataset_path, "train", "label_1", "3.jpg")
+        img = PILImage.open(image_path)
+        exif = img.getexif()
+        exif.update(
+            [
+                (ExifTags.Base.ResolutionUnit, 3),
+                (ExifTags.Base.XResolution, 28.0),
+                (ExifTags.Base.YCbCrPositioning, 1),
+                (ExifTags.Base.Orientation, 6),
+                (ExifTags.Base.YResolution, 28.0),
+            ]
+        )
+        img.save(image_path, exif=exif)
+
+        dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+
+        self.compare_datasets(expected_dataset, dataset, require_media=True)
 
 
 class YoloExtractorTest:
@@ -1098,9 +1552,9 @@ class YoloExtractorTest:
             Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
 
 
-class YOLOv8ExtractorTest(YoloExtractorTest):
-    IMPORTER = YOLOv8Importer
-    EXTRACTOR = YOLOv8Extractor
+class YOLOv8DetectionExtractorTest(YoloExtractorTest):
+    IMPORTER = YOLOv8DetectionImporter
+    EXTRACTOR = YOLOv8DetectionExtractor
 
     @staticmethod
     def _get_annotation_dir(subset="train"):
@@ -1119,8 +1573,21 @@ class YOLOv8ExtractorTest(YoloExtractorTest):
         with pytest.raises(InvalidAnnotationError, match="subset image folder"):
             Dataset.import_from(dataset_path, self.IMPORTER.NAME).init_cache()
 
+    def test_can_report_missing_ann_file(self, test_dir):
+        # YOLOv8 does not require annotation files
+        # This empty test is needed to not run the test with the same name from the parent class
+        pass
 
-class YOLOv8SegmentationExtractorTest(YOLOv8ExtractorTest):
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    def test_can_import_with_missing_ann_file(self, test_dir, helper_tc):
+        source_dataset = self._prepare_dataset(test_dir)
+        os.remove(osp.join(test_dir, self._get_annotation_dir(), "a.txt"))
+        actual = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        source_dataset.get("a", subset="train").annotations.clear()
+        compare_datasets(helper_tc, source_dataset, actual)
+
+
+class YOLOv8SegmentationExtractorTest(YOLOv8DetectionExtractorTest):
     IMPORTER = YOLOv8SegmentationImporter
     EXTRACTOR = YOLOv8SegmentationExtractor
 
@@ -1149,7 +1616,7 @@ class YOLOv8SegmentationExtractorTest(YOLOv8ExtractorTest):
         self._check_can_report_invalid_field_type(field, field_name, test_dir)
 
 
-class YOLOv8OrientedBoxesExtractorTest(YOLOv8ExtractorTest):
+class YOLOv8OrientedBoxesExtractorTest(YOLOv8DetectionExtractorTest):
     IMPORTER = YOLOv8OrientedBoxesImporter
     EXTRACTOR = YOLOv8OrientedBoxesExtractor
 
@@ -1184,28 +1651,8 @@ class YOLOv8OrientedBoxesExtractorTest(YOLOv8ExtractorTest):
     def test_can_report_invalid_field_type(self, field, field_name, test_dir):
         self._check_can_report_invalid_field_type(field, field_name, test_dir)
 
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_invalid_shape(self, test_dir):
-        self._prepare_dataset(test_dir)
-        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
-            f.write("0 0.1 0.1 0.5 0.1 0.5 0.5 0.5 0.2")
 
-        with pytest.raises(AnnotationImportError) as capture:
-            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
-        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
-        assert "Given points do not form a rectangle" in str(capture.value.__cause__)
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_invalid_shape_parallelogram(self, test_dir):
-        self._prepare_dataset(test_dir)
-        with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
-            f.write("0 0.1 0.1 0.5 0.1 0.6 0.5 0.2 0.5")
-
-        with pytest.raises(AnnotationImportError, match="adjacent sides are not orthogonal"):
-            Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
-
-
-class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
+class YOLOv8PoseExtractorTest(YOLOv8DetectionExtractorTest):
     IMPORTER = YOLOv8PoseImporter
     EXTRACTOR = YOLOv8PoseExtractor
 
@@ -1247,6 +1694,61 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
         dataset.export(path, self.EXTRACTOR.NAME, save_media=True)
         return dataset
 
+    def _prepare_dataset_different_skeletons(self, path: str, anno=None) -> Dataset:
+        dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    "a",
+                    subset="train",
+                    media=Image(np.ones((5, 10, 3))),
+                    annotations=[
+                        Skeleton(
+                            [
+                                Points([1, 2], [Points.Visibility.visible.value], label=2),
+                                Points([3, 6], [Points.Visibility.visible.value], label=3),
+                                Points([4, 5], [Points.Visibility.visible.value], label=4),
+                                Points([8, 7], [Points.Visibility.visible.value], label=5),
+                            ],
+                            label=0,
+                        ),
+                        Skeleton(
+                            [
+                                Points([1, 2], [Points.Visibility.visible.value], label=6),
+                                Points([3, 6], [Points.Visibility.visible.value], label=7),
+                            ],
+                            label=1,
+                        ),
+                    ],
+                )
+            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "test",
+                        "test2",
+                        ("test_point_0", "test"),
+                        ("test_point_1", "test"),
+                        ("test_point_2", "test"),
+                        ("test_point_3", "test"),
+                        ("test2_point_0", "test2"),
+                        ("test2_point_1", "test2"),
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (
+                            0,
+                            ["test_point_0", "test_point_1", "test_point_2", "test_point_3"],
+                            set(),
+                        ),
+                        (1, ["test2_point_0", "test2_point_1"], set()),
+                    ]
+                ),
+            },
+        )
+        dataset.export(path, self.EXTRACTOR.NAME, save_media=True)
+        return dataset
+
     @staticmethod
     def _make_some_annotation_values():
         return [0.5, 0.5, 0.5, 0.5] + [0.5, 0.5, 2] * 4
@@ -1267,21 +1769,27 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
         self._check_can_report_invalid_field_type(field, field_name, test_dir)
 
     def test_can_use_sub_labels_hint(self, test_dir, helper_tc):
-        source_dataset = self._prepare_dataset(test_dir)
+        source_dataset = self._prepare_dataset_different_skeletons(test_dir)
         expected_dataset = Dataset.from_iterable(
             source_dataset,
             categories={
                 AnnotationType.label: LabelCategories.from_iterable(
                     [
                         "test",
+                        "test2",
                         ("custom_name", "test"),
                         ("another_custom_name", "test"),
                         ("test_name", "test"),
                         ("42", "test"),
-                    ]
+                        ("custom_name_2", "test2"),
+                        ("another_custom_name_2", "test2"),
+                    ],
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
-                    [(0, ["custom_name", "another_custom_name", "test_name", "42"], set())]
+                    [
+                        (0, ["custom_name", "another_custom_name", "test_name", "42"], set()),
+                        (1, ["custom_name_2", "another_custom_name_2"], set()),
+                    ]
                 ),
             },
         )
@@ -1290,12 +1798,13 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
             self.IMPORTER.NAME,
             skeleton_sub_labels={
                 "test": ["custom_name", "another_custom_name", "test_name", "42"],
+                "test2": ["custom_name_2", "another_custom_name_2"],
             },
         )
         compare_datasets(helper_tc, expected_dataset, parsed_dataset)
 
-    def test_can_report_wrong_number_of_sub_labels_in_hint(self, test_dir):
-        self._prepare_dataset(test_dir)
+    def test_can_report_too_many_sub_labels_in_hint(self, test_dir):
+        self._prepare_dataset_different_skeletons(test_dir)
         with pytest.raises(
             InvalidAnnotationError, match="Number of points in skeletons according to config file"
         ):
@@ -1310,28 +1819,49 @@ class YOLOv8PoseExtractorTest(YOLOv8ExtractorTest):
                         "42",
                         "extra_sub_label",
                     ],
+                    "test2": ["sub_label_1", "sub_label_2"],
                 },
             )
 
     def test_can_report_the_lack_of_skeleton_label_in_hint(self, test_dir):
-        self._prepare_dataset(test_dir)
+        self._prepare_dataset_different_skeletons(test_dir)
         with pytest.raises(InvalidAnnotationError, match="Labels from config file are absent"):
             Dataset.import_from(
                 test_dir,
                 self.IMPORTER.NAME,
                 skeleton_sub_labels={
-                    "no_such_name": ["custom_name", "another_custom_name", "test_name", "42"],
+                    "test2": ["sub_label_1", "sub_label_2"],
                 },
             )
 
-    def test_can_import_if_sub_label_hint_has_extra_labels(self, test_dir, helper_tc):
-        source_dataset = self._prepare_dataset(test_dir)
+    def test_can_import_if_sub_label_hint_has_extra_skeletons(self, test_dir, helper_tc):
+        source_dataset = self._prepare_dataset_different_skeletons(test_dir)
         parsed_dataset = Dataset.import_from(
             test_dir,
             self.IMPORTER.NAME,
             skeleton_sub_labels={
                 "test": ["test_point_0", "test_point_1", "test_point_2", "test_point_3"],
+                "test2": ["test2_point_0", "test2_point_1"],
                 "no_such_name": ["only_one"],
             },
         )
         compare_datasets(helper_tc, source_dataset, parsed_dataset)
+
+
+class YOLOv8ClassificationExtractorTest:
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_parse(self, helper_tc, test_dir):
+        expected = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    "test_label/a",
+                    subset="train",
+                    media=Image(np.ones((5, 10, 3))),
+                    annotations=[Label(0)],
+                )
+            ],
+            categories=["test_label"],
+        )
+        expected.export(test_dir, YOLOv8ClassificationExtractor.NAME, save_media=True)
+        actual = Dataset.import_from(test_dir, YOLOv8ClassificationImporter.NAME)
+        compare_datasets(helper_tc, expected, actual)

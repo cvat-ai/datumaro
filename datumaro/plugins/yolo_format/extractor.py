@@ -5,21 +5,22 @@
 
 from __future__ import annotations
 
-import math
 import os
 import os.path as osp
 import re
-from collections import OrderedDict
 from functools import cached_property
 from itertools import cycle
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
+import cv2
+import numpy as np
 import yaml
 
 from datumaro.components.annotation import (
     Annotation,
     AnnotationType,
     Bbox,
+    Label,
     LabelCategories,
     Points,
     PointsCategories,
@@ -33,30 +34,29 @@ from datumaro.components.errors import (
 )
 from datumaro.components.extractor import CategoriesInfo, DatasetItem, Extractor, SourceExtractor
 from datumaro.components.media import Image
+from datumaro.util import parse_json_file, take_by
 from datumaro.util.image import (
     DEFAULT_IMAGE_META_FILE_NAME,
     ImageMeta,
+    find_images,
     load_image,
     load_image_meta_file,
 )
 from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_meta_file
 from datumaro.util.os_util import split_path
 
-from ...util import parse_json_file, take_by
-from .format import YoloPath, YOLOv8Path, YOLOv8PoseFormat
+from .format import YoloPath, YOLOv8ClassificationFormat, YOLOv8Path, YOLOv8PoseFormat
 
 T = TypeVar("T")
 
 
-class YoloExtractor(SourceExtractor):
-    RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS
-
+class YoloBaseExtractor(SourceExtractor):
     class Subset(Extractor):
-        def __init__(self, name: str, parent: YoloExtractor):
+        def __init__(self, name: str, parent: YoloBaseExtractor):
             super().__init__()
             self._name = name
             self._parent = parent
-            self.items: Dict[str, Union[str, DatasetItem]] = OrderedDict()
+            self.items: Dict[str, Union[str, DatasetItem]] = {}
 
         def __iter__(self):
             for item_id in self.items:
@@ -72,17 +72,15 @@ class YoloExtractor(SourceExtractor):
 
     def __init__(
         self,
-        config_path: str,
+        rootpath: str,
         image_info: Union[None, str, ImageMeta] = None,
         **kwargs,
     ) -> None:
-        if not osp.isfile(config_path):
-            raise DatasetImportError(f"Can't read dataset descriptor file '{config_path}'")
+        if not osp.isdir(rootpath):
+            raise DatasetImportError(f"Can't read dataset folder '{rootpath}'")
 
         super().__init__(**kwargs)
 
-        rootpath = osp.dirname(config_path)
-        self._config_path = config_path
         self._path = rootpath
 
         assert image_info is None or isinstance(image_info, (str, dict))
@@ -97,6 +95,86 @@ class YoloExtractor(SourceExtractor):
 
         self._categories = self._load_categories()
 
+        self._subsets: Dict[str, YoloBaseExtractor.Subset] = {}
+
+        for subset_name in self._get_subset_names():
+            subset = YoloBaseExtractor.Subset(subset_name, self)
+            subset.items = self._get_lazy_subset_items(subset_name)
+            self._subsets[subset_name] = subset
+
+    @classmethod
+    def _image_loader(cls, *args, **kwargs):
+        return load_image(*args, **kwargs, keep_exif=True)
+
+    def _get(self, item_id: str, subset_name: str) -> Optional[DatasetItem]:
+        subset = self._subsets[subset_name]
+        item = subset.items[item_id]
+
+        if isinstance(item, str):
+            try:
+                image_size = self._image_info.get(item_id)
+                image_path = osp.join(self._path, item)
+
+                if image_size:
+                    image = Image(path=image_path, size=image_size)
+                else:
+                    image = Image(path=image_path, data=self._image_loader)
+
+                annotations = self._parse_annotations(image, item_id=(item_id, subset_name))
+
+                item = DatasetItem(
+                    id=item_id, subset=subset_name, media=image, annotations=annotations
+                )
+                subset.items[item_id] = item
+            except (FileNotFoundError, IOError, DatasetImportError) as e:
+                self._ctx.error_policy.report_item_error(e, item_id=(item_id, subset_name))
+                subset.items.pop(item_id)
+                item = None
+
+        return item
+
+    def _get_subset_names(self):
+        raise NotImplementedError()
+
+    def _get_lazy_subset_items(self, subset_name: str):
+        raise NotImplementedError()
+
+    def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:
+        raise NotImplementedError()
+
+    def _load_categories(self) -> CategoriesInfo:
+        raise NotImplementedError()
+
+    def __iter__(self):
+        subsets = self._subsets
+        pbars = self._ctx.progress_reporter.split(len(subsets))
+        for pbar, (subset_name, subset) in zip(pbars, subsets.items()):
+            for item in pbar.iter(subset, desc=f"Parsing '{subset_name}'"):
+                yield item
+
+    def __len__(self):
+        return sum(len(s) for s in self._subsets.values())
+
+    def get_subset(self, name):
+        return self._subsets[name]
+
+
+class YoloExtractor(YoloBaseExtractor):
+    RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS
+
+    def __init__(
+        self,
+        config_path: str,
+        image_info: Union[None, str, ImageMeta] = None,
+        **kwargs,
+    ) -> None:
+        if not osp.isfile(config_path):
+            raise DatasetImportError(f"Can't read dataset descriptor file '{config_path}'")
+
+        self._config_path = config_path
+        super().__init__(rootpath=osp.dirname(config_path), image_info=image_info, **kwargs)
+
+    def _get_subset_names(self):
         # The original format is like this:
         #
         # classes = 2
@@ -107,20 +185,16 @@ class YoloExtractor(SourceExtractor):
         #
         # To support more subset names, we disallow subsets
         # called 'classes', 'names' and 'backup'.
-        subsets = {k: v for k, v in self._config.items() if k not in self.RESERVED_CONFIG_KEYS}
+        return [k for k in self._config if k not in self.RESERVED_CONFIG_KEYS]
 
-        for subset_name, list_path in subsets.items():
-            subset = YoloExtractor.Subset(subset_name, self)
-            subset.items = OrderedDict(
-                (self.name_from_path(p), self.localize_path(p))
-                for p in self._iterate_over_image_paths(subset_name, list_path)
-            )
-            subsets[subset_name] = subset
+    def _get_lazy_subset_items(self, subset_name: str):
+        return {
+            self.name_from_path(p): self.localize_path(p)
+            for p in self._get_subset_image_paths(subset_name)
+        }
 
-        self._subsets: Dict[str, YoloExtractor.Subset] = subsets
-
-    def _iterate_over_image_paths(self, subset_name: str, list_path: str):
-        list_path = osp.join(self._path, self.localize_path(list_path))
+    def _get_subset_image_paths(self, subset_name: str):
+        list_path = osp.join(self._path, self.localize_path(self._config[subset_name]))
         if not osp.isfile(list_path):
             raise InvalidAnnotationError(f"Can't find '{subset_name}' subset list file")
 
@@ -174,42 +248,8 @@ class YoloExtractor(SourceExtractor):
 
         return osp.splitext(path)[0]
 
-    @classmethod
-    def _image_loader(cls, *args, **kwargs):
-        return load_image(*args, **kwargs, keep_exif=True)
-
     def _get_labels_path_from_image_path(self, image_path: str) -> str:
         return osp.splitext(image_path)[0] + YoloPath.LABELS_EXT
-
-    def _get(self, item_id: str, subset_name: str) -> Optional[DatasetItem]:
-        subset = self._subsets[subset_name]
-        item = subset.items[item_id]
-
-        if isinstance(item, str):
-            try:
-                image_size = self._image_info.get(item_id)
-                image_path = osp.join(self._path, item)
-
-                if image_size:
-                    image = Image(path=image_path, size=image_size)
-                else:
-                    image = Image(path=image_path, data=self._image_loader)
-
-                anno_path = self._get_labels_path_from_image_path(image.path)
-                annotations = self._parse_annotations(
-                    anno_path, image, item_id=(item_id, subset_name)
-                )
-
-                item = DatasetItem(
-                    id=item_id, subset=subset_name, media=image, annotations=annotations
-                )
-                subset.items[item_id] = item
-            except Exception as e:
-                self._ctx.error_policy.report_item_error(e, item_id=(item_id, subset_name))
-                subset.items.pop(item_id)
-                item = None
-
-        return item
 
     @staticmethod
     def _parse_field(value: str, cls: Type[T], field_name: str) -> T:
@@ -220,9 +260,8 @@ class YoloExtractor(SourceExtractor):
                 f"Can't parse {field_name} from '{value}'. Expected {cls}"
             ) from e
 
-    def _parse_annotations(
-        self, anno_path: str, image: Image, *, item_id: Tuple[str, str]
-    ) -> List[Annotation]:
+    def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:
+        anno_path = self._get_labels_path_from_image_path(image.path)
         lines = []
         with open(anno_path, "r", encoding="utf-8") as f:
             for line in f:
@@ -305,21 +344,8 @@ class YoloExtractor(SourceExtractor):
 
         return {AnnotationType.label: label_categories}
 
-    def __iter__(self):
-        subsets = self._subsets
-        pbars = self._ctx.progress_reporter.split(len(subsets))
-        for pbar, (subset_name, subset) in zip(pbars, subsets.items()):
-            for item in pbar.iter(subset, desc=f"Parsing '{subset_name}'"):
-                yield item
 
-    def __len__(self):
-        return sum(len(s) for s in self._subsets.values())
-
-    def get_subset(self, name):
-        return self._subsets[name]
-
-
-class YOLOv8Extractor(YoloExtractor):
+class YOLOv8DetectionExtractor(YoloExtractor):
     RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
 
     def __init__(
@@ -329,6 +355,12 @@ class YOLOv8Extractor(YoloExtractor):
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
+
+    def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:
+        anno_path = self._get_labels_path_from_image_path(image.path)
+        if not osp.exists(anno_path):
+            return []
+        return super()._parse_annotations(image, item_id=item_id)
 
     @cached_property
     def _config(self) -> Dict[str, Any]:
@@ -404,12 +436,11 @@ class YOLOv8Extractor(YoloExtractor):
             path = osp.join(*parts[2:])  # pylint: disable=no-value-for-parameter
         return osp.splitext(path)[0]
 
-    def _iterate_over_image_paths(
-        self, subset_name: str, subset_images_source: Union[str, List[str]]
-    ):
+    def _get_subset_image_paths(self, subset_name: str):
+        subset_images_source = self._config[subset_name]
         if isinstance(subset_images_source, str):
             if subset_images_source.endswith(YoloPath.SUBSET_LIST_EXT):
-                yield from super()._iterate_over_image_paths(subset_name, subset_images_source)
+                yield from super()._get_subset_image_paths(subset_name)
             else:
                 path = osp.join(self._path, self.localize_path(subset_images_source))
                 if not osp.isdir(path):
@@ -424,7 +455,7 @@ class YOLOv8Extractor(YoloExtractor):
             yield from subset_images_source
 
 
-class YOLOv8SegmentationExtractor(YOLOv8Extractor):
+class YOLOv8SegmentationExtractor(YOLOv8DetectionExtractor):
     def _load_segmentation_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Polygon:
@@ -451,30 +482,7 @@ class YOLOv8SegmentationExtractor(YOLOv8Extractor):
         )
 
 
-class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
-    RECTANGLE_ANGLE_PRECISION = math.pi * 1 / 180
-
-    @classmethod
-    def _check_is_rectangle(
-        cls, p1: Tuple[int, int], p2: Tuple[int, int], p3: Tuple[int, int], p4: Tuple[int, int]
-    ) -> None:
-        p12_angle = math.atan2(p2[0] - p1[0], p2[1] - p1[1])
-        p23_angle = math.atan2(p3[0] - p2[0], p3[1] - p2[1])
-        p43_angle = math.atan2(p3[0] - p4[0], p3[1] - p4[1])
-        p14_angle = math.atan2(p4[0] - p1[0], p4[1] - p1[1])
-
-        if (
-            abs(p12_angle - p43_angle) > 0.001
-            or abs(p23_angle - p14_angle) > cls.RECTANGLE_ANGLE_PRECISION
-        ):
-            raise InvalidAnnotationError(
-                "Given points do not form a rectangle: opposite sides have different slope angles."
-            )
-        if abs((p12_angle - p23_angle) % math.pi - math.pi / 2) > cls.RECTANGLE_ANGLE_PRECISION:
-            raise InvalidAnnotationError(
-                "Given points do not form a rectangle: adjacent sides are not orthogonal."
-            )
-
+class YOLOv8OrientedBoxesExtractor(YOLOv8DetectionExtractor):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -491,18 +499,11 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
             )
             for idx, (x, y) in enumerate(take_by(parts[1:], 2))
         ]
-        self._check_is_rectangle(*points)
 
-        (x1, y1), (x2, y2), (x3, y3), (x4, y4) = points
-
-        width = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
-        height = math.sqrt((x2 - x3) ** 2 + (y2 - y3) ** 2)
-        rotation = math.atan2(y2 - y1, x2 - x1)
-        if rotation < 0:
-            rotation += math.pi * 2
-
-        center_x = (x1 + x2 + x3 + x4) / 4
-        center_y = (y1 + y2 + y3 + y4) / 4
+        (center_x, center_y), (width, height), rotation = cv2.minAreaRect(
+            np.array(points, dtype=np.float32)
+        )
+        rotation = rotation % 180
 
         return Bbox(
             x=center_x - width / 2,
@@ -510,11 +511,11 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8Extractor):
             w=width,
             h=height,
             label=label_id,
-            attributes=(dict(rotation=math.degrees(rotation)) if abs(rotation) > 0.00001 else {}),
+            attributes=(dict(rotation=rotation) if abs(rotation) > 0.00001 else {}),
         )
 
 
-class YOLOv8PoseExtractor(YOLOv8Extractor):
+class YOLOv8PoseExtractor(YOLOv8DetectionExtractor):
     def __init__(
         self,
         *args,
@@ -572,7 +573,7 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
         if has_meta_file(self._path):
             return self._load_categories_from_meta_file()
 
-        number_of_points, _ = self._kpt_shape
+        max_number_of_points, _ = self._kpt_shape
         skeleton_labels = self._load_names_from_config_file()
 
         if self._skeleton_sub_labels:
@@ -584,16 +585,17 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
             if skeletons_with_wrong_sub_labels := [
                 skeleton
                 for skeleton in skeleton_labels
-                if len(self._skeleton_sub_labels[skeleton]) != number_of_points
+                if len(self._skeleton_sub_labels[skeleton]) > max_number_of_points
             ]:
                 raise InvalidAnnotationError(
-                    f"Number of points in skeletons according to config file is {number_of_points}. "
-                    f"Following skeletons have number of sub labels which differs: {skeletons_with_wrong_sub_labels}"
+                    f"Number of points in skeletons according to config file is {max_number_of_points}. "
+                    f"Following skeletons have more sub labels: {skeletons_with_wrong_sub_labels}"
                 )
 
         children_labels = self._skeleton_sub_labels or {
             skeleton_label: [
-                f"{skeleton_label}_point_{point_index}" for point_index in range(number_of_points)
+                f"{skeleton_label}_point_{point_index}"
+                for point_index in range(max_number_of_points)
             ]
             for skeleton_label in skeleton_labels
         }
@@ -625,12 +627,12 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
-        number_of_points, values_per_point = self._kpt_shape
-        if len(parts) != 5 + number_of_points * values_per_point:
+        max_number_of_points, values_per_point = self._kpt_shape
+        if len(parts) != 5 + max_number_of_points * values_per_point:
             raise InvalidAnnotationError(
                 f"Unexpected field count {len(parts)} in the skeleton description. "
                 "Expected 5 fields (label, xc, yc, w, h)"
-                f"and then {values_per_point} for each of {number_of_points} points"
+                f"and then {values_per_point} for each of {max_number_of_points} points"
             )
 
         label_id = self._map_label_id(parts[0])
@@ -674,7 +676,83 @@ class YOLOv8PoseExtractor(YOLOv8Extractor):
                 ),
             ]
         ]
-        return Skeleton(
-            points,
-            label=label_id,
+        return Skeleton(points, label=label_id)
+
+
+class YOLOv8ClassificationExtractor(YoloBaseExtractor):
+    def _get_subset_names(self):
+        return [
+            subset_name
+            for subset_name in os.listdir(self._path)
+            if osp.isdir(osp.join(self._path, subset_name))
+        ]
+
+    def _get_image_paths_for_subset_and_label(self, subset_name: str, label_name: str) -> list[str]:
+        category_folder = osp.join(self._path, subset_name, label_name)
+        image_list_path = osp.join(category_folder, YOLOv8ClassificationFormat.LABELS_FILE)
+        if osp.isfile(image_list_path):
+            with open(image_list_path, "r", encoding="utf-8") as f:
+                yield from (osp.join(subset_name, label_name, line.strip()) for line in f)
+
+        yield from (
+            osp.relpath(image_path, self._path)
+            for image_path in find_images(category_folder, recursive=True)
         )
+
+    def _get_item_info_from_labels_file(self, subset_name: str) -> Optional[Dict]:
+        subset_path = osp.join(self._path, subset_name)
+        labels_file_path = osp.join(subset_path, YOLOv8ClassificationFormat.LABELS_FILE)
+        if osp.isfile(labels_file_path):
+            return parse_json_file(labels_file_path)
+
+    def _get_lazy_subset_items(self, subset_name: str):
+        subset_path = osp.join(self._path, subset_name)
+
+        if item_info := self._get_item_info_from_labels_file(subset_name):
+            return {id: osp.join(subset_name, item_info[id]["path"]) for id in item_info}
+
+        return {
+            self.name_from_path(image_path): image_path
+            for category_name in os.listdir(subset_path)
+            if osp.isdir(osp.join(subset_path, category_name))
+            for image_path in self._get_image_paths_for_subset_and_label(subset_name, category_name)
+        }
+
+    def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:
+        item_id, subset_name = item_id
+        if item_info := self._get_item_info_from_labels_file(subset_name):
+            label_names = item_info[item_id]["labels"]
+        else:
+            subset_path = osp.join(self._path, subset_name)
+            relative_image_path = osp.relpath(image.path, subset_path)
+            label_names = [split_path(relative_image_path)[0]]
+
+        return [
+            Label(label=self._categories[AnnotationType.label].find(label)[0])
+            for label in label_names
+            if label != YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
+        ]
+
+    def _load_categories(self) -> CategoriesInfo:
+        categories = set()
+        for subset in os.listdir(self._path):
+            subset_path = osp.join(self._path, subset)
+            if not osp.isdir(subset_path):
+                continue
+
+            if item_info := self._get_item_info_from_labels_file(subset):
+                categories.update(*[item_info[item_id]["labels"] for item_id in item_info])
+
+            for label_dir_name in os.listdir(subset_path):
+                if not osp.isdir(osp.join(subset_path, label_dir_name)):
+                    continue
+                if label_dir_name == YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL:
+                    continue
+                categories.add(label_dir_name)
+        return {AnnotationType.label: LabelCategories.from_iterable(sorted(categories))}
+
+    @classmethod
+    def name_from_path(cls, path_from_root: str) -> str:
+        subset_folder = split_path(path_from_root)[0]
+        path_from_subset_folder = osp.relpath(path_from_root, subset_folder)
+        return osp.splitext(path_from_subset_folder)[0]

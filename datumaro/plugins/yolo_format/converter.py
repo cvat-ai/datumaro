@@ -3,11 +3,12 @@
 #
 # SPDX-License-Identifier: MIT
 
+import itertools
 import logging as log
 import math
 import os
 import os.path as osp
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from functools import cached_property
 from itertools import cycle
 from typing import Dict, List, Optional
@@ -28,9 +29,10 @@ from datumaro.components.dataset import DatasetPatch, ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, IExtractor
 from datumaro.components.media import Image
-from datumaro.util import str_to_bool
+from datumaro.util import dump_json_file, str_to_bool
+from datumaro.util.os_util import split_path
 
-from .format import YoloPath, YOLOv8Path
+from .format import YoloPath, YOLOv8ClassificationFormat, YOLOv8Path
 
 
 def _make_yolo_bbox(img_size, box):
@@ -194,6 +196,10 @@ class YoloConverter(Converter):
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
+    def _save_annotation_file(self, annotation_path, yolo_annotation):
+        with open(annotation_path, "w", encoding="utf-8") as f:
+            f.write(yolo_annotation)
+
     def _export_item_annotation(self, item: DatasetItem, subset_dir: str) -> None:
         try:
             height, width = item.media.size
@@ -208,8 +214,7 @@ class YoloConverter(Converter):
             annotation_path = osp.join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             os.makedirs(osp.dirname(annotation_path), exist_ok=True)
 
-            with open(annotation_path, "w", encoding="utf-8") as f:
-                f.write(yolo_annotation)
+            self._save_annotation_file(annotation_path, yolo_annotation)
 
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
@@ -222,7 +227,19 @@ class YoloConverter(Converter):
 
         values = _make_yolo_bbox((width, height), anno.points)
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (anno.label, string_values)
+        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
+
+    @cached_property
+    def _labels_to_save(self) -> List[int]:
+        return [
+            label_id
+            for label_id, label in enumerate(self._extractor.categories()[AnnotationType.label])
+            if label.parent == ""
+        ]
+
+    @cached_property
+    def _map_labels_for_save(self) -> Dict[int, int]:
+        return {label_id: index for index, label_id in enumerate(self._labels_to_save)}
 
     @staticmethod
     def _make_image_subset_folder(save_dir: str, subset: str) -> str:
@@ -261,7 +278,7 @@ class YoloConverter(Converter):
                 os.remove(ann_path)
 
 
-class YOLOv8Converter(YoloConverter):
+class YOLOv8DetectionConverter(YoloConverter):
     RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
 
     def __init__(
@@ -276,6 +293,10 @@ class YOLOv8Converter(YoloConverter):
         super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
         self._config_filename = config_file or YOLOv8Path.DEFAULT_CONFIG_FILE
 
+    def _save_annotation_file(self, annotation_path, yolo_annotation):
+        if yolo_annotation:
+            super()._save_annotation_file(annotation_path, yolo_annotation)
+
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
         parser = super().build_cmdline_parser(**kwargs)
@@ -287,15 +308,19 @@ class YOLOv8Converter(YoloConverter):
         )
         return parser
 
-    def _save_config_files(self, subset_lists: Dict[str, str]):
+    def _save_config_files(self, subset_lists: Dict[str, str], **extra_config_fields):
         extractor = self._extractor
         save_dir = self._save_dir
         with open(osp.join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
             label_categories = extractor.categories()[AnnotationType.label]
             data = dict(
                 path=".",
-                names={idx: label.name for idx, label in enumerate(label_categories.items)},
+                names={
+                    index: label_categories[label_id].name
+                    for label_id, index in self._map_labels_for_save.items()
+                },
                 **subset_lists,
+                **extra_config_fields,
             )
             yaml.dump(data, f)
 
@@ -308,64 +333,46 @@ class YOLOv8Converter(YoloConverter):
         return osp.join(save_dir, YOLOv8Path.LABELS_FOLDER_NAME, subset)
 
 
-class YOLOv8SegmentationConverter(YOLOv8Converter):
+class YOLOv8SegmentationConverter(YOLOv8DetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Polygon):
             return
         values = [value / size for value, size in zip(anno.points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (anno.label, string_values)
+        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
 
 
-class YOLOv8OrientedBoxesConverter(YOLOv8Converter):
+class YOLOv8OrientedBoxesConverter(YOLOv8DetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Bbox):
             return
         points = _bbox_annotation_as_polygon(anno)
         values = [value / size for value, size in zip(points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (anno.label, string_values)
+        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
 
 
-class YOLOv8PoseConverter(YOLOv8Converter):
+class YOLOv8PoseConverter(YOLOv8DetectionConverter):
     @cached_property
-    def _map_labels_for_save(self):
+    def _labels_to_save(self) -> List[int]:
         point_categories = self._extractor.categories().get(
             AnnotationType.points, PointsCategories.from_iterable([])
         )
-        return {label_id: index for index, label_id in enumerate(sorted(point_categories.items))}
+        return sorted(point_categories.items)
 
-    def _save_config_files(self, subset_lists: Dict[str, str]):
-        extractor = self._extractor
-        save_dir = self._save_dir
+    @cached_property
+    def _max_number_of_points(self):
+        point_categories = self._extractor.categories().get(AnnotationType.points)
+        if point_categories is None or len(point_categories) == 0:
+            return 0
+        return max(len(category.labels) for category in point_categories.items.values())
 
-        point_categories = extractor.categories().get(
-            AnnotationType.points, PointsCategories.from_iterable([])
+    def _save_config_files(self, subset_lists: Dict[str, str], **extra_config_fields):
+        super()._save_config_files(
+            subset_lists=subset_lists,
+            kpt_shape=[self._max_number_of_points, 3],
+            **extra_config_fields,
         )
-        if len(set(len(cat.labels) for cat in point_categories.items.values())) > 1:
-            raise DatasetExportError(
-                "Can't export: skeletons should have the same number of points"
-            )
-        n_of_points = (
-            len(next(iter(point_categories.items.values())).labels)
-            if len(point_categories) > 0
-            else 0
-        )
-
-        with open(osp.join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
-            label_categories = extractor.categories()[AnnotationType.label]
-            parent_categories = {
-                self._map_labels_for_save[label_id]: label_categories.items[label_id].name
-                for label_id in point_categories.items
-            }
-            assert set(parent_categories.keys()) == set(range(len(parent_categories)))
-            data = dict(
-                path=".",
-                names=parent_categories,
-                kpt_shape=[n_of_points, 3],
-                **subset_lists,
-            )
-            yaml.dump(data, f)
 
     def _make_annotation_line(self, width: int, height: int, skeleton: Annotation) -> Optional[str]:
         if skeleton.label is None or not isinstance(skeleton, Skeleton):
@@ -385,7 +392,7 @@ class YOLOv8PoseConverter(YOLOv8Converter):
             .labels
         ]
 
-        points_values = [f"0.0, 0.0, {Points.Visibility.absent.value}"] * len(point_label_ids)
+        points_values = [f"0.0 0.0 {Points.Visibility.absent.value}"] * self._max_number_of_points
         for element in skeleton.elements:
             assert len(element.points) == 2 and len(element.visibility) == 1
             position = point_label_ids.index(element.label)
@@ -394,3 +401,87 @@ class YOLOv8PoseConverter(YOLOv8Converter):
             points_values[position] = f"{x:.6f} {y:.6f} {element.visibility[0].value}"
 
         return f"{self._map_labels_for_save[skeleton.label]} {bbox_string_values} {' '.join(points_values)}\n"
+
+
+class YOLOv8ClassificationConverter(Converter):
+    DEFAULT_IMAGE_EXT = ".jpg"
+
+    def apply(self):
+        save_dir = self._save_dir
+
+        if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
+            raise MediaTypeError("Media type is not an image")
+
+        os.makedirs(save_dir, exist_ok=True)
+        self._used_paths = defaultdict(set)
+
+        if self._save_dataset_meta:
+            self._save_meta_file(self._save_dir)
+
+        labels = self._extractor.categories()[AnnotationType.label]
+
+        subsets = self._extractor.subsets()
+        pbars = self._ctx.progress_reporter.split(len(subsets))
+        for (subset_name, subset), pbar in zip(subsets.items(), pbars):
+            if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
+                subset_name = YoloPath.DEFAULT_SUBSET_NAME
+
+            os.makedirs(osp.join(self._save_dir, subset_name), exist_ok=True)
+
+            items_info = defaultdict(dict)
+
+            for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
+                try:
+                    items_info[item.id]["labels"] = [
+                        labels[anno.label].name
+                        for anno in item.annotations
+                        if anno.type == AnnotationType.label
+                    ]
+                    for label_name in items_info[item.id]["labels"] or [
+                        YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
+                    ]:
+                        items_info[item.id]["path"] = self._export_media_for_label(
+                            item, subset_name, label_name
+                        )
+
+                except Exception as e:
+                    self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
+
+            labels_path = osp.join(
+                self._save_dir,
+                subset_name,
+                YOLOv8ClassificationFormat.LABELS_FILE,
+            )
+            dump_json_file(labels_path, items_info)
+
+    def _generate_path_for_item(self, item: DatasetItem, label_folder_path: str) -> str:
+        item_name = base_item_name = split_path(item.id)[-1]
+        if item_name in self._used_paths[label_folder_path]:
+            for index in itertools.count():
+                item_name = f"{base_item_name}.{index}"
+                if item_name not in self._used_paths[label_folder_path]:
+                    break
+        self._used_paths[label_folder_path].add(item_name)
+        return self._make_image_filename(item, name=item_name, subdir=label_folder_path)
+
+    def _export_media_for_label(self, item: DatasetItem, subset_name: str, label_name: str) -> str:
+        try:
+            if not item.media or not (item.media.has_data or item.media.has_size):
+                raise DatasetExportError(
+                    "Failed to export item '%s': " "item has no image info" % item.id
+                )
+            subset_path = osp.join(self._save_dir, subset_name)
+            label_folder_path = osp.join(subset_path, label_name)
+
+            image_fpath = self._generate_path_for_item(item, label_folder_path)
+
+            if self._save_media:
+                if item.media:
+                    os.makedirs(label_folder_path, exist_ok=True)
+                    self._save_image(item, image_fpath)
+                else:
+                    log.warning("Item '%s' has no image" % item.id)
+
+            return osp.relpath(image_fpath, subset_path)
+        except Exception as e:
+            self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))

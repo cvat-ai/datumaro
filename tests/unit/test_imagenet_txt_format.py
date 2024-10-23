@@ -11,6 +11,7 @@ from datumaro.components.media import Image
 from datumaro.plugins.data_formats.imagenet_txt import ImagenetTxtConverter, ImagenetTxtImporter
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, compare_datasets
 
 
@@ -166,13 +167,9 @@ class ImagenetTxtFormatTest(TestCase):
             compare_datasets(self, dataset, parsed_dataset, require_media=True)
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets/imagenet_txt_dataset/basic")
-DUMMY_DATASET_WITH_CUSTOM_LABELS_DIR = osp.join(
-    osp.dirname(__file__), "assets/imagenet_txt_dataset/custom_labels"
-)
-DUMMY_DATASET_WITH_NO_LABELS_DIR = osp.join(
-    osp.dirname(__file__), "assets/imagenet_txt_dataset/no_labels"
-)
+DUMMY_DATASET_DIR = get_test_asset_path("imagenet_txt_dataset", "basic")
+DUMMY_DATASET_WITH_CUSTOM_LABELS_DIR = get_test_asset_path("imagenet_txt_dataset", "custom_labels")
+DUMMY_DATASET_WITH_NO_LABELS_DIR = get_test_asset_path("imagenet_txt_dataset", "no_labels")
 
 
 class ImagenetTxtImporterTest(TestCase):

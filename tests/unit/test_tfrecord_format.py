@@ -14,6 +14,7 @@ from datumaro.util.image import encode_image
 from datumaro.util.tf_util import check_import
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 try:

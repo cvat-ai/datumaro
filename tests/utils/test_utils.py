@@ -9,14 +9,15 @@ import tempfile
 import unittest
 import unittest.mock
 import warnings
+from copy import copy
 from enum import Enum, auto
 from glob import glob
-from typing import Any, Collection, List, Optional, Union
+from typing import Any, Callable, Collection, List, Optional, Union
 
 import pytest
 from typing_extensions import Literal
 
-from datumaro.components.annotation import AnnotationType
+from datumaro.components.annotation import Annotation, AnnotationType, Points
 from datumaro.components.dataset import Dataset, IDataset
 from datumaro.components.media import Image, MultiframeImage, PointCloud
 from datumaro.util import current_function_name, filter_dict, find
@@ -111,26 +112,34 @@ def compare_categories(test, expected, actual):
 IGNORE_ALL = "*"
 
 
-def _compare_annotations(expected, actual, ignored_attrs=None):
-    if not ignored_attrs:
+def compare_annotations(expected: Annotation, actual: Annotation, ignored_attrs=None):
+    is_skeleton = expected.type == actual.type == AnnotationType.skeleton
+    if not ignored_attrs and not is_skeleton:
         return expected == actual
 
-    a_attr = expected.attributes
-    b_attr = actual.attributes
+    ignored_attrs = ignored_attrs or []
+
+    expected = copy(expected)
+    actual = copy(actual)
 
     if ignored_attrs != IGNORE_ALL:
-        expected.attributes = filter_dict(a_attr, exclude_keys=ignored_attrs)
-        actual.attributes = filter_dict(b_attr, exclude_keys=ignored_attrs)
+        expected.attributes = filter_dict(expected.attributes, exclude_keys=ignored_attrs)
+        actual.attributes = filter_dict(actual.attributes, exclude_keys=ignored_attrs)
     else:
         expected.attributes = {}
         actual.attributes = {}
 
-    r = expected == actual
+    if is_skeleton:
+        expected.elements = sorted(
+            filter(lambda p: p.visibility[0] != Points.Visibility.absent, expected.elements),
+            key=lambda p: p.label if p.label is not None else -1,
+        )
+        actual.elements = sorted(
+            filter(lambda p: p.visibility[0] != Points.Visibility.absent, actual.elements),
+            key=lambda p: p.label if p.label is not None else -1,
+        )
 
-    expected.attributes = a_attr
-    actual.attributes = b_attr
-
-    return r
+    return expected == actual
 
 
 def compare_datasets(
@@ -140,6 +149,7 @@ def compare_datasets(
     ignored_attrs: Union[None, Literal["*"], Collection[str]] = None,
     require_media: bool = False,
     require_images: bool = False,
+    compare_annotations_function: Callable = compare_annotations,
 ):
     compare_categories(test, expected.categories(), actual.categories())
 
@@ -184,7 +194,8 @@ def compare_datasets(
             test.assertFalse(len(ann_b_matches) == 0, "ann id: %s" % ann_a.id)
 
             ann_b = find(
-                ann_b_matches, lambda x: _compare_annotations(x, ann_a, ignored_attrs=ignored_attrs)
+                ann_b_matches,
+                lambda x: compare_annotations_function(x, ann_a, ignored_attrs=ignored_attrs),
             )
             if ann_b is None:
                 test.fail(
@@ -250,7 +261,7 @@ def compare_datasets_3d(
             test.assertFalse(len(ann_b_matches) == 0, "ann id: %s" % ann_a.id)
 
             ann_b = find(
-                ann_b_matches, lambda x: _compare_annotations(x, ann_a, ignored_attrs=ignored_attrs)
+                ann_b_matches, lambda x: compare_annotations(x, ann_a, ignored_attrs=ignored_attrs)
             )
             if ann_b is None:
                 test.fail("ann %s, candidates %s" % (ann_a, ann_b_matches))

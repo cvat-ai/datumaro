@@ -1,7 +1,7 @@
 cityscapes\_format module
 -------------------------
 
-.. automodule:: datumaro.plugins.cityscapes_format
+.. automodule:: datumaro.plugins.data_formats.cityscapes
    :members:
    :undoc-members:
    :private-members:

@@ -1,7 +1,7 @@
 converter module
 ----------------
 
-.. automodule:: datumaro.plugins.tf_detection_api_format.converter
+.. automodule:: datumaro.plugins.data_formats.tf_detection_api.converter
    :members:
    :undoc-members:
    :private-members:

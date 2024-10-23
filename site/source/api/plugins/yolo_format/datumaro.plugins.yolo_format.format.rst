@@ -1,7 +1,7 @@
 format module
 -------------
 
-.. automodule:: datumaro.plugins.yolo_format.format
+.. automodule:: datumaro.plugins.data_formats.yolo.format
    :members:
    :undoc-members:
    :private-members:

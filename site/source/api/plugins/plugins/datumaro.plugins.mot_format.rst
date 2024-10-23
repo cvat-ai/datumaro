@@ -2,9 +2,9 @@ mot\_format module
 ------------------
 
 
-.. automodule:: datumaro.plugins.mot_format
+.. automodule:: datumaro.plugins.data_formats.mot
 
-   .. autoclass:: datumaro.plugins.mot_format.MotLabel
+   .. autoclass:: datumaro.plugins.data_formats.mot.MotLabel
       :show-inheritance:
 
       .. py:attribute:: pedestrian = 1

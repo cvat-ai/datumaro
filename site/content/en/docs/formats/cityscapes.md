@@ -174,7 +174,7 @@ from collections import OrderedDict
 
 import numpy as np
 import datumaro as dm
-import datumaro.plugins.cityscapes_format as Cityscapes
+import datumaro.plugins.data_formats.cityscapes as Cityscapes
 
 label_map = OrderedDict()
 label_map['background'] = (0, 0, 0)

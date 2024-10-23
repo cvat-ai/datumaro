@@ -1,7 +1,7 @@
 lfw\_format module
 ------------------
 
-.. automodule:: datumaro.plugins.lfw_format
+.. automodule:: datumaro.plugins.data_formats.lfw
    :members:
    :undoc-members:
    :private-members:

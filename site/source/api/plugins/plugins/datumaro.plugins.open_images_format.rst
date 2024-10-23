@@ -1,7 +1,7 @@
 open\_images\_format module
 ---------------------------
 
-.. automodule:: datumaro.plugins.open_images_format
+.. automodule:: datumaro.plugins.data_formats.open_images
    :members:
    :undoc-members:
    :private-members:

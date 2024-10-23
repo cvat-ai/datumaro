@@ -1,7 +1,7 @@
 extractor module
 ----------------
 
-.. automodule:: datumaro.plugins.coco_format.extractor
+.. automodule:: datumaro.plugins.data_formats.coco.extractor
    :members:
    :undoc-members:
    :private-members:

@@ -1,7 +1,7 @@
 widerface\_format module
 ------------------------
 
-.. automodule:: datumaro.plugins.widerface_format
+.. automodule:: datumaro.plugins.data_formats.widerface
    :members:
    :undoc-members:
    :private-members:

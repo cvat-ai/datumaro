@@ -1,7 +1,7 @@
 mnist\_format module
 --------------------
 
-.. automodule:: datumaro.plugins.mnist_format
+.. automodule:: datumaro.plugins.data_formats.mnist
    :members:
    :undoc-members:
    :private-members:

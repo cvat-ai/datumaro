@@ -1,7 +1,7 @@
 ade20k2017\_format module
 -------------------------
 
-.. automodule:: datumaro.plugins.ade20k2017_format
+.. automodule:: datumaro.plugins.data_formats.ade20k2017
    :members:
    :undoc-members:
    :private-members:

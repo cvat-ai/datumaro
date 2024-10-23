@@ -1,7 +1,7 @@
 format module
 -------------
 
-.. automodule:: datumaro.plugins.icdar_format.format
+.. automodule:: datumaro.plugins.data_formats.icdar.format
    :members:
    :undoc-members:
    :private-members:

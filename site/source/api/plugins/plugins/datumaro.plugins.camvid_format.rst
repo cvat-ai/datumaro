@@ -1,7 +1,7 @@
 camvid\_format module
 ---------------------
 
-.. automodule:: datumaro.plugins.camvid_format
+.. automodule:: datumaro.plugins.data_formats.camvid
    :members:
    :undoc-members:
    :private-members:

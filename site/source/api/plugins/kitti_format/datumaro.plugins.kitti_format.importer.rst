@@ -1,7 +1,7 @@
 importer module
 ---------------
 
-.. automodule:: datumaro.plugins.kitti_format.importer
+.. automodule:: datumaro.plugins.data_formats.kitti.importer
    :members:
    :undoc-members:
    :private-members:

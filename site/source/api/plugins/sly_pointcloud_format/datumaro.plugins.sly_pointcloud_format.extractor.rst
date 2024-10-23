@@ -1,7 +1,7 @@
 extractor module
 ----------------
 
-.. automodule:: datumaro.plugins.sly_pointcloud_format.extractor
+.. automodule:: datumaro.plugins.data_formats.sly_pointcloud.extractor
    :members:
    :undoc-members:
    :private-members:

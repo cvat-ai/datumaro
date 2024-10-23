@@ -1,7 +1,7 @@
 image\_dir\_format module
 -------------------------
 
-.. automodule:: datumaro.plugins.image_dir_format
+.. automodule:: datumaro.plugins.data_formats.image_dir
    :members:
    :undoc-members:
    :private-members:

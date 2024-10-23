@@ -1,7 +1,7 @@
 converter module
 ----------------
 
-.. automodule:: datumaro.plugins.voc_format.converter
+.. automodule:: datumaro.plugins.data_formats.voc.converter
    :members:
    :undoc-members:
    :private-members:

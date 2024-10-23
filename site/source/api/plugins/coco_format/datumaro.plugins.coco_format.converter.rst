@@ -1,7 +1,7 @@
 converter module
 ----------------
 
-.. automodule:: datumaro.plugins.coco_format.converter
+.. automodule:: datumaro.plugins.data_formats.coco.converter
    :members:
    :undoc-members:
    :private-members:

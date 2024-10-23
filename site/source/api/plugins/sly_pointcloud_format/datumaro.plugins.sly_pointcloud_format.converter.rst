@@ -1,7 +1,7 @@
 converter module
 ----------------
 
-.. automodule:: datumaro.plugins.sly_pointcloud_format.converter
+.. automodule:: datumaro.plugins.data_formats.sly_pointcloud.converter
    :members:
    :undoc-members:
    :private-members:

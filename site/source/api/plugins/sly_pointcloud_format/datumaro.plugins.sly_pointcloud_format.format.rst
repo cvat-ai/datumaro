@@ -1,7 +1,7 @@
 format module
 -------------
 
-.. automodule:: datumaro.plugins.sly_pointcloud_format.format
+.. automodule:: datumaro.plugins.data_formats.sly_pointcloud.format
    :members:
    :undoc-members:
    :private-members:

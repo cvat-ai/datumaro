@@ -1,7 +1,7 @@
 converter module
 ----------------
 
-.. automodule:: datumaro.plugins.yolo_format.converter
+.. automodule:: datumaro.plugins.data_formats.yolo.converter
    :members:
    :undoc-members:
    :private-members:

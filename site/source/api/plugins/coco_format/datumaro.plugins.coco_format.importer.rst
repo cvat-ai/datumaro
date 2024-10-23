@@ -1,7 +1,7 @@
 importer module
 ---------------
 
-.. automodule:: datumaro.plugins.coco_format.importer
+.. automodule:: datumaro.plugins.data_formats.coco.importer
    :members:
    :undoc-members:
    :private-members:

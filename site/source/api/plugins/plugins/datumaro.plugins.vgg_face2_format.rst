@@ -1,7 +1,7 @@
 vgg\_face2\_format module
 -------------------------
 
-.. automodule:: datumaro.plugins.vgg_face2_format
+.. automodule:: datumaro.plugins.data_formats.vgg_face2
    :members:
    :undoc-members:
    :private-members:

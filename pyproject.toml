@@ -12,12 +12,12 @@ branch = true
 # relative_files = true # does not work?
 
 source = [
-    "datumaro/",
+    "src/",
 ]
 
 omit = [
-    "datumaro/__main__.py",
-    "datumaro/version.py",
+    "src/datumaro/__main__.py",
+    "src/datumaro/version.py",
     "tests/*",
 ]
 

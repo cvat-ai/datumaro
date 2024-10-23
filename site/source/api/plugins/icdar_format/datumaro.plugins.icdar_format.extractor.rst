@@ -1,7 +1,7 @@
 extractor module
 ----------------
 
-.. automodule:: datumaro.plugins.icdar_format.extractor
+.. automodule:: datumaro.plugins.data_formats.icdar.extractor
    :members:
    :undoc-members:
    :private-members:

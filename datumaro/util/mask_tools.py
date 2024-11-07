@@ -317,7 +317,7 @@ def is_uncompressed_rle(obj: Segment) -> bool:
 def is_polygon_group(obj: Segment) -> bool:
     return (
         isinstance(obj, list)
-        and isinstance(obj[0], list)
+        and isinstance(obj[0], (list, tuple))
         and (len(obj[0]) == 0 or isinstance(obj[0][0], int))
     )
 

@@ -534,8 +534,8 @@ class CompiledMask:
 @attrs(slots=True, order=False)
 class _Shape(Annotation):
     # Flattened list of point coordinates
-    points: List[float] = field(
-        converter=lambda x: np.around(x, COORDINATE_ROUNDING_DIGITS).tolist(), factory=list
+    points: Tuple[float] = field(
+        converter=lambda x: tuple(np.around(x, COORDINATE_ROUNDING_DIGITS).tolist()), factory=tuple
     )
 
     label: Optional[int] = field(

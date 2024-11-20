@@ -145,6 +145,38 @@ class LfwFormatTest(TestCase):
             compare_datasets(self, source_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_with_only_landmarks(self):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="name0_0001",
+                    subset="test",
+                    media=Image(data=np.ones((2, 5, 3))),
+                    annotations=[
+                        Points([0, 4, 3, 3, 2, 2, 1, 0, 3, 0], label=0),
+                    ],
+                ),
+            ],
+            categories=["name0"],
+        )
+
+        target_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="name0_0001",
+                    subset="test",
+                    media=Image(data=np.ones((2, 5, 3))),
+                ),
+            ],
+            categories=["name0"],
+        )
+
+        LfwConverter.convert(source_dataset, "./lfw", save_media=True)
+        parsed_dataset = Dataset.import_from("./lfw", "lfw")
+
+        compare_datasets(self, parsed_dataset, target_dataset)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_with_no_subsets(self):
         source_dataset = Dataset.from_iterable(
             [

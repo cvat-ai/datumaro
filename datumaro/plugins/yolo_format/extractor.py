@@ -415,11 +415,18 @@ class YOLOv8DetectionExtractor(YoloExtractor):
         return {AnnotationType.label: LabelCategories.from_iterable(names)}
 
     def _get_labels_path_from_image_path(self, image_path: str) -> str:
-        relative_image_path = osp.relpath(
-            image_path, osp.join(self._path, YOLOv8Path.IMAGES_FOLDER_NAME)
-        )
-        relative_labels_path = osp.splitext(relative_image_path)[0] + YOLOv8Path.LABELS_EXT
-        return osp.join(self._path, YOLOv8Path.LABELS_FOLDER_NAME, relative_labels_path)
+        split_rel_path = osp.relpath(image_path, self._path).split(osp.sep, 2)
+
+        split_rel_path[
+            next(
+                index
+                for index in range(len(split_rel_path) - 1, -1, -1)
+                if split_rel_path[index] == YOLOv8Path.IMAGES_FOLDER_NAME
+            )
+        ] = YOLOv8Path.LABELS_FOLDER_NAME
+        split_rel_path[2] = osp.splitext(split_rel_path[2])[0] + YOLOv8Path.LABELS_EXT
+
+        return osp.join(self._path, *split_rel_path)
 
     @classmethod
     def name_from_path(cls, path: str) -> str:

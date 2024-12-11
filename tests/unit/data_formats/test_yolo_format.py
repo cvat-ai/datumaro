@@ -1147,6 +1147,7 @@ class YOLOv8DetectionImporterTest(YoloImporterTest):
     IMPORTER = YOLOv8DetectionImporter
     ASSETS = [
         "yolov8_detection",
+        "yolov8_detection_reversed_folders",
         "yolov8_detection_with_list_of_imgs",
         "yolov8_detection_with_subset_txt",
         "yolov8_detection_with_list_of_names",

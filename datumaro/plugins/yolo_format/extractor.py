@@ -417,7 +417,9 @@ class YOLOv8DetectionExtractor(YoloExtractor):
     def _get_labels_path_from_image_path(self, image_path: str) -> str:
         rel_image_path = osp.relpath(image_path, self._path)
         split_rel_path = rel_image_path.split(osp.sep, 2)
-        if len(split_rel_path) < 3 or not any(pc == YOLOv8Path.IMAGES_FOLDER_NAME for pc in split_rel_path[:2]):
+        if len(split_rel_path) < 3 or not any(
+            pc == YOLOv8Path.IMAGES_FOLDER_NAME for pc in split_rel_path[:2]
+        ):
             raise InvalidAnnotationError(f"Malformed folder structure for image {rel_image_path}")
 
         split_rel_path[

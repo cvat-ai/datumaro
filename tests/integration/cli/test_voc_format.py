@@ -9,8 +9,7 @@ from datumaro.components.annotation import Bbox, Label, Mask
 from datumaro.components.dataset import Dataset, DatasetItem
 from datumaro.components.media import Image
 
-from ..requirements import Requirements, mark_requirement
-
+from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir, compare_datasets
 from tests.utils.test_utils import run_datum as run
 

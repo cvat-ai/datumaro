@@ -9,8 +9,7 @@ from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.components.project import Dataset, Project
 
-from ..requirements import Requirements, mark_requirement
-
+from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir, compare_datasets
 from tests.utils.test_utils import run_datum as run
 

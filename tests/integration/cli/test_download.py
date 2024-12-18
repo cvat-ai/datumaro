@@ -5,8 +5,7 @@ from unittest.case import skipIf
 from datumaro.components.dataset import Dataset
 from datumaro.components.extractor_tfds import AVAILABLE_TFDS_DATASETS, TFDS_EXTRACTOR_AVAILABLE
 
-from ..requirements import Requirements, mark_requirement
-
+from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir, compare_datasets, mock_tfds_data
 from tests.utils.test_utils import run_datum as run
 

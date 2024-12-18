@@ -5,9 +5,8 @@ from unittest.case import TestCase
 from datumaro.components.media_manager import MediaManager
 from datumaro.util.scope import on_exit_do, scope_add, scoped
 
-from ..requirements import Requirements, mark_requirement
-from ..test_video import make_sample_video  # pylint: disable=unused-import
-
+from tests.requirements import Requirements, mark_requirement
+from tests.test_video import make_sample_video  # pylint: disable=unused-import
 from tests.utils.test_utils import TestDir
 from tests.utils.test_utils import run_datum as run
 

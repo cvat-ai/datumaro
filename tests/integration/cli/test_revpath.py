@@ -14,9 +14,8 @@ from datumaro.components.extractor import DatasetItem
 from datumaro.components.project import Project
 from datumaro.util.scope import scope_add, scoped
 
-from ..conftest import ASSETS_DIR
-from ..requirements import Requirements, mark_requirement
-
+from tests.conftest import ASSETS_DIR
+from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir
 
 

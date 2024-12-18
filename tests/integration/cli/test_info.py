@@ -10,8 +10,7 @@ import pytest
 
 from datumaro.util import parse_json
 
-from ..requirements import Requirements, mark_requirement
-
+from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import run_datum
 
 DUMMY_DATASET_DIR = osp.join(

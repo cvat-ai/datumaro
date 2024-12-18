@@ -13,12 +13,13 @@ from datumaro.plugins.lfw_format import LfwImporter
 from datumaro.util.os_util import suppress_output
 
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir
 from tests.utils.test_utils import run_datum as run
 
-ADE20K2017_DIR = osp.join(osp.dirname(__file__), "../assets/ade20k2017_dataset/dataset")
-ADE20K2020_DIR = osp.join(osp.dirname(__file__), "../assets/ade20k2020_dataset/dataset")
-LFW_DIR = osp.join(osp.dirname(__file__), "../assets/lfw_dataset")
+ADE20K2017_DIR = get_test_asset_path("ade20k2017_dataset", "dataset")
+ADE20K2020_DIR = get_test_asset_path("ade20k2020_dataset", "dataset")
+LFW_DIR = get_test_asset_path("lfw_dataset")
 
 
 class DetectFormatTest(TestCase):

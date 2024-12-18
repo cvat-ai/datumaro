@@ -12,23 +12,18 @@ from datumaro.components.media import Image
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
-DUMMY_LABELS_SEGM_DATASET_DIR = osp.join(
-    osp.dirname(__file__), "assets", "synthia_dataset", "labels_segm_dataset"
+DUMMY_LABELS_SEGM_DATASET_DIR = get_test_asset_path("synthia_dataset", "labels_segm_dataset")
+
+DUMMY_COLOR_SEGM_DATASET_DIR = get_test_asset_path("synthia_dataset", "color_segm_dataset")
+
+DUMMY_DATASET_DIR_CUSTOM_LABELMAP = get_test_asset_path(
+    "synthia_dataset", "dataset_with_custom_labelmap"
 )
 
-DUMMY_COLOR_SEGM_DATASET_DIR = osp.join(
-    osp.dirname(__file__), "assets", "synthia_dataset", "color_segm_dataset"
-)
-
-DUMMY_DATASET_DIR_CUSTOM_LABELMAP = osp.join(
-    osp.dirname(__file__), "assets", "synthia_dataset", "dataset_with_custom_labelmap"
-)
-
-DUMMY_DATASET_DIR_META_FILE = osp.join(
-    osp.dirname(__file__), "assets", "synthia_dataset", "dataset_with_meta_file"
-)
+DUMMY_DATASET_DIR_META_FILE = get_test_asset_path("synthia_dataset", "dataset_with_meta_file")
 
 
 class SynthiaImporterTest(TestCase):

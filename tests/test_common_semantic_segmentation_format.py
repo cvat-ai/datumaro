@@ -16,15 +16,12 @@ from datumaro.plugins.common_semantic_segmentation_format import (
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(
-    osp.dirname(__file__), "assets", "common_semantic_segmentation_dataset", "dataset"
-)
+DUMMY_DATASET_DIR = get_test_asset_path("common_semantic_segmentation_dataset", "dataset")
 
-DUMMY_NON_STANDARD_DATASET_DIR = osp.join(
-    osp.dirname(__file__),
-    "assets",
+DUMMY_NON_STANDARD_DATASET_DIR = get_test_asset_path(
     "common_semantic_segmentation_dataset",
     "non_standard_dataset",
 )

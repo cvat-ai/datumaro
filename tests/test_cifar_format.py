@@ -14,6 +14,7 @@ from datumaro.plugins.cifar_format import CifarConverter, CifarImporter
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, compare_datasets
 
 
@@ -260,9 +261,9 @@ class CifarFormatTest(TestCase):
             compare_datasets(self, source_dataset, parsed_dataset, require_media=True)
 
 
-DUMMY_10_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "cifar10_dataset")
+DUMMY_10_DATASET_DIR = get_test_asset_path("cifar10_dataset")
 
-DUMMY_100_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "cifar100_dataset")
+DUMMY_100_DATASET_DIR = get_test_asset_path("cifar100_dataset")
 
 
 class CifarImporterTest(TestCase):

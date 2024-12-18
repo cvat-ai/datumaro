@@ -13,6 +13,7 @@ from datumaro.plugins.widerface_format import WiderFaceConverter, WiderFaceImpor
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import IGNORE_ALL, TestDir, compare_datasets
 
 
@@ -400,7 +401,7 @@ class WiderFaceFormatTest(TestCase):
             )
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "widerface_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("widerface_dataset")
 
 
 class WiderFaceImporterTest(TestCase):

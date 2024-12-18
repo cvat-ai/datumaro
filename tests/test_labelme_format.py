@@ -14,6 +14,7 @@ from datumaro.plugins.labelme_format import LabelMeConverter, LabelMeImporter
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 
@@ -319,7 +320,7 @@ class LabelMeConverterTest(TestCase):
             self.assertTrue(osp.isfile(osp.join(test_dir, "dataset_meta.json")))
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "labelme_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("labelme_dataset")
 
 
 class LabelMeImporterTest(TestCase):

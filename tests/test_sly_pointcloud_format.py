@@ -13,9 +13,10 @@ from datumaro.plugins.sly_pointcloud_format.extractor import SuperviselyPointClo
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import Dimensions, TestDir, check_save_and_load, compare_datasets_3d
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "sly_pointcloud_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("sly_pointcloud_dataset")
 
 
 class SuperviselyPointcloudImporterTest(TestCase):

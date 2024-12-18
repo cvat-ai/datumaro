@@ -12,6 +12,7 @@ from datumaro.plugins.mnist_format import MnistConverter, MnistImporter
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, compare_datasets
 
 
@@ -190,7 +191,7 @@ class MnistFormatTest(TestCase):
             compare_datasets(self, source_dataset, parsed_dataset, require_media=True)
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "mnist_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("mnist_dataset")
 
 
 class MnistImporterTest(TestCase):

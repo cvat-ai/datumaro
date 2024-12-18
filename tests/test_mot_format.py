@@ -13,6 +13,7 @@ from datumaro.plugins.mot_format import MotSeqGtConverter, MotSeqImporter
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 
@@ -307,10 +308,8 @@ class MotConverterTest(TestCase):
             self.assertTrue(osp.isfile(osp.join(test_dir, "dataset_meta.json")))
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "mot_dataset", "mot_seq")
-DUMMY_SEQINFO_DATASET_DIR = osp.join(
-    osp.dirname(__file__), "assets", "mot_dataset", "mot_seq_with_seqinfo"
-)
+DUMMY_DATASET_DIR = get_test_asset_path("mot_dataset", "mot_seq")
+DUMMY_SEQINFO_DATASET_DIR = get_test_asset_path("mot_dataset", "mot_seq_with_seqinfo")
 
 
 class MotImporterTest(TestCase):

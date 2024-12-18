@@ -34,6 +34,7 @@ from datumaro.components.operations import (
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
 
@@ -1004,7 +1005,7 @@ class TestMultimerge(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_merge_point_clouds(self):
-        dataset_dir = osp.join(osp.dirname(__file__), "assets", "sly_pointcloud_dataset")
+        dataset_dir = get_test_asset_path("sly_pointcloud_dataset")
         pcd1 = osp.join(dataset_dir, "ds0", "pointcloud", "frame1.pcd")
         pcd2 = osp.join(dataset_dir, "ds0", "pointcloud", "frame2.pcd")
 

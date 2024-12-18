@@ -11,6 +11,7 @@ from datumaro.plugins.market1501_format import Market1501Converter, Market1501Im
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, compare_datasets
 
 
@@ -209,7 +210,7 @@ class Market1501FormatTest(TestCase):
             compare_datasets(self, source_dataset, parsed_dataset)
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "market1501_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("market1501_dataset")
 
 
 class Market1501ImporterTest(TestCase):

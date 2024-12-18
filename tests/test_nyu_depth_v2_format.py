@@ -12,9 +12,10 @@ from datumaro.plugins.nyu_depth_v2_format import NyuDepthV2Importer
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "nyu_depth_v2_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("nyu_depth_v2_dataset")
 
 
 class NyuDepthV2ImporterTest(TestCase):

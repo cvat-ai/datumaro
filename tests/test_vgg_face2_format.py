@@ -12,6 +12,7 @@ from datumaro.plugins.vgg_face2_format import VggFace2Converter, VggFace2Importe
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, compare_datasets
 
 
@@ -275,7 +276,7 @@ class VggFace2FormatTest(TestCase):
             compare_datasets(self, source_dataset, parsed_dataset)
 
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "vgg_face2_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("vgg_face2_dataset")
 
 
 class VggFace2ImporterTest(TestCase):

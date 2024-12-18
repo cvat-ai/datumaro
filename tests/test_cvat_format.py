@@ -25,11 +25,12 @@ from datumaro.plugins.cvat_format.extractor import CvatImporter
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
-DUMMY_IMAGE_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "cvat_dataset", "for_images")
+DUMMY_IMAGE_DATASET_DIR = get_test_asset_path("cvat_dataset", "for_images")
 
-DUMMY_VIDEO_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "cvat_dataset", "for_video")
+DUMMY_VIDEO_DATASET_DIR = get_test_asset_path("cvat_dataset", "for_video")
 
 
 class CvatImporterTest(TestCase):

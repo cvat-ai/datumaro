@@ -12,12 +12,11 @@ from datumaro.plugins.vott_csv_format import VottCsvImporter
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "vott_csv_dataset", "dataset")
-DUMMY_DATASET_DIR_WITH_META_FILE = osp.join(
-    osp.dirname(__file__), "assets", "vott_csv_dataset", "dataset_with_meta_file"
-)
+DUMMY_DATASET_DIR = get_test_asset_path("vott_csv_dataset", "dataset")
+DUMMY_DATASET_DIR_WITH_META_FILE = get_test_asset_path("vott_csv_dataset", "dataset_with_meta_file")
 
 
 class VottCsvImporterTest(TestCase):

@@ -49,6 +49,7 @@ from datumaro.util import dump_json_file
 
 from .requirements import Requirements, mark_requirement
 
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import (
     TestDir,
     check_save_and_load,
@@ -56,7 +57,7 @@ from tests.utils.test_utils import (
     compare_datasets_strict,
 )
 
-DUMMY_DATASET_DIR = osp.join(osp.dirname(__file__), "assets", "coco_dataset")
+DUMMY_DATASET_DIR = get_test_asset_path("coco_dataset")
 
 
 class CocoImporterTest(TestCase):

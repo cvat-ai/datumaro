@@ -1,4 +1,3 @@
-import os.path as osp
 from unittest import TestCase
 
 from datumaro.components.media import Video

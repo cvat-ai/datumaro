@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-import os.path as osp
 from unittest.case import TestCase
 
 import numpy as np

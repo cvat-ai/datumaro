@@ -3,7 +3,7 @@ import os.path as osp
 from unittest import TestCase
 
 from tests.requirements import Requirements, mark_requirement
-from tests.test_video import make_sample_video
+from tests.unit.test_video import make_sample_video
 from tests.utils.test_utils import TestDir
 from tests.utils.test_utils import run_datum as run
 

@@ -12,11 +12,11 @@ from datumaro.components.environment import Environment
 from datumaro.components.media import Image
 from datumaro.plugins.mars_format import MarsImporter
 
-from tests.conftest import ASSETS_DIR
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_datasets
 
-DUMMY_MARS_DATASET = str(ASSETS_DIR / "mars_dataset")
+DUMMY_MARS_DATASET = get_test_asset_path("mars_dataset")
 
 
 class MarsImporterTest(TestCase):

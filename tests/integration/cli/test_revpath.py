@@ -14,8 +14,8 @@ from datumaro.components.extractor import DatasetItem
 from datumaro.components.project import Project
 from datumaro.util.scope import scope_add, scoped
 
-from tests.conftest import ASSETS_DIR
 from tests.requirements import Requirements, mark_requirement
+from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir
 
 
@@ -139,7 +139,7 @@ class TestRevpath(TestCase):
             ("ade20k2017_dataset", "1_atr.txt"),
             ("ade20k2020_dataset", "1.json"),
         ):
-            asset = ASSETS_DIR / root / "dataset" / "training" / "street" / asset_name
+            asset = get_test_asset_path(root, "dataset", "training", "street", asset_name)
             shutil.copy(asset, annotation_dir)
 
         with self.subTest("no context"):

@@ -179,8 +179,9 @@ All coordinates must be normalized and be in range \[0, 1\].
 It can be achieved by dividing x coordinates and widths by image width,
 and y coordinates and heights by image height.
 
-Since some tools (e.g. https://roboflow.com/formats/yolov8-pytorch-txt) have the folders order
-switched when exporting to Ultralytics YOLO format, datumaro can also import dataset with folders like that:
+Since some tools (e.g. [roboflow](https://roboflow.com/formats/yolov8-pytorch-txt))
+have the folders order switched when exporting to Ultralytics YOLO format,
+datumaro can also import dataset with folders like that:
 ```bash
 archive.zip/
    ├── train/

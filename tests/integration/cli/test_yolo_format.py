@@ -220,6 +220,6 @@ class YoloIntegrationScenarios(TestCase):
             compare_datasets(self, target_dataset, parsed_dataset)
 
 
-class YOLOv8IntegrationScenarios(YoloIntegrationScenarios):
-    ASSET_PATH = ["yolo_dataset", "yolov8_detection"]
-    FORMAT_NAME = "yolov8_detection"
+class YoloUltralyticsIntegrationScenarios(YoloIntegrationScenarios):
+    ASSET_PATH = ["yolo_dataset", "yolo_ultralytics_detection"]
+    FORMAT_NAME = "yolo_ultralytics_detection"

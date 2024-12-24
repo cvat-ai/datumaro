@@ -41,27 +41,27 @@ from datumaro.components.format_detection import FormatDetectionContext, FormatR
 from datumaro.components.media import Image
 from datumaro.plugins.yolo_format.converter import (
     YoloConverter,
-    YOLOv8ClassificationConverter,
-    YOLOv8DetectionConverter,
-    YOLOv8OrientedBoxesConverter,
-    YOLOv8PoseConverter,
-    YOLOv8SegmentationConverter,
+    YoloUltralyticsClassificationConverter,
+    YoloUltralyticsDetectionConverter,
+    YoloUltralyticsOrientedBoxesConverter,
+    YoloUltralyticsPoseConverter,
+    YoloUltralyticsSegmentationConverter,
 )
 from datumaro.plugins.yolo_format.extractor import (
     YoloExtractor,
-    YOLOv8ClassificationExtractor,
-    YOLOv8DetectionExtractor,
-    YOLOv8OrientedBoxesExtractor,
-    YOLOv8PoseExtractor,
-    YOLOv8SegmentationExtractor,
+    YoloUltralyticsClassificationExtractor,
+    YoloUltralyticsDetectionExtractor,
+    YoloUltralyticsOrientedBoxesExtractor,
+    YoloUltralyticsPoseExtractor,
+    YoloUltralyticsSegmentationExtractor,
 )
 from datumaro.plugins.yolo_format.importer import (
     YoloImporter,
-    YOLOv8ClassificationImporter,
-    YOLOv8DetectionImporter,
-    YOLOv8OrientedBoxesImporter,
-    YOLOv8PoseImporter,
-    YOLOv8SegmentationImporter,
+    YoloUltralyticsClassificationImporter,
+    YoloUltralyticsDetectionImporter,
+    YoloUltralyticsOrientedBoxesImporter,
+    YoloUltralyticsPoseImporter,
+    YoloUltralyticsSegmentationImporter,
 )
 from datumaro.util.image import save_image
 
@@ -420,9 +420,9 @@ class YoloConverterTest(CompareDatasetMixin):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
 
-class YOLOv8DetectionConverterTest(YoloConverterTest):
-    CONVERTER = YOLOv8DetectionConverter
-    IMPORTER = YOLOv8DetectionImporter
+class YoloUltralyticsDetectionConverterTest(YoloConverterTest):
+    CONVERTER = YoloUltralyticsDetectionConverter
+    IMPORTER = YoloUltralyticsDetectionImporter
 
     @staticmethod
     def _make_image_path(test_dir: str, subset_name: str, image_id: str):
@@ -571,9 +571,9 @@ class YOLOv8DetectionConverterTest(YoloConverterTest):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
 
-class YOLOv8SegmentationConverterTest(YOLOv8DetectionConverterTest):
-    CONVERTER = YOLOv8SegmentationConverter
-    IMPORTER = YOLOv8SegmentationImporter
+class YoloUltralyticsSegmentationConverterTest(YoloUltralyticsDetectionConverterTest):
+    CONVERTER = YoloUltralyticsSegmentationConverter
+    IMPORTER = YoloUltralyticsSegmentationImporter
 
     def _generate_random_annotation(self, n_of_labels=10, label=None):
         return Polygon(
@@ -586,9 +586,11 @@ class YOLOv8SegmentationConverterTest(YOLOv8DetectionConverterTest):
         pass
 
 
-class YOLOv8OrientedBoxesConverterTest(CompareDatasetsRotationMixin, YOLOv8DetectionConverterTest):
-    CONVERTER = YOLOv8OrientedBoxesConverter
-    IMPORTER = YOLOv8OrientedBoxesImporter
+class YoloUltralyticsOrientedBoxesConverterTest(
+    CompareDatasetsRotationMixin, YoloUltralyticsDetectionConverterTest
+):
+    CONVERTER = YoloUltralyticsOrientedBoxesConverter
+    IMPORTER = YoloUltralyticsOrientedBoxesImporter
 
     def _generate_random_annotation(self, n_of_labels=10, label=None):
         return self._generate_random_bbox(
@@ -616,9 +618,9 @@ class YOLOv8OrientedBoxesConverterTest(CompareDatasetsRotationMixin, YOLOv8Detec
         self.compare_datasets(source_dataset, parsed_dataset)
 
 
-class YOLOv8PoseConverterTest(YOLOv8DetectionConverterTest):
-    CONVERTER = YOLOv8PoseConverter
-    IMPORTER = YOLOv8PoseImporter
+class YoloUltralyticsPoseConverterTest(YoloUltralyticsDetectionConverterTest):
+    CONVERTER = YoloUltralyticsPoseConverter
+    IMPORTER = YoloUltralyticsPoseImporter
 
     def _generate_random_skeleton_annotation(self, skeleton_label_to_point_labels, n_of_labels=10):
         label_id = random.choice(list(skeleton_label_to_point_labels.keys()))  # nosec B311 NOSONAR
@@ -906,9 +908,9 @@ class YOLOv8PoseConverterTest(YOLOv8DetectionConverterTest):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
 
-class YOLOv8ClassificationConverterTest(YoloConverterTest):
-    CONVERTER = YOLOv8ClassificationConverter
-    IMPORTER = YOLOv8ClassificationImporter
+class YoloUltralyticsClassificationConverterTest(YoloConverterTest):
+    CONVERTER = YoloUltralyticsClassificationConverter
+    IMPORTER = YoloUltralyticsClassificationImporter
 
     @staticmethod
     def _make_image_path(test_dir: str, subset_name: str, image_id: str):
@@ -1142,14 +1144,14 @@ class YoloImporterTest(CompareDatasetMixin):
             compare_datasets_strict(helper_tc, source, parsed)
 
 
-class YOLOv8DetectionImporterTest(YoloImporterTest):
-    IMPORTER = YOLOv8DetectionImporter
+class YoloUltralyticsDetectionImporterTest(YoloImporterTest):
+    IMPORTER = YoloUltralyticsDetectionImporter
     ASSETS = [
-        "yolov8_detection",
-        "yolov8_detection_reversed_folders",
-        "yolov8_detection_with_list_of_imgs",
-        "yolov8_detection_with_subset_txt",
-        "yolov8_detection_with_list_of_names",
+        "yolo_ultralytics_detection",
+        "yolo_ultralytics_detection_reversed_folders",
+        "yolo_ultralytics_detection_with_list_of_imgs",
+        "yolo_ultralytics_detection_with_subset_txt",
+        "yolo_ultralytics_detection_with_list_of_names",
     ]
 
     def test_can_detect(self):
@@ -1157,9 +1159,9 @@ class YOLOv8DetectionImporterTest(YoloImporterTest):
             dataset_dir = get_test_asset_path("yolo_dataset", asset)
             detected_formats = Environment().detect_dataset(dataset_dir)
             assert set(detected_formats) == {
-                YOLOv8DetectionImporter.NAME,
-                YOLOv8SegmentationImporter.NAME,
-                YOLOv8OrientedBoxesImporter.NAME,
+                YoloUltralyticsDetectionImporter.NAME,
+                YoloUltralyticsSegmentationImporter.NAME,
+                YoloUltralyticsOrientedBoxesImporter.NAME,
             }
 
     def test_can_detect_and_import_with_any_yaml_as_config(self, test_dir):
@@ -1222,7 +1224,7 @@ class YOLOv8DetectionImporterTest(YoloImporterTest):
         self.compare_datasets(expected_dataset, dataset)
 
     def test_can_import_if_names_dict_has_non_sequential_keys(self, test_dir):
-        if self.IMPORTER.NAME != YOLOv8DetectionImporter.NAME:
+        if self.IMPORTER.NAME != YoloUltralyticsDetectionImporter.NAME:
             return
         expected_dataset = Dataset.from_iterable(
             [
@@ -1241,7 +1243,9 @@ class YOLOv8DetectionImporterTest(YoloImporterTest):
         )
 
         dataset_path = osp.join(test_dir, "dataset")
-        shutil.copytree(get_test_asset_path("yolo_dataset", "yolov8_detection"), dataset_path)
+        shutil.copytree(
+            get_test_asset_path("yolo_dataset", "yolo_ultralytics_detection"), dataset_path
+        )
 
         with open(osp.join(dataset_path, "data.yaml"), "r+") as f:
             config = yaml.safe_load(f)
@@ -1256,10 +1260,10 @@ class YOLOv8DetectionImporterTest(YoloImporterTest):
         self.compare_datasets(expected_dataset, dataset)
 
 
-class YOLOv8SegmentationImporterTest(YOLOv8DetectionImporterTest):
-    IMPORTER = YOLOv8SegmentationImporter
+class YoloUltralyticsSegmentationImporterTest(YoloUltralyticsDetectionImporterTest):
+    IMPORTER = YoloUltralyticsSegmentationImporter
     ASSETS = [
-        "yolov8_segmentation",
+        "yolo_ultralytics_segmentation",
     ]
 
     @staticmethod
@@ -1280,9 +1284,11 @@ class YOLOv8SegmentationImporterTest(YOLOv8DetectionImporterTest):
         )
 
 
-class YOLOv8OrientedBoxesImporterTest(CompareDatasetsRotationMixin, YOLOv8DetectionImporterTest):
-    IMPORTER = YOLOv8OrientedBoxesImporter
-    ASSETS = ["yolov8_oriented_boxes"]
+class YoloUltralyticsOrientedBoxesImporterTest(
+    CompareDatasetsRotationMixin, YoloUltralyticsDetectionImporterTest
+):
+    IMPORTER = YoloUltralyticsOrientedBoxesImporter
+    ASSETS = ["yolo_ultralytics_oriented_boxes"]
 
     @staticmethod
     def _asset_dataset():
@@ -1302,11 +1308,11 @@ class YOLOv8OrientedBoxesImporterTest(CompareDatasetsRotationMixin, YOLOv8Detect
         )
 
 
-class YOLOv8PoseImporterTest(YOLOv8DetectionImporterTest):
-    IMPORTER = YOLOv8PoseImporter
+class YoloUltralyticsPoseImporterTest(YoloUltralyticsDetectionImporterTest):
+    IMPORTER = YoloUltralyticsPoseImporter
     ASSETS = [
-        "yolov8_pose",
-        "yolov8_pose_two_values_per_point",
+        "yolo_ultralytics_pose",
+        "yolo_ultralytics_pose_two_values_per_point",
     ]
 
     def test_can_detect(self):
@@ -1361,12 +1367,12 @@ class YOLOv8PoseImporterTest(YOLOv8DetectionImporterTest):
         )
 
 
-class YOLOv8ClassificationImporterTest(YoloImporterTest):
-    IMPORTER = YOLOv8ClassificationImporter
-    ASSETS = ["yolov8_classification"]
+class YoloUltralyticsClassificationImporterTest(YoloImporterTest):
+    IMPORTER = YoloUltralyticsClassificationImporter
+    ASSETS = ["yolo_ultralytics_classification"]
 
     def test_can_detect(self):
-        dataset_dir = get_test_asset_path("yolo_dataset", "yolov8_classification")
+        dataset_dir = get_test_asset_path("yolo_dataset", "yolo_ultralytics_classification")
         detected_formats = Environment().detect_dataset(dataset_dir)
         assert self.IMPORTER.NAME in detected_formats
 
@@ -1411,7 +1417,9 @@ class YOLOv8ClassificationImporterTest(YoloImporterTest):
         )
 
         dataset_path = osp.join(test_dir, "dataset")
-        shutil.copytree(get_test_asset_path("yolo_dataset", "yolov8_classification"), dataset_path)
+        shutil.copytree(
+            get_test_asset_path("yolo_dataset", "yolo_ultralytics_classification"), dataset_path
+        )
         shutil.rmtree(osp.join(dataset_path, "train", "label_0"))
 
         # Add exif rotation for image
@@ -1552,9 +1560,9 @@ class YoloExtractorTest:
             Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
 
 
-class YOLOv8DetectionExtractorTest(YoloExtractorTest):
-    IMPORTER = YOLOv8DetectionImporter
-    EXTRACTOR = YOLOv8DetectionExtractor
+class YoloUltralyticsDetectionExtractorTest(YoloExtractorTest):
+    IMPORTER = YoloUltralyticsDetectionImporter
+    EXTRACTOR = YoloUltralyticsDetectionExtractor
 
     @staticmethod
     def _get_annotation_dir(subset="train"):
@@ -1574,7 +1582,7 @@ class YOLOv8DetectionExtractorTest(YoloExtractorTest):
             Dataset.import_from(dataset_path, self.IMPORTER.NAME).init_cache()
 
     def test_can_report_missing_ann_file(self, test_dir):
-        # YOLOv8 does not require annotation files
+        # YoloUltralytics does not require annotation files
         # This empty test is needed to not run the test with the same name from the parent class
         pass
 
@@ -1587,9 +1595,9 @@ class YOLOv8DetectionExtractorTest(YoloExtractorTest):
         compare_datasets(helper_tc, source_dataset, actual)
 
 
-class YOLOv8SegmentationExtractorTest(YOLOv8DetectionExtractorTest):
-    IMPORTER = YOLOv8SegmentationImporter
-    EXTRACTOR = YOLOv8SegmentationExtractor
+class YoloUltralyticsSegmentationExtractorTest(YoloUltralyticsDetectionExtractorTest):
+    IMPORTER = YoloUltralyticsSegmentationImporter
+    EXTRACTOR = YoloUltralyticsSegmentationExtractor
 
     def _prepare_dataset(self, path: str, anno=None) -> Dataset:
         return super()._prepare_dataset(
@@ -1616,9 +1624,9 @@ class YOLOv8SegmentationExtractorTest(YOLOv8DetectionExtractorTest):
         self._check_can_report_invalid_field_type(field, field_name, test_dir)
 
 
-class YOLOv8OrientedBoxesExtractorTest(YOLOv8DetectionExtractorTest):
-    IMPORTER = YOLOv8OrientedBoxesImporter
-    EXTRACTOR = YOLOv8OrientedBoxesExtractor
+class YoloUltralyticsOrientedBoxesExtractorTest(YoloUltralyticsDetectionExtractorTest):
+    IMPORTER = YoloUltralyticsOrientedBoxesImporter
+    EXTRACTOR = YoloUltralyticsOrientedBoxesExtractor
 
     def _prepare_dataset(self, path: str, anno=None) -> Dataset:
         return super()._prepare_dataset(
@@ -1652,9 +1660,9 @@ class YOLOv8OrientedBoxesExtractorTest(YOLOv8DetectionExtractorTest):
         self._check_can_report_invalid_field_type(field, field_name, test_dir)
 
 
-class YOLOv8PoseExtractorTest(YOLOv8DetectionExtractorTest):
-    IMPORTER = YOLOv8PoseImporter
-    EXTRACTOR = YOLOv8PoseExtractor
+class YoloUltralyticsPoseExtractorTest(YoloUltralyticsDetectionExtractorTest):
+    IMPORTER = YoloUltralyticsPoseImporter
+    EXTRACTOR = YoloUltralyticsPoseExtractor
 
     def _prepare_dataset(self, path: str, anno=None) -> Dataset:
         dataset = Dataset.from_iterable(
@@ -1848,7 +1856,7 @@ class YOLOv8PoseExtractorTest(YOLOv8DetectionExtractorTest):
         compare_datasets(helper_tc, source_dataset, parsed_dataset)
 
 
-class YOLOv8ClassificationExtractorTest:
+class YoloUltralyticsClassificationExtractorTest:
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_parse(self, helper_tc, test_dir):
         expected = Dataset.from_iterable(
@@ -1862,6 +1870,6 @@ class YOLOv8ClassificationExtractorTest:
             ],
             categories=["test_label"],
         )
-        expected.export(test_dir, YOLOv8ClassificationExtractor.NAME, save_media=True)
-        actual = Dataset.import_from(test_dir, YOLOv8ClassificationImporter.NAME)
+        expected.export(test_dir, YoloUltralyticsClassificationExtractor.NAME, save_media=True)
+        actual = Dataset.import_from(test_dir, YoloUltralyticsClassificationImporter.NAME)
         compare_datasets(helper_tc, expected, actual)

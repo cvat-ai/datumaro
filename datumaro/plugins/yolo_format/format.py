@@ -12,7 +12,7 @@ class YoloPath:
     SUBSET_LIST_EXT = ".txt"
 
 
-class YOLOv8Path(YoloPath):
+class YoloUltralyticsPath(YoloPath):
     CONFIG_FILE_EXT = ".yaml"
     DEFAULT_CONFIG_FILE = "data.yaml"
     RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS + [
@@ -24,10 +24,10 @@ class YOLOv8Path(YoloPath):
     LABELS_FOLDER_NAME = "labels"
 
 
-class YOLOv8PoseFormat:
+class YoloUltralyticsPoseFormat:
     KPT_SHAPE_FIELD_NAME = "kpt_shape"
 
 
-class YOLOv8ClassificationFormat:
+class YoloUltralyticsClassificationFormat:
     IMAGE_DIR_NO_LABEL = "no_label"
     LABELS_FILE = "labels.json"

@@ -161,27 +161,27 @@ List of supported formats:
   - [Format specification](https://github.com/AlexeyAB/darknet#how-to-train-pascal-voc-data)
   - [Dataset example](https://github.com/cvat-ai/datumaro/tree/develop/tests/assets/yolo_dataset)
   - [Format documentation](/docs/formats/yolo)
-- YOLOv8 (`detection`, `segmentation`, `pose`, `oriented_box`)
+- YOLO Ultralytics (`detection`, `segmentation`, `pose`, `oriented_box`, `classification`)
   - Detection
     - [Format specification](https://docs.ultralytics.com/datasets/detect/)
     - [Dataset example](https://docs.ultralytics.com/datasets/detect/coco8/)
-    - [Format documentation](/docs/formats/yolo_v8)
+    - [Format documentation](/docs/formats/yolo_ultralytics)
   - Segmentation
     - [Format specification](https://docs.ultralytics.com/datasets/segment/)
     - [Dataset example](https://docs.ultralytics.com/datasets/segment/coco8-seg/)
-    - [Format documentation](/docs/formats/yolo_v8)
+    - [Format documentation](/docs/formats/yolo_ultralytics)
   - Pose
     - [Format specification](https://docs.ultralytics.com/datasets/pose/)
     - [Dataset example](https://docs.ultralytics.com/datasets/pose/coco8-pose/)
-    - [Format documentation](/docs/formats/yolo_v8)
+    - [Format documentation](/docs/formats/yolo_ultralytics)
   - Oriented box
     - [Format specification](https://docs.ultralytics.com/datasets/obb/)
     - [Dataset example](https://docs.ultralytics.com/datasets/obb/dota8/)
-    - [Format documentation](/docs/formats/yolo_v8)
+    - [Format documentation](/docs/formats/yolo_ultralytics)
   - Classification
     - [Format specification](https://docs.ultralytics.com/datasets/classify/)
-    - [Dataset example](https://github.com/cvat-ai/datumaro/tree/develop/tests/assets/yolo_dataset/yolov8_classification)
-    - [Format documentation](/docs/formats/yolo_v8_classification)
+    - [Dataset example](https://github.com/cvat-ai/datumaro/tree/develop/tests/assets/yolo_dataset/yolo_ultralytics_classification)
+    - [Format documentation](/docs/formats/yolo_ultralytics_classification)
 <a id="annotation-types"></a>
 ### Supported annotation types
 

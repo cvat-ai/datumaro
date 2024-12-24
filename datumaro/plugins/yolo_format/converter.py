@@ -32,7 +32,7 @@ from datumaro.components.media import Image
 from datumaro.util import dump_json_file, str_to_bool
 from datumaro.util.os_util import split_path
 
-from .format import YoloPath, YOLOv8ClassificationFormat, YOLOv8Path
+from .format import YoloPath, YoloUltralyticsClassificationFormat, YoloUltralyticsPath
 
 
 def _make_yolo_bbox(img_size, box):
@@ -278,8 +278,8 @@ class YoloConverter(Converter):
                 os.remove(ann_path)
 
 
-class YOLOv8DetectionConverter(YoloConverter):
-    RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
+class YoloUltralyticsDetectionConverter(YoloConverter):
+    RESERVED_CONFIG_KEYS = YoloUltralyticsPath.RESERVED_CONFIG_KEYS
 
     def __init__(
         self,
@@ -291,7 +291,7 @@ class YOLOv8DetectionConverter(YoloConverter):
         **kwargs,
     ) -> None:
         super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
-        self._config_filename = config_file or YOLOv8Path.DEFAULT_CONFIG_FILE
+        self._config_filename = config_file or YoloUltralyticsPath.DEFAULT_CONFIG_FILE
 
     def _save_annotation_file(self, annotation_path, yolo_annotation):
         if yolo_annotation:
@@ -302,7 +302,7 @@ class YOLOv8DetectionConverter(YoloConverter):
         parser = super().build_cmdline_parser(**kwargs)
         parser.add_argument(
             "--config-file",
-            default=YOLOv8Path.DEFAULT_CONFIG_FILE,
+            default=YoloUltralyticsPath.DEFAULT_CONFIG_FILE,
             type=str,
             help="config file name (default: %(default)s)",
         )
@@ -326,14 +326,14 @@ class YOLOv8DetectionConverter(YoloConverter):
 
     @staticmethod
     def _make_image_subset_folder(save_dir: str, subset: str) -> str:
-        return osp.join(save_dir, YOLOv8Path.IMAGES_FOLDER_NAME, subset)
+        return osp.join(save_dir, YoloUltralyticsPath.IMAGES_FOLDER_NAME, subset)
 
     @staticmethod
     def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
-        return osp.join(save_dir, YOLOv8Path.LABELS_FOLDER_NAME, subset)
+        return osp.join(save_dir, YoloUltralyticsPath.LABELS_FOLDER_NAME, subset)
 
 
-class YOLOv8SegmentationConverter(YOLOv8DetectionConverter):
+class YoloUltralyticsSegmentationConverter(YoloUltralyticsDetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Polygon):
             return
@@ -342,7 +342,7 @@ class YOLOv8SegmentationConverter(YOLOv8DetectionConverter):
         return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
 
 
-class YOLOv8OrientedBoxesConverter(YOLOv8DetectionConverter):
+class YoloUltralyticsOrientedBoxesConverter(YoloUltralyticsDetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Bbox):
             return
@@ -352,7 +352,7 @@ class YOLOv8OrientedBoxesConverter(YOLOv8DetectionConverter):
         return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
 
 
-class YOLOv8PoseConverter(YOLOv8DetectionConverter):
+class YoloUltralyticsPoseConverter(YoloUltralyticsDetectionConverter):
     @cached_property
     def _labels_to_save(self) -> List[int]:
         point_categories = self._extractor.categories().get(
@@ -403,7 +403,7 @@ class YOLOv8PoseConverter(YOLOv8DetectionConverter):
         return f"{self._map_labels_for_save[skeleton.label]} {bbox_string_values} {' '.join(points_values)}\n"
 
 
-class YOLOv8ClassificationConverter(Converter):
+class YoloUltralyticsClassificationConverter(Converter):
     DEFAULT_IMAGE_EXT = ".jpg"
 
     def apply(self):
@@ -438,7 +438,7 @@ class YOLOv8ClassificationConverter(Converter):
                         if anno.type == AnnotationType.label
                     ]
                     for label_name in items_info[item.id]["labels"] or [
-                        YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
+                        YoloUltralyticsClassificationFormat.IMAGE_DIR_NO_LABEL
                     ]:
                         items_info[item.id]["path"] = self._export_media_for_label(
                             item, subset_name, label_name
@@ -450,7 +450,7 @@ class YOLOv8ClassificationConverter(Converter):
             labels_path = osp.join(
                 self._save_dir,
                 subset_name,
-                YOLOv8ClassificationFormat.LABELS_FILE,
+                YoloUltralyticsClassificationFormat.LABELS_FILE,
             )
             dump_json_file(labels_path, items_info)
 

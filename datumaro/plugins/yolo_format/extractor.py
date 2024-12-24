@@ -45,7 +45,12 @@ from datumaro.util.image import (
 from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_meta_file
 from datumaro.util.os_util import split_path
 
-from .format import YoloPath, YOLOv8ClassificationFormat, YOLOv8Path, YOLOv8PoseFormat
+from .format import (
+    YoloPath,
+    YoloUltralyticsClassificationFormat,
+    YoloUltralyticsPath,
+    YoloUltralyticsPoseFormat,
+)
 
 T = TypeVar("T")
 
@@ -345,8 +350,8 @@ class YoloExtractor(YoloBaseExtractor):
         return {AnnotationType.label: label_categories}
 
 
-class YOLOv8DetectionExtractor(YoloExtractor):
-    RESERVED_CONFIG_KEYS = YOLOv8Path.RESERVED_CONFIG_KEYS
+class YoloUltralyticsDetectionExtractor(YoloExtractor):
+    RESERVED_CONFIG_KEYS = YoloUltralyticsPath.RESERVED_CONFIG_KEYS
 
     def __init__(
         self,
@@ -417,17 +422,20 @@ class YOLOv8DetectionExtractor(YoloExtractor):
     def _get_labels_path_from_image_path(self, image_path: str) -> str:
         rel_image_path = osp.relpath(image_path, self._path)
         split_rel_path = rel_image_path.split(osp.sep, 2)
-        if len(split_rel_path) < 3 or YOLOv8Path.IMAGES_FOLDER_NAME not in split_rel_path[:2]:
+        if (
+            len(split_rel_path) < 3
+            or YoloUltralyticsPath.IMAGES_FOLDER_NAME not in split_rel_path[:2]
+        ):
             raise InvalidAnnotationError(f"Malformed folder structure for image {rel_image_path}")
 
         split_rel_path[
             next(
                 index
                 for index in range(len(split_rel_path) - 1, -1, -1)
-                if split_rel_path[index] == YOLOv8Path.IMAGES_FOLDER_NAME
+                if split_rel_path[index] == YoloUltralyticsPath.IMAGES_FOLDER_NAME
             )
-        ] = YOLOv8Path.LABELS_FOLDER_NAME
-        split_rel_path[2] = osp.splitext(split_rel_path[2])[0] + YOLOv8Path.LABELS_EXT
+        ] = YoloUltralyticsPath.LABELS_FOLDER_NAME
+        split_rel_path[2] = osp.splitext(split_rel_path[2])[0] + YoloUltralyticsPath.LABELS_EXT
 
         return osp.join(self._path, *split_rel_path)
 
@@ -465,7 +473,7 @@ class YOLOv8DetectionExtractor(YoloExtractor):
             yield from subset_images_source
 
 
-class YOLOv8SegmentationExtractor(YOLOv8DetectionExtractor):
+class YoloUltralyticsSegmentationExtractor(YoloUltralyticsDetectionExtractor):
     def _load_segmentation_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Polygon:
@@ -492,7 +500,7 @@ class YOLOv8SegmentationExtractor(YOLOv8DetectionExtractor):
         )
 
 
-class YOLOv8OrientedBoxesExtractor(YOLOv8DetectionExtractor):
+class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -525,7 +533,7 @@ class YOLOv8OrientedBoxesExtractor(YOLOv8DetectionExtractor):
         )
 
 
-class YOLOv8PoseExtractor(YOLOv8DetectionExtractor):
+class YoloUltralyticsPoseExtractor(YoloUltralyticsDetectionExtractor):
     def __init__(
         self,
         *args,
@@ -537,24 +545,24 @@ class YOLOv8PoseExtractor(YOLOv8DetectionExtractor):
 
     @cached_property
     def _kpt_shape(self) -> list[int]:
-        if YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME not in self._config:
+        if YoloUltralyticsPoseFormat.KPT_SHAPE_FIELD_NAME not in self._config:
             raise InvalidAnnotationError(
-                f"Failed to parse {YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME} from config"
+                f"Failed to parse {YoloUltralyticsPoseFormat.KPT_SHAPE_FIELD_NAME} from config"
             )
-        kpt_shape = self._config[YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME]
+        kpt_shape = self._config[YoloUltralyticsPoseFormat.KPT_SHAPE_FIELD_NAME]
         if not isinstance(kpt_shape, list) or len(kpt_shape) != 2:
             raise InvalidAnnotationError(
-                f"Failed to parse {YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME} from config"
+                f"Failed to parse {YoloUltralyticsPoseFormat.KPT_SHAPE_FIELD_NAME} from config"
             )
         if kpt_shape[1] not in [2, 3]:
             raise InvalidAnnotationError(
                 f"Unexpected values per point {kpt_shape[1]} in field"
-                f"{YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME}. Expected 2 or 3."
+                f"{YoloUltralyticsPoseFormat.KPT_SHAPE_FIELD_NAME}. Expected 2 or 3."
             )
         if not isinstance(kpt_shape[0], int) or kpt_shape[0] < 0:
             raise InvalidAnnotationError(
                 f"Unexpected number of points {kpt_shape[0]} in field "
-                f"{YOLOv8PoseFormat.KPT_SHAPE_FIELD_NAME}. Expected non-negative integer."
+                f"{YoloUltralyticsPoseFormat.KPT_SHAPE_FIELD_NAME}. Expected non-negative integer."
             )
 
         return kpt_shape
@@ -689,7 +697,7 @@ class YOLOv8PoseExtractor(YOLOv8DetectionExtractor):
         return Skeleton(points, label=label_id)
 
 
-class YOLOv8ClassificationExtractor(YoloBaseExtractor):
+class YoloUltralyticsClassificationExtractor(YoloBaseExtractor):
     def _get_subset_names(self):
         return [
             subset_name
@@ -699,7 +707,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
 
     def _get_image_paths_for_subset_and_label(self, subset_name: str, label_name: str) -> list[str]:
         category_folder = osp.join(self._path, subset_name, label_name)
-        image_list_path = osp.join(category_folder, YOLOv8ClassificationFormat.LABELS_FILE)
+        image_list_path = osp.join(category_folder, YoloUltralyticsClassificationFormat.LABELS_FILE)
         if osp.isfile(image_list_path):
             with open(image_list_path, "r", encoding="utf-8") as f:
                 yield from (osp.join(subset_name, label_name, line.strip()) for line in f)
@@ -711,7 +719,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
 
     def _get_item_info_from_labels_file(self, subset_name: str) -> Optional[Dict]:
         subset_path = osp.join(self._path, subset_name)
-        labels_file_path = osp.join(subset_path, YOLOv8ClassificationFormat.LABELS_FILE)
+        labels_file_path = osp.join(subset_path, YoloUltralyticsClassificationFormat.LABELS_FILE)
         if osp.isfile(labels_file_path):
             return parse_json_file(labels_file_path)
 
@@ -740,7 +748,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
         return [
             Label(label=self._categories[AnnotationType.label].find(label)[0])
             for label in label_names
-            if label != YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL
+            if label != YoloUltralyticsClassificationFormat.IMAGE_DIR_NO_LABEL
         ]
 
     def _load_categories(self) -> CategoriesInfo:
@@ -756,7 +764,7 @@ class YOLOv8ClassificationExtractor(YoloBaseExtractor):
             for label_dir_name in os.listdir(subset_path):
                 if not osp.isdir(osp.join(subset_path, label_dir_name)):
                     continue
-                if label_dir_name == YOLOv8ClassificationFormat.IMAGE_DIR_NO_LABEL:
+                if label_dir_name == YoloUltralyticsClassificationFormat.IMAGE_DIR_NO_LABEL:
                     continue
                 categories.add(label_dir_name)
         return {AnnotationType.label: LabelCategories.from_iterable(sorted(categories))}

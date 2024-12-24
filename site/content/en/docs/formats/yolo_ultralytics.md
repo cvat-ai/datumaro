@@ -1,13 +1,13 @@
 ---
-title: 'YOLOv8'
-linkTitle: 'YOLOv8'
+title: 'Ultralytics YOLO'
+linkTitle: 'Ultralytics YOLO'
 description: ''
 ---
 
 ## Format specification
 
-The YOLOv8 format family allows you to define the dataset root directory, the relative paths
-to training/validation/testing image directories or *.txt files containing image paths,
+The Ultralytics YOLO format family allows you to define the dataset root directory, the relative
+paths to training/validation/testing image directories or *.txt files containing image paths,
 and a dictionary of class names.
 
 Family consists of four formats:
@@ -32,18 +32,18 @@ The format supports arbitrary subset names, except `classes`, `names`, `backup`,
   If there is no subset separation in a project, the data
   will be saved in the `train` subset.
 
-## Import YOLOv8 dataset
-To create a Datumaro project with a YOLOv8 source, use the following commands:
+## Import Ultralytics YOLO dataset
+To create a Datumaro project with a Ultralytics YOLO source, use the following commands:
 
 ```bash
 datum create
-datum import --format yolov8_detection <path/to/dataset> # for Detection dataset
-datum import --format yolov8_oriented_boxes <path/to/dataset> # for Oriented Bounding Box dataset
-datum import --format yolov8_segmentation <path/to/dataset> # for Segmentation dataset
-datum import --format yolov8_pose <path/to/dataset> # for Pose dataset
+datum import --format yolo_ultralytics_detection <path/to/dataset> # for Detection dataset
+datum import --format yolo_ultralytics_oriented_boxes <path/to/dataset> # for Oriented Bounding Box dataset
+datum import --format yolo_ultralytics_segmentation <path/to/dataset> # for Segmentation dataset
+datum import --format yolo_ultralytics_pose <path/to/dataset> # for Pose dataset
 ```
 
-The YOLOv8 dataset directory should have the following structure:
+The Ultralytics YOLO dataset directory should have the following structure:
 
 ```bash
 └─ yolo_dataset/
@@ -83,7 +83,7 @@ path:  ./ # dataset root dir
 train: train.txt  # train images (relative to 'path') 4 images
 val: val.txt  # val images (relative to 'path') 4 images
 
-# YOLOv8 Pose specific field
+# Ultralytics YOLO Pose specific field
 # First number is a number of points in skeleton
 # Second number defines a format of point info in an annotation txt files
 kpt_shape: [17, 3]
@@ -98,7 +98,7 @@ names:
   78: hair drier
   79: toothbrush
 ```
-> Note, that though by default YOLOv8 framework expects `data.yaml`,
+> Note, that though by default Ultralytics YOLO framework expects `data.yaml`,
   Datumaro allows this file to have arbitrary name.
 
 `data.yaml` can specify what images a subset contains in 3 ways:
@@ -182,21 +182,21 @@ and y coordinates and heights by image height.
 
 ## Export to other formats
 
-Datumaro can convert a YOLOv8 dataset into any other format Datumaro supports.
+Datumaro can convert a Ultralytics YOLO dataset into any other format Datumaro supports.
 To get the expected result, convert the dataset to formats
-that support the same annotations as YOLOv8 format you have.
+that support the same annotations as Ultralytics YOLO format you have.
 
 ```bash
 datum create
-datum add -f yolov8_detection <path/to/yolov8_detection/>
+datum add -f yolo_ultralytics_detection <path/to/yolo_ultralytics_detection/>
 datum export -f coco_instances -o <output/dir>
 ```
 or
 ```bash
-datum convert -if yolov8_detection -i <path/to/dataset> -f coco_instances -o <path/to/dataset>
+datum convert -if yolo_ultralytics_detection -i <path/to/dataset> -f coco_instances -o <path/to/dataset>
 ```
 
-Extra options for importing YOLOv8 format:
+Extra options for importing Ultralytics YOLO format:
 - `--config-file` allows to specify config file name to use instead of default `data.yaml`
 
 Alternatively, using the Python API:
@@ -205,14 +205,14 @@ Alternatively, using the Python API:
 from datumaro.components.dataset import Dataset
 
 data_path = 'path/to/dataset'
-data_format = 'yolov8_detection'
+data_format = 'yolo_ultralytics_detection'
 
 dataset = Dataset.import_from(data_path, data_format)
 dataset.export('save_dir', 'coco_instances')
 ```
 
-## Export to YOLOv8 format
-Datumaro can convert an existing dataset to YOLOv8 format
+## Export to Ultralytics YOLO format
+Datumaro can convert an existing dataset to Ultralytics YOLO format
 if it supports annotations from source format.
 
 Example:
@@ -220,10 +220,10 @@ Example:
 ```bash
 datum create
 datum import -f coco_instances <path/to/dataset>
-datum export -f yolov8_detection -o <path/to/dataset>
+datum export -f yolo_ultralytics_detection -o <path/to/dataset>
 ```
 
-Extra options for exporting to YOLOv8 format:
+Extra options for exporting to Ultralytics YOLO format:
 - `--save-media` allow to export dataset with saving media files
   (default: `False`)
 - `--image-ext <IMAGE_EXT>` allow to specify image extension
@@ -234,7 +234,7 @@ Extra options for exporting to YOLOv8 format:
 
 ## Examples
 
-### Example 1. Create a custom dataset in YOLOv8 Detection format
+### Example 1. Create a custom dataset in Ultralytics YOLO Detection format
 
 ```python
 import numpy as np
@@ -254,10 +254,10 @@ dataset = dm.Dataset.from_iterable(
     ],
     categories=["label_" + str(i) for i in range(10)],
 )
-dataset.export('../yolov8_dataset', format='yolov8_detection')
+dataset.export('../yolo_ultralytics_dataset', format='yolo_ultralytics_detection')
 ```
 
-### Example 2. Create a custom dataset in YOLOv8 Oriented Bounding Box format
+### Example 2. Create a custom dataset in Ultralytics YOLO Oriented Bounding Box format
 
 Orientation of bounding boxes is controlled through `rotation` attribute of `Bbox` annotation.
 Its value is a counter-clockwise angle in degrees.
@@ -280,10 +280,10 @@ dataset = dm.Dataset.from_iterable(
     ],
     categories=["label_" + str(i) for i in range(10)],
 )
-dataset.export('../yolov8_dataset', format='yolov8_oriented_boxes')
+dataset.export('../yolo_ultralytics_dataset', format='yolo_ultralytics_oriented_boxes')
 ```
 
-### Example 3. Create a custom dataset in YOLOv8 Segmentation format
+### Example 3. Create a custom dataset in Ultralytics YOLO Segmentation format
 
 ```python
 import numpy as np
@@ -302,10 +302,10 @@ dataset = dm.Dataset.from_iterable(
     ],
     categories=["label_" + str(i) for i in range(10)],
 )
-dataset.export('../yolov8_dataset', format='yolov8_segmentation')
+dataset.export('../yolo_ultralytics_dataset', format='yolo_ultralytics_segmentation')
 ```
 
-### Example 4. Create a custom dataset in YOLOv8 Pose format
+### Example 4. Create a custom dataset in Ultralytics YOLO Pose format
 
 ```python
 import numpy as np
@@ -341,5 +341,5 @@ dataset = dm.Dataset.from_iterable(
         ]),
     },
 )
-dataset.export('../yolov8_dataset', format='yolov8_pose')
+dataset.export('../yolo_ultralytics_dataset', format='yolo_ultralytics_pose')
 ```

@@ -287,10 +287,12 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
         save_dir: str,
         *,
         add_path_prefix: bool = True,
-        config_file=None,
+        config_file: str | None = None,
+        write_track_id: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
+        self._write_track_id = write_track_id
         self._config_filename = config_file or YoloUltralyticsPath.DEFAULT_CONFIG_FILE
 
     def _save_annotation_file(self, annotation_path, yolo_annotation):
@@ -305,6 +307,12 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
             default=YoloUltralyticsPath.DEFAULT_CONFIG_FILE,
             type=str,
             help="config file name (default: %(default)s)",
+        )
+        parser.add_argument(
+            "--write-track-id",
+            default=False,
+            type=str_to_bool,
+            help="save track id to annotations",
         )
         return parser
 
@@ -332,6 +340,18 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
     def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
         return osp.join(save_dir, YoloUltralyticsPath.LABELS_FOLDER_NAME, subset)
 
+    def _make_track_id_suffix(self, anno: Annotation):
+        track_id = anno.attributes.get("track_id") if self._write_track_id else None
+        return f" {track_id}" if track_id is not None else ""
+
+    def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
+        anno_line = super()._make_annotation_line(width=width, height=height, anno=anno)
+
+        if anno_line and {track_id_suffix := self._make_track_id_suffix(anno)}:
+            anno_line = f"{anno_line.strip()}{track_id_suffix}\n"
+
+        return anno_line
+
 
 class YoloUltralyticsSegmentationConverter(YoloUltralyticsDetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
@@ -339,7 +359,7 @@ class YoloUltralyticsSegmentationConverter(YoloUltralyticsDetectionConverter):
             return
         values = [value / size for value, size in zip(anno.points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
+        return f"{self._map_labels_for_save[anno.label]} {string_values}{self._make_track_id_suffix(anno)}\n"
 
 
 class YoloUltralyticsOrientedBoxesConverter(YoloUltralyticsDetectionConverter):
@@ -349,7 +369,7 @@ class YoloUltralyticsOrientedBoxesConverter(YoloUltralyticsDetectionConverter):
         points = _bbox_annotation_as_polygon(anno)
         values = [value / size for value, size in zip(points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
+        return f"{self._map_labels_for_save[anno.label]} {string_values}{self._make_track_id_suffix(anno)}\n"
 
 
 class YoloUltralyticsPoseConverter(YoloUltralyticsDetectionConverter):
@@ -400,7 +420,10 @@ class YoloUltralyticsPoseConverter(YoloUltralyticsDetectionConverter):
             y = element.points[1] / height
             points_values[position] = f"{x:.6f} {y:.6f} {element.visibility[0].value}"
 
-        return f"{self._map_labels_for_save[skeleton.label]} {bbox_string_values} {' '.join(points_values)}\n"
+        return (
+            f"{self._map_labels_for_save[skeleton.label]} {bbox_string_values} "
+            f"{' '.join(points_values)}{self._make_track_id_suffix(skeleton)}\n"
+        )
 
 
 class YoloUltralyticsClassificationConverter(Converter):

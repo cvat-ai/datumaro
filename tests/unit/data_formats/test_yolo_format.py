@@ -570,6 +570,41 @@ class YoloUltralyticsDetectionConverterTest(YoloConverterTest):
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         self.compare_datasets(expected_dataset, parsed_dataset)
 
+    @pytest.mark.parametrize("write_track_id", [True, False])
+    def test_write_track_id_parameter(self, test_dir, write_track_id):
+        dataset_without_tracks = self._generate_random_dataset(
+            recipes=[{"annotations": 2}, {"annotations": 3}]
+        )
+        items = list(dataset_without_tracks)
+        dataset_with_track = Dataset.from_iterable(
+            [
+                items[0].wrap(
+                    annotations=[
+                        items[0]
+                        .annotations[0]
+                        .wrap(
+                            attributes=dict(items[0].annotations[0].attributes, track_id=77),
+                        ),
+                        items[0].annotations[1],
+                    ]
+                ),
+                items[1],
+            ],
+            categories=dataset_without_tracks.categories(),
+        )
+
+        expected_dataset = dataset_with_track if write_track_id else dataset_without_tracks
+        self.CONVERTER.convert(
+            dataset_with_track, test_dir, save_media=True, write_track_id=write_track_id
+        )
+
+        if write_track_id:
+            with open(osp.join(test_dir, "labels", "train", "1.txt"), "r") as f:
+                assert f.readlines()[0].strip().endswith(" 77")
+
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, parsed_dataset)
+
 
 class YoloUltralyticsSegmentationConverterTest(YoloUltralyticsDetectionConverterTest):
     CONVERTER = YoloUltralyticsSegmentationConverter

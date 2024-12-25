@@ -9,9 +9,6 @@ from distutils.util import strtobool
 
 import setuptools
 
-# Snyk scan integration
-here = None
-
 
 def find_version(project_dir=None):
     if not project_dir:
@@ -56,14 +53,15 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="datumaro",
-    version=find_version(here),
+    version=find_version("./src"),
     author="Intel",
     author_email="maxim.zhiltsov@intel.com",
     description="Dataset Management Framework (Datumaro)",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/cvat-ai/datumaro",
-    packages=setuptools.find_packages(include=["datumaro*"]),
+    package_dir={"": "src"},
+    packages=setuptools.find_packages(where="src", include=["datumaro*"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

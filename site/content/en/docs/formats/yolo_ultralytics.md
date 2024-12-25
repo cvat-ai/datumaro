@@ -179,9 +179,10 @@ All coordinates must be normalized and be in range \[0, 1\].
 It can be achieved by dividing x coordinates and widths by image width,
 and y coordinates and heights by image height.
 
-Since some tools (e.g. [roboflow](https://roboflow.com/formats/yolov8-pytorch-txt))
-have the folders order switched when exporting to Ultralytics YOLO format,
-datumaro can also import dataset with folders like that:
+For compatibility with other tools exporting in Ultralytics YOLO format 
+(e.g. [roboflow](https://roboflow.com/formats/yolov8-pytorch-txt)),
+datumaro supports datasets with the inverted directory order of subset and "images" or "labels",
+i.e. both `train/images/`, `images/train/` are valid inputs.
 ```bash
 archive.zip/
    ├── train/
@@ -194,7 +195,6 @@ archive.zip/
    │   │    ├── image2.txt
    │   │    └── ...
 ```
-
 
 ## Export to other formats
 

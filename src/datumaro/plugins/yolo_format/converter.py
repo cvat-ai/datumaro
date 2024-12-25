@@ -347,7 +347,7 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         anno_line = super()._make_annotation_line(width=width, height=height, anno=anno)
 
-        if anno_line and {track_id_suffix := self._make_track_id_suffix(anno)}:
+        if anno_line and (track_id_suffix := self._make_track_id_suffix(anno)):
             anno_line = f"{anno_line.strip()}{track_id_suffix}\n"
 
         return anno_line

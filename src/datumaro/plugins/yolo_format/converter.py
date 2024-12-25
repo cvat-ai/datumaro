@@ -287,7 +287,7 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
         save_dir: str,
         *,
         add_path_prefix: bool = True,
-        config_file: str | None = None,
+        config_file: Optional[str] = None,
         write_track_id: bool = False,
         **kwargs,
     ) -> None:

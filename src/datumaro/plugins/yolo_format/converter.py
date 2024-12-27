@@ -73,10 +73,10 @@ def _bbox_annotation_as_polygon(bbox: Bbox) -> List[float]:
     return points
 
 
-def _resolve_subsets(initial_subsets: dict[str, IExtractor]) -> dict[str, Iterable]:
+def _resolve_subsets(initial_subsets: Dict[str, IExtractor]) -> Dict[str, Iterable]:
     assert YoloPath.DEFAULT_SUBSET_NAME.lower() != DEFAULT_SUBSET_NAME.lower()
 
-    subsets: dict[str, Iterable] = {
+    subsets: Dict[str, Iterable] = {
         subset_name: subset
         for subset_name, subset in initial_subsets.items()
         if subset_name and subset_name != DEFAULT_SUBSET_NAME

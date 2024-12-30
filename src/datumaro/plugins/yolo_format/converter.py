@@ -46,7 +46,7 @@ def _make_yolo_bbox(img_size, box):
     return x, y, w, h
 
 
-def _bbox_annotation_as_polygon(bbox: Bbox) -> List[float]:
+def bbox_annotation_as_polygon(bbox: Bbox) -> List[float]:
     points = bbox.as_polygon()
 
     def rotate_point(x: float, y: float):
@@ -346,7 +346,7 @@ class YoloUltralyticsOrientedBoxesConverter(YoloUltralyticsDetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Bbox):
             return
-        points = _bbox_annotation_as_polygon(anno)
+        points = bbox_annotation_as_polygon(anno)
         values = [value / size for value, size in zip(points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
         return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)

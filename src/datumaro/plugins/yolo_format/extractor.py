@@ -45,6 +45,7 @@ from datumaro.util.image import (
 from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_meta_file
 from datumaro.util.os_util import split_path
 
+from .converter import bbox_annotation_as_polygon
 from .format import (
     YoloPath,
     YoloUltralyticsClassificationFormat,
@@ -501,6 +502,50 @@ class YoloUltralyticsSegmentationExtractor(YoloUltralyticsDetectionExtractor):
 
 
 class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
+    @staticmethod
+    def _rotate_bbox_to_sync_exported_annotation_with_imported(
+        imported_points: list[tuple[int, int]],
+        bbox: Bbox,
+    ) -> Bbox:
+        exported_points = list(take_by(bbox_annotation_as_polygon(bbox), count=2))
+        best_shift = min(
+            range(4),
+            key=lambda shift: sum(
+                (
+                    (imported_points[(index + shift) % 4][0] - exported_points[index][0]) ** 2
+                    + (imported_points[(index + shift) % 4][1] - exported_points[index][1]) ** 2
+                )
+                ** 0.5
+                for index in range(4)
+            ),
+        )
+        if best_shift == 0:
+            return bbox
+
+        x, y = bbox.x, bbox.y
+        width, height = bbox.w, bbox.h
+        rotation = bbox.attributes.get("rotation", 0)
+        center_x = x + width / 2
+        center_y = y + height / 2
+        if best_shift == 1:
+            rotation -= 90
+            width, height = height, width
+        elif best_shift == 2:
+            rotation -= 180
+        elif best_shift == 3:
+            rotation -= 270
+            width, height = height, width
+        rotation = rotation % 360
+
+        return Bbox(
+            x=center_x - width / 2,
+            y=center_y - height / 2,
+            w=width,
+            h=height,
+            label=bbox.label,
+            attributes=(dict(rotation=rotation) if abs(rotation) > 0.00001 else {}),
+        )
+
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -523,7 +568,7 @@ class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
         )
         rotation = rotation % 180
 
-        return Bbox(
+        bbox = Bbox(
             x=center_x - width / 2,
             y=center_y - height / 2,
             w=width,
@@ -531,6 +576,8 @@ class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
             label=label_id,
             attributes=(dict(rotation=rotation) if abs(rotation) > 0.00001 else {}),
         )
+        bbox = self._rotate_bbox_to_sync_exported_annotation_with_imported(points, bbox)
+        return bbox
 
 
 class YoloUltralyticsPoseExtractor(YoloUltralyticsDetectionExtractor):

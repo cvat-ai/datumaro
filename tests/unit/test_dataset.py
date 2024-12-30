@@ -18,7 +18,6 @@ from datumaro.components.annotation import (
     Polygon,
     PolyLine,
 )
-from datumaro.components.converter import Converter
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, ItemStatus, eager_mode
 from datumaro.components.dataset_filter import (
     DatasetItemEncoder,
@@ -38,6 +37,7 @@ from datumaro.components.errors import (
     RepeatedItemError,
     UnknownFormatError,
 )
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import (
     DEFAULT_SUBSET_NAME,
     DatasetItem,

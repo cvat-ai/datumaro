@@ -6,8 +6,8 @@ import os
 import os.path as osp
 
 from datumaro.components.annotation import AnnotationType, CompiledMask
-from datumaro.components.converter import Converter
 from datumaro.components.errors import DatumaroError, MediaTypeError
+from datumaro.components.exporter import Converter
 from datumaro.components.media import Image
 from datumaro.util.image import save_image
 from datumaro.util.mask_tools import generate_colormap, paint_mask

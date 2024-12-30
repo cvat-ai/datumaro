@@ -12,8 +12,8 @@ import numpy as np
 from defusedxml import ElementTree
 
 from datumaro.components.annotation import AnnotationType, Bbox, LabelCategories, Mask, Polygon
-from datumaro.components.converter import Converter
 from datumaro.components.errors import MediaTypeError
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import DatasetItem, Extractor, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image

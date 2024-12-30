@@ -10,9 +10,9 @@ from collections import OrderedDict
 import numpy as np
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
-from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
 from datumaro.components.errors import MediaTypeError
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
 from datumaro.components.media import Image
 from datumaro.util import cast

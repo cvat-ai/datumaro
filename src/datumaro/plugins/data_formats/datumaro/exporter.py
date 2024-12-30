@@ -32,8 +32,8 @@ from datumaro.components.annotation import (
     Skeleton,
     _Shape,
 )
-from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, CategoriesInfo, DatasetItem
 from datumaro.components.media import Image, MediaElement, PointCloud
 from datumaro.util import cast, dump_json_file

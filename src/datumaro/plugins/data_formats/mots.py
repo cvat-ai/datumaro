@@ -13,8 +13,8 @@ from glob import iglob
 import numpy as np
 
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask
-from datumaro.components.converter import Converter
 from datumaro.components.errors import MediaTypeError
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
 from datumaro.components.media import Image
 from datumaro.util.image import find_images, load_image, save_image

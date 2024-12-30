@@ -11,9 +11,9 @@ from copy import deepcopy
 from xml.sax.saxutils import XMLGenerator  # nosec
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
-from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
 from datumaro.components.errors import MediaTypeError
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import PointCloud
 from datumaro.util import cast

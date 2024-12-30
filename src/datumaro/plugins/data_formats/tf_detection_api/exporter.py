@@ -11,7 +11,7 @@ import string
 from collections import OrderedDict
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
-from datumaro.components.converter import Converter
+from datumaro.components.exporter import Converter
 from datumaro.components.media import ByteImage, Image
 from datumaro.util.annotation_util import find_group_leader, find_instances, max_bbox
 from datumaro.util.image import encode_image

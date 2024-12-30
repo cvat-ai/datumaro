@@ -72,8 +72,8 @@ class Environment:
         return issubclass(t, accept) and t not in skip
 
     def __init__(self):
-        from datumaro.components.converter import Converter
         from datumaro.components.dataset_generator import DatasetGenerator
+        from datumaro.components.exporter import Converter
         from datumaro.components.extractor import (
             Extractor,
             Importer,

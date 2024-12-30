@@ -15,9 +15,9 @@ import uuid
 from datetime import datetime
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
-from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
 from datumaro.components.errors import MediaTypeError
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import DatasetItem, IExtractor
 from datumaro.components.media import PointCloud
 from datumaro.util import cast, dump_json_file

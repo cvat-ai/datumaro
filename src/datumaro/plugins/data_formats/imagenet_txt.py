@@ -9,8 +9,8 @@ from typing import Iterable, Optional, Sequence, Tuple, Union
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.converter import Converter
 from datumaro.components.errors import DatasetImportError, MediaTypeError
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image

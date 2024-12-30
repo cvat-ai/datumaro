@@ -32,7 +32,6 @@ from .components.annotation import (
     Skeleton,
 )
 from .components.cli_plugin import CliPlugin
-from .components.converter import Converter, ExportErrorPolicy, FailingExportErrorPolicy
 from .components.dataset import (
     Dataset,
     DatasetPatch,
@@ -42,6 +41,7 @@ from .components.dataset import (
     eager_mode,
 )
 from .components.environment import Environment, PluginRegistry
+from .components.exporter import Converter, ExportErrorPolicy, FailingExportErrorPolicy
 from .components.extractor import (
     DEFAULT_SUBSET_NAME,
     CategoriesInfo,

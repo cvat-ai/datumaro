@@ -20,7 +20,6 @@ import numpy as np
 from attr import attrs
 
 from datumaro.components.annotation import AnnotationType, Bbox, Label, LabelCategories, Mask
-from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
 from datumaro.components.errors import (
     DatasetError,
@@ -28,6 +27,7 @@ from datumaro.components.errors import (
     RepeatedItemError,
     UndefinedLabel,
 )
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import DatasetItem, Extractor, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image

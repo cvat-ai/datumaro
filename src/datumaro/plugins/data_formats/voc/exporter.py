@@ -24,9 +24,9 @@ from datumaro.components.annotation import (
     LabelCategories,
     Mask,
 )
-from datumaro.components.converter import Converter
 from datumaro.components.dataset import ItemStatus
 from datumaro.components.errors import MediaTypeError
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool

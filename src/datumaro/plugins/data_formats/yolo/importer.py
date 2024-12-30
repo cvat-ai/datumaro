@@ -13,7 +13,7 @@ import yaml
 
 from datumaro import Importer
 from datumaro.components.format_detection import FormatDetectionContext
-from datumaro.plugins.data_formats.yolo.extractor import (
+from datumaro.plugins.data_formats.yolo.base import (
     YoloUltralyticsClassificationExtractor,
     YoloUltralyticsDetectionExtractor,
     YoloUltralyticsOrientedBoxesExtractor,

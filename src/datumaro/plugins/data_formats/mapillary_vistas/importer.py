@@ -7,7 +7,7 @@ import os.path as osp
 
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, Importer
 
-from .extractor import MapillaryVistasInstancesExtractor, MapillaryVistasPanopticExtractor
+from .base import MapillaryVistasInstancesExtractor, MapillaryVistasPanopticExtractor
 from .format import MapillaryVistasPath, MapillaryVistasTask
 
 

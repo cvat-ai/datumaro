@@ -8,8 +8,8 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
-from datumaro.plugins.data_formats.kitti_raw.converter import KittiRawConverter
-from datumaro.plugins.data_formats.kitti_raw.extractor import KittiRawImporter
+from datumaro.plugins.data_formats.kitti_raw.base import KittiRawImporter
+from datumaro.plugins.data_formats.kitti_raw.exporter import KittiRawConverter
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path

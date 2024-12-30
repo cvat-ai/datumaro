@@ -29,7 +29,7 @@ from datumaro.components.errors import (
 )
 from datumaro.components.extractor import DatasetItem, Extractor
 from datumaro.components.media import Image
-from datumaro.plugins.data_formats.voc.converter import (
+from datumaro.plugins.data_formats.voc.exporter import (
     VocActionConverter,
     VocClassificationConverter,
     VocConverter,

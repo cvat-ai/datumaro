@@ -10,7 +10,7 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem, Extractor
 from datumaro.components.media import Image
-from datumaro.plugins.data_formats.kitti.converter import KittiConverter
+from datumaro.plugins.data_formats.kitti.exporter import KittiConverter
 from datumaro.plugins.data_formats.kitti.format import (
     KittiLabelMap,
     KittiPath,

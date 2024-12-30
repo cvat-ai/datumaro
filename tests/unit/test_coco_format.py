@@ -33,7 +33,8 @@ from datumaro.components.errors import (
 )
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.data_formats.coco.converter import (
+from datumaro.plugins.data_formats.coco.base import CocoInstancesExtractor
+from datumaro.plugins.data_formats.coco.exporter import (
     CocoCaptionsConverter,
     CocoConverter,
     CocoImageInfoConverter,
@@ -43,7 +44,6 @@ from datumaro.plugins.data_formats.coco.converter import (
     CocoPersonKeypointsConverter,
     CocoStuffConverter,
 )
-from datumaro.plugins.data_formats.coco.extractor import CocoInstancesExtractor
 from datumaro.plugins.data_formats.coco.importer import CocoImporter
 from datumaro.util import dump_json_file
 

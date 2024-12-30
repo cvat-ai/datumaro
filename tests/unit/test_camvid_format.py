@@ -6,13 +6,13 @@ from unittest import TestCase
 
 import numpy as np
 
-import datumaro.plugins.camvid_format as Camvid
+import datumaro.plugins.data_formats.camvid as Camvid
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, MaskCategories
 from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem, Extractor
 from datumaro.components.media import Image
-from datumaro.plugins.camvid_format import CamvidConverter, CamvidImporter
+from datumaro.plugins.data_formats.camvid import CamvidConverter, CamvidImporter
 from datumaro.util.meta_file_util import parse_meta_file
 
 from tests.requirements import Requirements, mark_requirement

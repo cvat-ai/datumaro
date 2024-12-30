@@ -8,7 +8,7 @@ from unittest import TestCase
 import numpy as np
 from lxml import etree as ElementTree  # nosec
 
-import datumaro.plugins.voc_format.format as VOC
+import datumaro.plugins.data_formats.voc.format as VOC
 from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
@@ -29,7 +29,7 @@ from datumaro.components.errors import (
 )
 from datumaro.components.extractor import DatasetItem, Extractor
 from datumaro.components.media import Image
-from datumaro.plugins.voc_format.converter import (
+from datumaro.plugins.data_formats.voc.converter import (
     VocActionConverter,
     VocClassificationConverter,
     VocConverter,
@@ -37,7 +37,7 @@ from datumaro.plugins.voc_format.converter import (
     VocLayoutConverter,
     VocSegmentationConverter,
 )
-from datumaro.plugins.voc_format.importer import VocImporter
+from datumaro.plugins.data_formats.voc.importer import VocImporter
 from datumaro.util.image import save_image
 from datumaro.util.mask_tools import load_mask
 

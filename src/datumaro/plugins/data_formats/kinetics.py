@@ -10,7 +10,7 @@ from datumaro.components.annotation import AnnotationType, Label, LabelCategorie
 from datumaro.components.extractor import DatasetItem, Extractor, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Video
-from datumaro.plugins.video_formats import VIDEO_EXTENSIONS
+from datumaro.plugins.data_formats.video import VIDEO_EXTENSIONS
 from datumaro.util import parse_json, parse_json_file
 from datumaro.util.os_util import find_files
 

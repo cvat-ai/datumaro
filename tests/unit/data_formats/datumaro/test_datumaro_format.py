@@ -25,8 +25,8 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
-from datumaro.plugins.datumaro_format.converter import DatumaroConverter
-from datumaro.plugins.datumaro_format.extractor import DatumaroImporter
+from datumaro.plugins.data_formats.datumaro.converter import DatumaroConverter
+from datumaro.plugins.data_formats.datumaro.extractor import DatumaroImporter
 from datumaro.util import parse_json_file
 from datumaro.util.mask_tools import generate_colormap
 

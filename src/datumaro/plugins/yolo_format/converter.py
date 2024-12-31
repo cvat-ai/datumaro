@@ -340,9 +340,12 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
     def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
         return osp.join(save_dir, YoloUltralyticsPath.LABELS_FOLDER_NAME, subset)
 
-    def _make_track_id_suffix(self, anno: Annotation):
+    def _make_track_id_suffix(self, anno: Annotation) -> str:
         track_id = anno.attributes.get("track_id") if self._write_track_id else None
-        return f" {track_id}" if track_id is not None else ""
+        try:
+            return f" {int(track_id)}"
+        except (ValueError, TypeError):
+            return ""
 
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         anno_line = super()._make_annotation_line(width=width, height=height, anno=anno)

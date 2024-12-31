@@ -11,7 +11,7 @@ import os.path as osp
 from collections import OrderedDict, defaultdict
 from functools import cached_property
 from itertools import cycle
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 import yaml
 
@@ -73,6 +73,26 @@ def _bbox_annotation_as_polygon(bbox: Bbox) -> List[float]:
     return points
 
 
+def _resolve_subsets(initial_subsets: Dict[str, IExtractor]) -> Dict[str, Iterable]:
+    assert YoloPath.DEFAULT_SUBSET_NAME.lower() != DEFAULT_SUBSET_NAME.lower()
+
+    subsets: Dict[str, Iterable] = {
+        subset_name: subset
+        for subset_name, subset in initial_subsets.items()
+        if subset_name and subset_name != DEFAULT_SUBSET_NAME
+    }
+    for subset_name, subset in initial_subsets.items():
+        if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
+            subset_name = YoloPath.DEFAULT_SUBSET_NAME
+            try:
+                subset_name = next(name for name in subsets if name.lower() == subset_name.lower())
+            except StopIteration:
+                pass
+            subsets[subset_name] = itertools.chain(subsets.get(subset_name, []), subset)
+
+    return subsets
+
+
 class YoloConverter(Converter):
     # https://github.com/AlexeyAB/darknet#how-to-train-to-detect-your-custom-objects
     DEFAULT_IMAGE_EXT = ".jpg"
@@ -109,12 +129,11 @@ class YoloConverter(Converter):
 
         subset_lists = OrderedDict()
 
-        subsets = self._extractor.subsets()
+        subsets = _resolve_subsets(self._extractor.subsets())
+
         pbars = self._ctx.progress_reporter.split(len(subsets))
         for (subset_name, subset), pbar in zip(subsets.items(), pbars):
-            if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
-                subset_name = YoloPath.DEFAULT_SUBSET_NAME
-            elif subset_name in self.RESERVED_CONFIG_KEYS:
+            if subset_name in self.RESERVED_CONFIG_KEYS:
                 raise DatasetExportError(
                     f"Can't export '{subset_name}' subset in YOLO format, this word is reserved."
                 )
@@ -446,12 +465,9 @@ class YoloUltralyticsClassificationConverter(Converter):
 
         labels = self._extractor.categories()[AnnotationType.label]
 
-        subsets = self._extractor.subsets()
+        subsets = _resolve_subsets(self._extractor.subsets())
         pbars = self._ctx.progress_reporter.split(len(subsets))
         for (subset_name, subset), pbar in zip(subsets.items(), pbars):
-            if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
-                subset_name = YoloPath.DEFAULT_SUBSET_NAME
-
             os.makedirs(osp.join(self._save_dir, subset_name), exist_ok=True)
 
             items_info = defaultdict(dict)

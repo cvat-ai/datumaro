@@ -36,7 +36,7 @@ from datumaro.components.errors import (
     ItemImportError,
     UndeclaredLabelError,
 )
-from datumaro.components.extractor import DatasetItem
+from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem
 from datumaro.components.format_detection import FormatDetectionContext, FormatRequirementsUnmet
 from datumaro.components.media import Image
 from datumaro.plugins.yolo_format.converter import (
@@ -168,6 +168,23 @@ class YoloConverterTest(CompareDatasetMixin):
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
 
         self.compare_datasets(source_dataset, parsed_dataset)
+
+    def test_merges_default_subset_to_train_if_exists(self, test_dir):
+        source_dataset = self._generate_random_dataset(
+            [
+                {"subset": DEFAULT_SUBSET_NAME},
+                {"subset": "Train"},
+            ]
+        )
+        expected_dataset = source_dataset.from_iterable(
+            [item.wrap(subset="Train") for item in source_dataset],
+            categories=source_dataset.categories(),
+        )
+
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+
+        self.compare_datasets(expected_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_image_info(self, test_dir):

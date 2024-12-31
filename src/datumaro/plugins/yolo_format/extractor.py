@@ -527,7 +527,7 @@ class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
         if len(parts) not in [9, 10]:
             raise InvalidAnnotationError(
                 f"Unexpected field count {len(parts)} in the bbox description. "
-                "Expected 9 fields (label, x1, y1, x2, y2, x3, y3, x4, y4)."
+                "Expected 9 or 10 fields (label, x1, y1, x2, y2, x3, y3, x4, y4 [, track_id])."
             )
         label_id = self._map_label_id(parts[0])
         points = [

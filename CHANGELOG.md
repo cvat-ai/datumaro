@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/50>)
 - Support for Ultralytics YOLO Classification format
   (<https://github.com/cvat-ai/datumaro/pull/59>)
+- Support for tracks in Ultralytics YOLO formats
+  (<https://github.com/cvat-ai/datumaro/pull/70>)
 
 ### Changed
 - `env.detect_dataset()` now returns a list of detected formats at all recursion levels

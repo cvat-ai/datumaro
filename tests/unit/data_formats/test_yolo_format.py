@@ -36,7 +36,7 @@ from datumaro.components.errors import (
     ItemImportError,
     UndeclaredLabelError,
 )
-from datumaro.components.extractor import DatasetItem
+from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem
 from datumaro.components.format_detection import FormatDetectionContext, FormatRequirementsUnmet
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.yolo.base import (
@@ -184,6 +184,23 @@ class YoloConverterTest(CompareDatasetMixin):
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
 
         self.compare_datasets(source_dataset, parsed_dataset)
+
+    def test_merges_default_subset_to_train_if_exists(self, test_dir):
+        source_dataset = self._generate_random_dataset(
+            [
+                {"subset": DEFAULT_SUBSET_NAME},
+                {"subset": "Train"},
+            ]
+        )
+        expected_dataset = source_dataset.from_iterable(
+            [item.wrap(subset="Train") for item in source_dataset],
+            categories=source_dataset.categories(),
+        )
+
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+
+        self.compare_datasets(expected_dataset, parsed_dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_image_info(self, test_dir):
@@ -567,6 +584,41 @@ class YoloUltralyticsDetectionConverterTest(YoloConverterTest):
                 "one_more_label_wo_parent",
             ],
         )
+        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, parsed_dataset)
+
+    @pytest.mark.parametrize("write_track_id", [True, False])
+    def test_write_track_id_parameter(self, test_dir, write_track_id):
+        dataset_without_tracks = self._generate_random_dataset(
+            recipes=[{"annotations": 2}, {"annotations": 3}]
+        )
+        items = list(dataset_without_tracks)
+        dataset_with_track = Dataset.from_iterable(
+            [
+                items[0].wrap(
+                    annotations=[
+                        items[0]
+                        .annotations[0]
+                        .wrap(
+                            attributes=dict(items[0].annotations[0].attributes, track_id=77),
+                        ),
+                        items[0].annotations[1],
+                    ]
+                ),
+                items[1],
+            ],
+            categories=dataset_without_tracks.categories(),
+        )
+
+        expected_dataset = dataset_with_track if write_track_id else dataset_without_tracks
+        self.CONVERTER.convert(
+            dataset_with_track, test_dir, save_media=True, write_track_id=write_track_id
+        )
+
+        if write_track_id:
+            with open(osp.join(test_dir, "labels", "train", "1.txt"), "r") as f:
+                assert f.readlines()[0].strip().endswith(" 77")
+
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         self.compare_datasets(expected_dataset, parsed_dataset)
 
@@ -1259,6 +1311,29 @@ class YoloUltralyticsDetectionImporterTest(YoloImporterTest):
         dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
         self.compare_datasets(expected_dataset, dataset)
 
+    def test_can_import_with_track_id(self, test_dir):
+        track_id = 4
+
+        expected_dataset = self._asset_dataset()
+        untracked_anno = list(expected_dataset)[0].annotations[0]
+        tracked_anno = untracked_anno.wrap(
+            attributes=dict(untracked_anno.attributes, track_id=track_id)
+        )
+        for item in expected_dataset:
+            item.annotations.append(tracked_anno)
+
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", self.ASSETS[0]), dataset_path)
+
+        labels_path = osp.join(dataset_path, "labels", "train", "1.txt")
+        with open(labels_path, "r") as f:
+            first_line = f.readline().strip()
+        with open(labels_path, "a") as f:
+            f.write(f"{first_line} {track_id}")
+
+        dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, dataset)
+
 
 class YoloUltralyticsSegmentationImporterTest(YoloUltralyticsDetectionImporterTest):
     IMPORTER = YoloUltralyticsSegmentationImporter
@@ -1524,6 +1599,9 @@ class YoloExtractorTest:
         self._prepare_dataset(test_dir)
         with open(osp.join(test_dir, self._get_annotation_dir(), "a.txt"), "w") as f:
             values = [0] + self._make_some_annotation_values()
+            assert field <= len(values)
+            if field == len(values):
+                values.append(None)
             values[field] = "a"
             f.write(" ".join(str(v) for v in values))
 
@@ -1594,6 +1672,20 @@ class YoloUltralyticsDetectionExtractorTest(YoloExtractorTest):
         source_dataset.get("a", subset="train").annotations.clear()
         compare_datasets(helper_tc, source_dataset, actual)
 
+    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
+    @pytest.mark.parametrize(
+        "field, field_name",
+        [
+            (1, "bbox center x"),
+            (2, "bbox center y"),
+            (3, "bbox width"),
+            (4, "bbox height"),
+            (5, "bbox track id"),
+        ],
+    )
+    def test_can_report_invalid_field_type(self, field, field_name, test_dir):
+        self._check_can_report_invalid_field_type(field, field_name, test_dir)
+
 
 class YoloUltralyticsSegmentationExtractorTest(YoloUltralyticsDetectionExtractorTest):
     IMPORTER = YoloUltralyticsSegmentationImporter
@@ -1618,6 +1710,7 @@ class YoloUltralyticsSegmentationExtractorTest(YoloUltralyticsDetectionExtractor
             (4, "polygon point 1 y"),
             (5, "polygon point 2 x"),
             (6, "polygon point 2 y"),
+            (7, "polygon track id"),
         ],
     )
     def test_can_report_invalid_field_type(self, field, field_name, test_dir):
@@ -1654,6 +1747,7 @@ class YoloUltralyticsOrientedBoxesExtractorTest(YoloUltralyticsDetectionExtracto
             (4, "bbox point 1 y"),
             (5, "bbox point 2 x"),
             (6, "bbox point 2 y"),
+            (9, "bbox track id"),
         ],
     )
     def test_can_report_invalid_field_type(self, field, field_name, test_dir):
@@ -1771,6 +1865,7 @@ class YoloUltralyticsPoseExtractorTest(YoloUltralyticsDetectionExtractorTest):
             (8, "skeleton point 1 x"),
             (9, "skeleton point 1 y"),
             (10, "skeleton point 1 visibility"),
+            (17, "skeleton track id"),
         ],
     )
     def test_can_report_invalid_field_type(self, field, field_name, test_dir):

@@ -11,7 +11,7 @@ import os.path as osp
 from collections import OrderedDict, defaultdict
 from functools import cached_property
 from itertools import cycle
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 import yaml
 
@@ -73,6 +73,26 @@ def _bbox_annotation_as_polygon(bbox: Bbox) -> List[float]:
     return points
 
 
+def _resolve_subsets(initial_subsets: Dict[str, IExtractor]) -> Dict[str, Iterable]:
+    assert YoloPath.DEFAULT_SUBSET_NAME.lower() != DEFAULT_SUBSET_NAME.lower()
+
+    subsets: Dict[str, Iterable] = {
+        subset_name: subset
+        for subset_name, subset in initial_subsets.items()
+        if subset_name and subset_name != DEFAULT_SUBSET_NAME
+    }
+    for subset_name, subset in initial_subsets.items():
+        if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
+            subset_name = YoloPath.DEFAULT_SUBSET_NAME
+            try:
+                subset_name = next(name for name in subsets if name.lower() == subset_name.lower())
+            except StopIteration:
+                pass
+            subsets[subset_name] = itertools.chain(subsets.get(subset_name, []), subset)
+
+    return subsets
+
+
 class YoloConverter(Converter):
     # https://github.com/AlexeyAB/darknet#how-to-train-to-detect-your-custom-objects
     DEFAULT_IMAGE_EXT = ".jpg"
@@ -109,12 +129,11 @@ class YoloConverter(Converter):
 
         subset_lists = OrderedDict()
 
-        subsets = self._extractor.subsets()
+        subsets = _resolve_subsets(self._extractor.subsets())
+
         pbars = self._ctx.progress_reporter.split(len(subsets))
         for (subset_name, subset), pbar in zip(subsets.items(), pbars):
-            if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
-                subset_name = YoloPath.DEFAULT_SUBSET_NAME
-            elif subset_name in self.RESERVED_CONFIG_KEYS:
+            if subset_name in self.RESERVED_CONFIG_KEYS:
                 raise DatasetExportError(
                     f"Can't export '{subset_name}' subset in YOLO format, this word is reserved."
                 )
@@ -287,10 +306,12 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
         save_dir: str,
         *,
         add_path_prefix: bool = True,
-        config_file=None,
+        config_file: Optional[str] = None,
+        write_track_id: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(extractor, save_dir, add_path_prefix=add_path_prefix, **kwargs)
+        self._write_track_id = write_track_id
         self._config_filename = config_file or YoloUltralyticsPath.DEFAULT_CONFIG_FILE
 
     def _save_annotation_file(self, annotation_path, yolo_annotation):
@@ -305,6 +326,12 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
             default=YoloUltralyticsPath.DEFAULT_CONFIG_FILE,
             type=str,
             help="config file name (default: %(default)s)",
+        )
+        parser.add_argument(
+            "--write-track-id",
+            default=False,
+            type=str_to_bool,
+            help="save track id to annotations",
         )
         return parser
 
@@ -332,6 +359,21 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
     def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
         return osp.join(save_dir, YoloUltralyticsPath.LABELS_FOLDER_NAME, subset)
 
+    def _make_track_id_suffix(self, anno: Annotation) -> str:
+        track_id = anno.attributes.get("track_id") if self._write_track_id else None
+        try:
+            return f" {int(track_id)}"
+        except (ValueError, TypeError):
+            return ""
+
+    def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
+        anno_line = super()._make_annotation_line(width=width, height=height, anno=anno)
+
+        if anno_line and (track_id_suffix := self._make_track_id_suffix(anno)):
+            anno_line = f"{anno_line.strip()}{track_id_suffix}\n"
+
+        return anno_line
+
 
 class YoloUltralyticsSegmentationConverter(YoloUltralyticsDetectionConverter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
@@ -339,7 +381,7 @@ class YoloUltralyticsSegmentationConverter(YoloUltralyticsDetectionConverter):
             return
         values = [value / size for value, size in zip(anno.points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
+        return f"{self._map_labels_for_save[anno.label]} {string_values}{self._make_track_id_suffix(anno)}\n"
 
 
 class YoloUltralyticsOrientedBoxesConverter(YoloUltralyticsDetectionConverter):
@@ -349,7 +391,7 @@ class YoloUltralyticsOrientedBoxesConverter(YoloUltralyticsDetectionConverter):
         points = _bbox_annotation_as_polygon(anno)
         values = [value / size for value, size in zip(points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return "%s %s\n" % (self._map_labels_for_save[anno.label], string_values)
+        return f"{self._map_labels_for_save[anno.label]} {string_values}{self._make_track_id_suffix(anno)}\n"
 
 
 class YoloUltralyticsPoseConverter(YoloUltralyticsDetectionConverter):
@@ -400,7 +442,10 @@ class YoloUltralyticsPoseConverter(YoloUltralyticsDetectionConverter):
             y = element.points[1] / height
             points_values[position] = f"{x:.6f} {y:.6f} {element.visibility[0].value}"
 
-        return f"{self._map_labels_for_save[skeleton.label]} {bbox_string_values} {' '.join(points_values)}\n"
+        return (
+            f"{self._map_labels_for_save[skeleton.label]} {bbox_string_values} "
+            f"{' '.join(points_values)}{self._make_track_id_suffix(skeleton)}\n"
+        )
 
 
 class YoloUltralyticsClassificationConverter(Converter):
@@ -420,12 +465,9 @@ class YoloUltralyticsClassificationConverter(Converter):
 
         labels = self._extractor.categories()[AnnotationType.label]
 
-        subsets = self._extractor.subsets()
+        subsets = _resolve_subsets(self._extractor.subsets())
         pbars = self._ctx.progress_reporter.split(len(subsets))
         for (subset_name, subset), pbar in zip(subsets.items(), pbars):
-            if not subset_name or subset_name == DEFAULT_SUBSET_NAME:
-                subset_name = YoloPath.DEFAULT_SUBSET_NAME
-
             os.makedirs(osp.join(self._save_dir, subset_name), exist_ok=True)
 
             items_info = defaultdict(dict)

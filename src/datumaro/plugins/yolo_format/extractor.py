@@ -473,6 +473,19 @@ class YoloUltralyticsDetectionExtractor(YoloExtractor):
         else:
             yield from subset_images_source
 
+    def _load_one_annotation(
+        self, parts: List[str], image_height: int, image_width: int
+    ) -> Annotation:
+        if len(parts) not in [5, 6]:
+            raise InvalidAnnotationError(
+                f"Unexpected field count {len(parts)} in the bbox description. "
+                "Expected 5 or 6 fields (label, xc, yc, w, h, <optional track id>)."
+            )
+        bbox = super()._load_one_annotation(parts[:5], image_height, image_width)
+        if len(parts) == 6:
+            bbox.attributes["track_id"] = self._parse_field(parts[-1], int, "bbox track id")
+        return bbox
+
 
 class YoloUltralyticsSegmentationExtractor(YoloUltralyticsDetectionExtractor):
     def _load_segmentation_annotation(
@@ -480,31 +493,38 @@ class YoloUltralyticsSegmentationExtractor(YoloUltralyticsDetectionExtractor):
     ) -> Polygon:
         label_id = self._map_label_id(parts[0])
         points = [
-            self._parse_field(
-                value, float, f"polygon point {idx // 2} {'x' if idx % 2 == 0 else 'y'}"
+            parsed_value
+            for idx, (x, y) in enumerate(
+                take_by(parts[1:] if len(parts) % 2 == 1 else parts[1:-1], 2)
             )
-            for idx, value in enumerate(parts[1:])
+            for parsed_value in [
+                self._parse_field(x, float, f"polygon point {idx} x"),
+                self._parse_field(y, float, f"polygon point {idx} y"),
+            ]
         ]
         scaled_points = [
             value * size for value, size in zip(points, cycle((image_width, image_height)))
         ]
-        return Polygon(scaled_points, label=label_id)
+        polygon = Polygon(scaled_points, label=label_id)
+        if len(parts) % 2 == 0:
+            polygon.attributes["track_id"] = self._parse_field(parts[-1], int, "polygon track id")
+        return polygon
 
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
-        if len(parts) > 5 and len(parts) % 2 == 1:
+        if len(parts) > 6:
             return self._load_segmentation_annotation(parts, image_height, image_width)
         raise InvalidAnnotationError(
             f"Unexpected field count {len(parts)} in the polygon description. "
-            "Expected odd number > 5 of fields for segment annotation (label, x1, y1, x2, y2, x3, y3, ...)"
+            "Expected fields for segment annotation: (label, x1, y1, x2, y2, x3, y3, ..., <optional track id>)"
         )
 
 
 class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
     @staticmethod
     def _rotate_bbox_to_sync_exported_annotation_with_imported(
-        imported_points: list[tuple[int, int]],
+        imported_points: list[tuple[float, float]],
         bbox: Bbox,
     ) -> Bbox:
         exported_points = list(take_by(bbox_annotation_as_polygon(bbox), count=2))
@@ -549,10 +569,10 @@ class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
-        if len(parts) != 9:
+        if len(parts) not in [9, 10]:
             raise InvalidAnnotationError(
                 f"Unexpected field count {len(parts)} in the bbox description. "
-                "Expected 9 fields (label, x1, y1, x2, y2, x3, y3, x4, y4)."
+                "Expected 9 or 10 fields (label, x1, y1, x2, y2, x3, y3, x4, y4 [, track_id])."
             )
         label_id = self._map_label_id(parts[0])
         points = [
@@ -560,7 +580,9 @@ class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
                 self._parse_field(x, float, f"bbox point {idx} x") * image_width,
                 self._parse_field(y, float, f"bbox point {idx} y") * image_height,
             )
-            for idx, (x, y) in enumerate(take_by(parts[1:], 2))
+            for idx, (x, y) in enumerate(
+                take_by(parts[1:] if len(parts) % 2 == 1 else parts[1:-1], 2)
+            )
         ]
 
         (center_x, center_y), (width, height), rotation = cv2.minAreaRect(
@@ -577,6 +599,8 @@ class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
             attributes=(dict(rotation=rotation) if abs(rotation) > 0.00001 else {}),
         )
         bbox = self._rotate_bbox_to_sync_exported_annotation_with_imported(points, bbox)
+        if len(parts) == 10:
+            bbox.attributes["track_id"] = self._parse_field(parts[-1], int, "bbox track id")
         return bbox
 
 
@@ -693,11 +717,12 @@ class YoloUltralyticsPoseExtractor(YoloUltralyticsDetectionExtractor):
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
         max_number_of_points, values_per_point = self._kpt_shape
-        if len(parts) != 5 + max_number_of_points * values_per_point:
+        if len(parts) - (5 + max_number_of_points * values_per_point) not in [0, 1]:
             raise InvalidAnnotationError(
                 f"Unexpected field count {len(parts)} in the skeleton description. "
-                "Expected 5 fields (label, xc, yc, w, h)"
-                f"and then {values_per_point} for each of {max_number_of_points} points"
+                "Expected 5 fields (label, xc, yc, w, h) "
+                f"and then {values_per_point} for each of {max_number_of_points} points "
+                "and then optional track id"
             )
 
         label_id = self._map_label_id(parts[0])
@@ -741,7 +766,10 @@ class YoloUltralyticsPoseExtractor(YoloUltralyticsDetectionExtractor):
                 ),
             ]
         ]
-        return Skeleton(points, label=label_id)
+        skeleton = Skeleton(points, label=label_id)
+        if len(parts) - (5 + max_number_of_points * values_per_point) == 1:
+            skeleton.attributes["track_id"] = self._parse_field(parts[-1], int, "skeleton track id")
+        return skeleton
 
 
 class YoloUltralyticsClassificationExtractor(YoloBaseExtractor):

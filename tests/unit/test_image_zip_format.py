@@ -6,7 +6,7 @@ import numpy as np
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image, save_image
 from datumaro.components.project import Dataset
-from datumaro.plugins.image_zip_format import ImageZipConverter, ImageZipPath
+from datumaro.plugins.data_formats.image_zip import ImageZipConverter, ImageZipPath
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path

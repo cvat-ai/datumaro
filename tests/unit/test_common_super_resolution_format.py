@@ -7,7 +7,7 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.common_super_resolution_format import CommonSuperResolutionImporter
+from datumaro.plugins.data_formats.common_super_resolution import CommonSuperResolutionImporter
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path

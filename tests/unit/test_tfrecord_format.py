@@ -18,11 +18,11 @@ from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 try:
-    from datumaro.plugins.tf_detection_api_format.converter import TfDetectionApiConverter
-    from datumaro.plugins.tf_detection_api_format.extractor import (
+    from datumaro.plugins.data_formats.tf_detection_api.base import (
         TfDetectionApiExtractor,
         TfDetectionApiImporter,
     )
+    from datumaro.plugins.data_formats.tf_detection_api.exporter import TfDetectionApiConverter
 
     import_failed = False
 except ImportError:

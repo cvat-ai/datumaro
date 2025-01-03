@@ -39,15 +39,7 @@ from datumaro.components.errors import (
 from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem
 from datumaro.components.format_detection import FormatDetectionContext, FormatRequirementsUnmet
 from datumaro.components.media import Image
-from datumaro.plugins.yolo_format.converter import (
-    YoloConverter,
-    YoloUltralyticsClassificationConverter,
-    YoloUltralyticsDetectionConverter,
-    YoloUltralyticsOrientedBoxesConverter,
-    YoloUltralyticsPoseConverter,
-    YoloUltralyticsSegmentationConverter,
-)
-from datumaro.plugins.yolo_format.extractor import (
+from datumaro.plugins.data_formats.yolo.base import (
     YoloExtractor,
     YoloUltralyticsClassificationExtractor,
     YoloUltralyticsDetectionExtractor,
@@ -55,7 +47,15 @@ from datumaro.plugins.yolo_format.extractor import (
     YoloUltralyticsPoseExtractor,
     YoloUltralyticsSegmentationExtractor,
 )
-from datumaro.plugins.yolo_format.importer import (
+from datumaro.plugins.data_formats.yolo.exporter import (
+    YoloConverter,
+    YoloUltralyticsClassificationConverter,
+    YoloUltralyticsDetectionConverter,
+    YoloUltralyticsOrientedBoxesConverter,
+    YoloUltralyticsPoseConverter,
+    YoloUltralyticsSegmentationConverter,
+)
+from datumaro.plugins.data_formats.yolo.importer import (
     YoloImporter,
     YoloUltralyticsClassificationImporter,
     YoloUltralyticsDetectionImporter,

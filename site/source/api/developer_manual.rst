@@ -240,23 +240,23 @@ Dataset Formats
 ^^^^^^^^^^^^^^^
 
 The framework provides functions to read and write datasets in specific formats.
-It is supported by :mod:`Extractor <datumaro.components.extractor>` s, :mod:`Importer <datumaro.plugins.coco_format.importer>` s, and :mod:`Converter <datumaro.components.converter.Converter>` s.
+It is supported by :mod:`Extractor <datumaro.components.extractor>` s, :mod:`Importer <datumaro.plugins.data_formats.coco.importer>` s, and :mod:`Converter <datumaro.components.converter.Converter>` s.
 
-Dataset reading is supported by :mod:`Extractor <datumaro.components.extractor>` s and :mod:`Importer <datumaro.plugins.coco_format.importer>` s:
+Dataset reading is supported by :mod:`Extractor <datumaro.components.extractor>` s and :mod:`Importer <datumaro.plugins.data_formats.coco.importer>` s:
 
 * An :mod:`Extractor <datumaro.components.extractor>` produces a list of :mod:`DatasetItem <datumaro.components.extractor.DatasetItem>` s corresponding to the
   dataset. Annotations are available in the :mod:`DatasetItem.annotations <datumaro.components.extractor.DatasetItem.annotations>` list.
   The :mod:`SourceExtractor <datumaro.components.extractor.SourceExtractor>` class is designed for loading simple, single-subset
   datasets. It should be used by default. The :mod:`Extractor <datumaro.components.extractor>` base class should
   be used when :mod:`SourceExtractor <datumaro.components.extractor.SourceExtractor>` 's functionality is not enough.
-* An :mod:`Importer <datumaro.plugins.coco_format.importer>` detects dataset files and generates dataset loading parameters
-  for the corresponding :mod:`Extractor <datumaro.components.extractor>` s. :mod:`Importer <datumaro.plugins.coco_format.importer>` s are optional, they
+* An :mod:`Importer <datumaro.plugins.data_formats.coco.importer>` detects dataset files and generates dataset loading parameters
+  for the corresponding :mod:`Extractor <datumaro.components.extractor>` s. :mod:`Importer <datumaro.plugins.data_formats.coco.importer>` s are optional, they
   only extend the Extractor functionality and make them more flexible and
   simple. They are mostly used to locate dataset subsets, but they also can
   do some data compatibility checks and have other required logic.
 
-It is possible to add custom :mod:`Extractor <datumaro.components.extractor>` s and :mod:`Importer <datumaro.plugins.coco_format.importer>` s. To do this, you need
-to put an :mod:`Extractor <datumaro.components.extractor>` and :mod:`Importer <datumaro.plugins.coco_format.importer>` implementations to a plugin directory.
+It is possible to add custom :mod:`Extractor <datumaro.components.extractor>` s and :mod:`Importer <datumaro.plugins.data_formats.coco.importer>` s. To do this, you need
+to put an :mod:`Extractor <datumaro.components.extractor>` and :mod:`Importer <datumaro.plugins.data_formats.coco.importer>` implementations to a plugin directory.
 
 Dataset writing is supported by :mod:`Converter <datumaro.components.converter.Converter>` s.
 A :mod:`Converter <datumaro.components.converter.Converter>` produces a dataset of a specific format from dataset items.
@@ -287,7 +287,7 @@ In Datumaro there are several types of plugins, which include:
 
 
 * :mod:`Extractor <datumaro.components.extractor>` - produces dataset items from data source
-* :mod:`Importer <datumaro.plugins.coco_format.importer>` - recognizes dataset type and creates project
+* :mod:`Importer <datumaro.plugins.data_formats.coco.importer>` - recognizes dataset type and creates project
 * :mod:`Converter <datumaro.components.converter.Converter>` - exports dataset to a specific format
 * :mod:`transformation <datumaro.plugins.transforms>` - modifies dataset items or other properties
 * :mod:`launcher <datumaro.components.launcher>` - executes models
@@ -304,7 +304,7 @@ or by regular module importing:
 .. code-block:: python
 
    import datumaro as dm
-   from datumaro.plugins.yolo_format.converter import YoloConverter
+   from datumaro.plugins.data_formats.yolo.converter import YoloConverter
 
    # Import a dataset
    dataset = dm.Dataset.import_from(src_dir, 'voc')

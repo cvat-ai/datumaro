@@ -6,7 +6,7 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.market1501_format import Market1501Converter, Market1501Importer
+from datumaro.plugins.data_formats.market1501 import Market1501Converter, Market1501Importer
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path

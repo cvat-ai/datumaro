@@ -8,8 +8,8 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
-from datumaro.plugins.sly_pointcloud_format.converter import SuperviselyPointCloudConverter
-from datumaro.plugins.sly_pointcloud_format.extractor import SuperviselyPointCloudImporter
+from datumaro.plugins.data_formats.sly_pointcloud.base import SuperviselyPointCloudImporter
+from datumaro.plugins.data_formats.sly_pointcloud.exporter import SuperviselyPointCloudConverter
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path

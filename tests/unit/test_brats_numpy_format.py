@@ -7,7 +7,7 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import MultiframeImage
-from datumaro.plugins.brats_numpy_format import BratsNumpyImporter
+from datumaro.plugins.data_formats.brats_numpy import BratsNumpyImporter
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path

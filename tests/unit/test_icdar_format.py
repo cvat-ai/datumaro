@@ -9,15 +9,15 @@ from datumaro.components.environment import Environment
 from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
 from datumaro.components.project import Dataset
-from datumaro.plugins.icdar_format.converter import (
-    IcdarTextLocalizationConverter,
-    IcdarTextSegmentationConverter,
-    IcdarWordRecognitionConverter,
-)
-from datumaro.plugins.icdar_format.extractor import (
+from datumaro.plugins.data_formats.icdar.base import (
     IcdarTextLocalizationImporter,
     IcdarTextSegmentationImporter,
     IcdarWordRecognitionImporter,
+)
+from datumaro.plugins.data_formats.icdar.exporter import (
+    IcdarTextLocalizationConverter,
+    IcdarTextSegmentationConverter,
+    IcdarWordRecognitionConverter,
 )
 
 from tests.requirements import Requirements, mark_requirement

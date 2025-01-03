@@ -72,8 +72,8 @@ class Environment:
         return issubclass(t, accept) and t not in skip
 
     def __init__(self):
-        from datumaro.components.converter import Converter
         from datumaro.components.dataset_generator import DatasetGenerator
+        from datumaro.components.exporter import Converter
         from datumaro.components.extractor import (
             Extractor,
             Importer,
@@ -132,7 +132,7 @@ class Environment:
     def _find_plugins(plugins_dir):
         plugins = []
 
-        for pattern in ("*.py", "*/*.py"):
+        for pattern in ("*.py", "*/*.py", "*/*/*.py"):
             for path in glob.glob(osp.join(glob.escape(plugins_dir), pattern)):
                 if not osp.isfile(path):
                     continue

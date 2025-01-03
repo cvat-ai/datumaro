@@ -8,10 +8,10 @@ import os.path as osp
 import shutil
 from typing import Dict, Optional, Type, Union
 
-from datumaro.components.converter import Converter
 from datumaro.components.dataset import Dataset, DatasetItemStorageDatasetView, IDataset
 from datumaro.components.dataset_filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.environment import Environment
+from datumaro.components.exporter import Converter
 from datumaro.components.extractor import Transform
 from datumaro.components.launcher import Launcher, ModelTransform
 from datumaro.components.operations import ExactMerge

@@ -45,7 +45,7 @@ from datumaro.util.image import (
 from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_meta_file
 from datumaro.util.os_util import split_path
 
-from .converter import bbox_annotation_as_polygon
+from .exporter import bbox_annotation_as_polygon
 from .format import (
     YoloPath,
     YoloUltralyticsClassificationFormat,

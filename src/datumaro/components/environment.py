@@ -78,14 +78,14 @@ class Environment:
             DatasetBase,
             Importer,
             ItemTransform,
-            SourceExtractor,
+            SubsetBase,
             Transform,
         )
         from datumaro.components.launcher import Launcher
         from datumaro.components.validator import Validator
 
         _filter = self._make_filter
-        self._extractors = PluginRegistry(_filter(DatasetBase, skip=SourceExtractor))
+        self._extractors = PluginRegistry(_filter(DatasetBase, skip=SubsetBase))
         self._importers = PluginRegistry(_filter(Importer))
         self._launchers = PluginRegistry(_filter(Launcher))
         self._converters = PluginRegistry(_filter(Converter))

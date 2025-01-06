@@ -6,7 +6,7 @@ import os.path as osp
 from glob import iglob
 
 from datumaro.components.annotation import AnnotationType, Cuboid3d, LabelCategories
-from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.media import Image, PointCloud
 from datumaro.util import parse_json_file
 from datumaro.util.image import find_images
@@ -14,7 +14,7 @@ from datumaro.util.image import find_images
 from .format import PointCloudPath
 
 
-class SuperviselyPointCloudExtractor(SourceExtractor):
+class SuperviselyPointCloudBase(SubsetBase):
     NAME = "sly_pointcloud"
     _SUPPORTED_SHAPES = "cuboid"
 

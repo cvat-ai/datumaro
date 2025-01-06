@@ -10,13 +10,13 @@ from datumaro.components.errors import DatasetNotFoundError
 from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, Importer
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
 from datumaro.plugins.data_formats.coco.base import (
-    CocoCaptionsExtractor,
-    CocoImageInfoExtractor,
-    CocoInstancesExtractor,
-    CocoLabelsExtractor,
-    CocoPanopticExtractor,
-    CocoPersonKeypointsExtractor,
-    CocoStuffExtractor,
+    CocoCaptionsBase,
+    CocoImageInfoBase,
+    CocoInstancesBase,
+    CocoLabelsBase,
+    CocoPanopticBase,
+    CocoPersonKeypointsBase,
+    CocoStuffBase,
 )
 
 from .format import CocoTask
@@ -24,13 +24,13 @@ from .format import CocoTask
 
 class CocoImporter(Importer):
     _TASKS = {
-        CocoTask.instances: CocoInstancesExtractor,
-        CocoTask.person_keypoints: CocoPersonKeypointsExtractor,
-        CocoTask.captions: CocoCaptionsExtractor,
-        CocoTask.labels: CocoLabelsExtractor,
-        CocoTask.image_info: CocoImageInfoExtractor,
-        CocoTask.panoptic: CocoPanopticExtractor,
-        CocoTask.stuff: CocoStuffExtractor,
+        CocoTask.instances: CocoInstancesBase,
+        CocoTask.person_keypoints: CocoPersonKeypointsBase,
+        CocoTask.captions: CocoCaptionsBase,
+        CocoTask.labels: CocoLabelsBase,
+        CocoTask.image_info: CocoImageInfoBase,
+        CocoTask.panoptic: CocoPanopticBase,
+        CocoTask.stuff: CocoStuffBase,
     }
 
     @classmethod

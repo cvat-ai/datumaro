@@ -15,7 +15,7 @@ import numpy as np
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Converter
-from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.media import Image
 from datumaro.util.image import find_images, load_image, save_image
 from datumaro.util.mask_tools import merge_masks
@@ -37,11 +37,11 @@ class MotsLabels(Enum):
     ignored = 10
 
 
-class MotsPngExtractor(SourceExtractor):
+class MotsPngBase(SubsetBase):
     @staticmethod
     def detect_dataset(path):
         if osp.isdir(osp.join(path, MotsPath.MASKS_DIR)):
-            return [{"url": path, "format": MotsPngExtractor.NAME}]
+            return [{"url": path, "format": MotsPngBase.NAME}]
         return []
 
     def __init__(self, path, subset=None):
@@ -132,10 +132,10 @@ class MotsImporter(Importer):
         if not osp.isdir(path):
             return []
 
-        subsets = MotsPngExtractor.detect_dataset(path)
+        subsets = MotsPngBase.detect_dataset(path)
         if not subsets:
             for p in os.listdir(path):
-                detected = MotsPngExtractor.detect_dataset(osp.join(path, p))
+                detected = MotsPngBase.detect_dataset(osp.join(path, p))
                 for s in detected:
                     s.setdefault("options", {})["subset"] = p
                 subsets.extend(detected)

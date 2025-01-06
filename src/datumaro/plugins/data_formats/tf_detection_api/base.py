@@ -9,7 +9,7 @@ from collections import OrderedDict
 import numpy as np
 
 from datumaro.components.annotation import AnnotationType, Bbox, LabelCategories, Mask
-from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.media import ByteImage
 from datumaro.util.image import decode_image, lazy_image
 from datumaro.util.tf_util import import_tf as _import_tf
@@ -23,7 +23,7 @@ def clamp(value, _min, _max):
     return max(min(_max, value), _min)
 
 
-class TfDetectionApiExtractor(SourceExtractor):
+class TfDetectionApiBase(SubsetBase):
     def __init__(self, path, subset=None):
         assert osp.isfile(path), path
         images_dir = ""

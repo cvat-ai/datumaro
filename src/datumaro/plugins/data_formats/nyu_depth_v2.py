@@ -9,12 +9,12 @@ import h5py
 import numpy as np
 
 from datumaro.components.annotation import DepthAnnotation
-from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 
 
-class NyuDepthV2Extractor(SourceExtractor):
+class NyuDepthV2Base(SubsetBase):
     def __init__(self, path, subset=None):
         if not osp.isdir(path):
             raise FileNotFoundError("Can't read dataset directory '%s'" % path)

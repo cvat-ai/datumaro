@@ -17,7 +17,7 @@ from enum import Enum
 from datumaro.components.annotation import AnnotationType, Bbox, LabelCategories
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Converter
-from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util import cast
@@ -65,7 +65,7 @@ class MotPath:
     ]
 
 
-class MotSeqExtractor(SourceExtractor):
+class MotSeqBase(SubsetBase):
     def __init__(self, path, labels=None, occlusion_threshold=0, is_gt=None, subset=None):
         super().__init__(subset=subset)
 

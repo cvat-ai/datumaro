@@ -33,7 +33,7 @@ from datumaro.components.errors import (
 )
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.data_formats.coco.base import CocoInstancesExtractor
+from datumaro.plugins.data_formats.coco.base import CocoInstancesBase
 from datumaro.plugins.data_formats.coco.exporter import (
     CocoCaptionsConverter,
     CocoConverter,
@@ -890,7 +890,7 @@ class CocoExtractorTests(TestCase):
     def test_can_report_unexpected_file(self):
         with TestDir() as test_dir:
             with self.assertRaisesRegex(DatasetImportError, "JSON file"):
-                CocoInstancesExtractor(test_dir)
+                CocoInstancesBase(test_dir)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_item_field(self):

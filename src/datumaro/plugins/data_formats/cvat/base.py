@@ -20,14 +20,14 @@ from datumaro.components.annotation import (
     PolyLine,
     Skeleton,
 )
-from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 
 from .format import CvatPath
 
 
-class CvatExtractor(SourceExtractor):
+class CvatBase(SubsetBase):
     _SUPPORTED_SHAPES = ("box", "polygon", "polyline", "points", "skeleton")
 
     def __init__(self, path, subset=None):

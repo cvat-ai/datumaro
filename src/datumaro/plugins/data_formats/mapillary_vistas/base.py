@@ -18,7 +18,7 @@ from datumaro.components.annotation import (
     MaskCategories,
     Polygon,
 )
-from datumaro.components.dataset_base import DatasetItem, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.media import Image
 from datumaro.util import parse_json_file
 from datumaro.util.image import find_images, lazy_image, load_image
@@ -35,7 +35,7 @@ from .format import (
 )
 
 
-class _MapillaryVistasExtractor(SourceExtractor):
+class _MapillaryVistasBase(SubsetBase):
     def __init__(
         self, path, task, subset=None, use_original_config=False, keep_original_category_ids=False
     ):
@@ -283,13 +283,13 @@ class _MapillaryVistasExtractor(SourceExtractor):
         return self._label_map[cat_id]
 
 
-class MapillaryVistasInstancesExtractor(_MapillaryVistasExtractor):
+class MapillaryVistasInstancesBase(_MapillaryVistasBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = MapillaryVistasTask.instances
         super().__init__(path, **kwargs)
 
 
-class MapillaryVistasPanopticExtractor(_MapillaryVistasExtractor):
+class MapillaryVistasPanopticBase(_MapillaryVistasBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = MapillaryVistasTask.panoptic
         super().__init__(path, **kwargs)

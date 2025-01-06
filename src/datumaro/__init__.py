@@ -52,7 +52,7 @@ from .components.dataset_base import (
     Importer,
     ImportErrorPolicy,
     ItemTransform,
-    SourceExtractor,
+    SubsetBase,
     Transform,
 )
 from .components.hl_ops import (  # pylint: disable=redefined-builtin

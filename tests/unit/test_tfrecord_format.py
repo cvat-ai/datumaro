@@ -19,7 +19,7 @@ from tests.utils.test_utils import TestDir, check_save_and_load, compare_dataset
 
 try:
     from datumaro.plugins.data_formats.tf_detection_api.base import (
-        TfDetectionApiExtractor,
+        TfDetectionApiBase,
         TfDetectionApiImporter,
     )
     from datumaro.plugins.data_formats.tf_detection_api.exporter import TfDetectionApiConverter
@@ -302,7 +302,7 @@ class TfrecordConverterTest(TestCase):
             "qw3": 6,
             "qw4": 7,
         }
-        parsed = TfDetectionApiExtractor._parse_labelmap(text)
+        parsed = TfDetectionApiBase._parse_labelmap(text)
 
         self.assertEqual(expected, parsed)
 

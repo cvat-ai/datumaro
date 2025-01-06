@@ -31,7 +31,7 @@ from datumaro.components.errors import (
     MissingFieldError,
     UndeclaredLabelError,
 )
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, SourceExtractor
+from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, SubsetBase
 from datumaro.components.media import Image
 from datumaro.util import NOTSET, parse_json_file, take_by
 from datumaro.util.image import lazy_image, load_image
@@ -43,7 +43,7 @@ from .format import CocoPath, CocoTask
 T = TypeVar("T")
 
 
-class _CocoExtractor(SourceExtractor):
+class _CocoBase(SubsetBase):
     """
     Parses COCO annotations written in the following format:
     https://cocodataset.org/#format-data
@@ -450,43 +450,43 @@ class _CocoExtractor(SourceExtractor):
         return parsed_annotations
 
 
-class CocoImageInfoExtractor(_CocoExtractor):
+class CocoImageInfoBase(_CocoBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = CocoTask.image_info
         super().__init__(path, **kwargs)
 
 
-class CocoCaptionsExtractor(_CocoExtractor):
+class CocoCaptionsBase(_CocoBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = CocoTask.captions
         super().__init__(path, **kwargs)
 
 
-class CocoInstancesExtractor(_CocoExtractor):
+class CocoInstancesBase(_CocoBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = CocoTask.instances
         super().__init__(path, **kwargs)
 
 
-class CocoPersonKeypointsExtractor(_CocoExtractor):
+class CocoPersonKeypointsBase(_CocoBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = CocoTask.person_keypoints
         super().__init__(path, **kwargs)
 
 
-class CocoLabelsExtractor(_CocoExtractor):
+class CocoLabelsBase(_CocoBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = CocoTask.labels
         super().__init__(path, **kwargs)
 
 
-class CocoPanopticExtractor(_CocoExtractor):
+class CocoPanopticBase(_CocoBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = CocoTask.panoptic
         super().__init__(path, **kwargs)
 
 
-class CocoStuffExtractor(_CocoExtractor):
+class CocoStuffBase(_CocoBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = CocoTask.stuff
         super().__init__(path, **kwargs)

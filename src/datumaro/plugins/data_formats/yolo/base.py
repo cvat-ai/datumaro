@@ -32,7 +32,7 @@ from datumaro.components.errors import (
     InvalidAnnotationError,
     UndeclaredLabelError,
 )
-from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, DatasetBase, SourceExtractor
+from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, DatasetBase, SubsetBase
 from datumaro.components.media import Image
 from datumaro.util import parse_json_file, take_by
 from datumaro.util.image import (
@@ -55,9 +55,9 @@ from .format import (
 T = TypeVar("T")
 
 
-class YoloBaseExtractor(SourceExtractor):
+class _YoloBase(SubsetBase):
     class Subset(DatasetBase):
-        def __init__(self, name: str, parent: YoloBaseExtractor):
+        def __init__(self, name: str, parent: _YoloBase):
             super().__init__()
             self._name = name
             self._parent = parent
@@ -100,10 +100,10 @@ class YoloBaseExtractor(SourceExtractor):
 
         self._categories = self._load_categories()
 
-        self._subsets: Dict[str, YoloBaseExtractor.Subset] = {}
+        self._subsets: Dict[str, _YoloBase.Subset] = {}
 
         for subset_name in self._get_subset_names():
-            subset = YoloBaseExtractor.Subset(subset_name, self)
+            subset = _YoloBase.Subset(subset_name, self)
             subset.items = self._get_lazy_subset_items(subset_name)
             self._subsets[subset_name] = subset
 
@@ -164,7 +164,7 @@ class YoloBaseExtractor(SourceExtractor):
         return self._subsets[name]
 
 
-class YoloExtractor(YoloBaseExtractor):
+class YoloBase(_YoloBase):
     RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS
 
     def __init__(
@@ -350,7 +350,7 @@ class YoloExtractor(YoloBaseExtractor):
         return {AnnotationType.label: label_categories}
 
 
-class YoloUltralyticsDetectionExtractor(YoloExtractor):
+class YoloUltralyticsDetectionBase(YoloBase):
     RESERVED_CONFIG_KEYS = YoloUltralyticsPath.RESERVED_CONFIG_KEYS
 
     def __init__(
@@ -486,7 +486,7 @@ class YoloUltralyticsDetectionExtractor(YoloExtractor):
         return bbox
 
 
-class YoloUltralyticsSegmentationExtractor(YoloUltralyticsDetectionExtractor):
+class YoloUltralyticsSegmentationBase(YoloUltralyticsDetectionBase):
     def _load_segmentation_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Polygon:
@@ -520,7 +520,7 @@ class YoloUltralyticsSegmentationExtractor(YoloUltralyticsDetectionExtractor):
         )
 
 
-class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
+class YoloUltralyticsOrientedBoxesBase(YoloUltralyticsDetectionBase):
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -558,7 +558,7 @@ class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
         return bbox
 
 
-class YoloUltralyticsPoseExtractor(YoloUltralyticsDetectionExtractor):
+class YoloUltralyticsPoseBase(YoloUltralyticsDetectionBase):
     def __init__(
         self,
         *args,
@@ -726,7 +726,7 @@ class YoloUltralyticsPoseExtractor(YoloUltralyticsDetectionExtractor):
         return skeleton
 
 
-class YoloUltralyticsClassificationExtractor(YoloBaseExtractor):
+class YoloUltralyticsClassificationBase(_YoloBase):
     def _get_subset_names(self):
         return [
             subset_name

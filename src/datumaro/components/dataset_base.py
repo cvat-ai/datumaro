@@ -380,7 +380,7 @@ class DatasetBase(_DatasetBase, CliPlugin):
         return self._media_type
 
 
-class SourceExtractor(DatasetBase):
+class SubsetBase(DatasetBase):
     """
     A base class for simple, single-subset extractors.
     Should be used by default for user-defined extractors.

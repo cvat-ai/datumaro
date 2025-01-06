@@ -7,14 +7,14 @@ import os.path as osp
 
 from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, Importer
 
-from .base import MapillaryVistasInstancesExtractor, MapillaryVistasPanopticExtractor
+from .base import MapillaryVistasInstancesBase, MapillaryVistasPanopticBase
 from .format import MapillaryVistasPath, MapillaryVistasTask
 
 
 class MapillaryVistasImporter(Importer):
     _TASKS = {
-        MapillaryVistasTask.instances: MapillaryVistasInstancesExtractor,
-        MapillaryVistasTask.panoptic: MapillaryVistasPanopticExtractor,
+        MapillaryVistasTask.instances: MapillaryVistasInstancesBase,
+        MapillaryVistasTask.panoptic: MapillaryVistasPanopticBase,
     }
 
     @classmethod

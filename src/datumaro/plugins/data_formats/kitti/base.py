@@ -8,7 +8,7 @@ import os.path as osp
 import numpy as np
 
 from datumaro.components.annotation import Bbox, LabelCategories, Mask
-from datumaro.components.dataset_base import AnnotationType, DatasetItem, SourceExtractor
+from datumaro.components.dataset_base import AnnotationType, DatasetItem, SubsetBase
 from datumaro.components.media import Image
 from datumaro.util.image import find_images, load_image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
@@ -16,7 +16,7 @@ from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
 from .format import KittiLabelMap, KittiPath, KittiTask, make_kitti_categories, parse_label_map
 
 
-class _KittiExtractor(SourceExtractor):
+class _KittiBase(SubsetBase):
     def __init__(self, path, task, subset=None):
         assert osp.isdir(path), path
         self._path = path
@@ -154,11 +154,11 @@ class _KittiExtractor(SourceExtractor):
         return lambda: mask == c
 
 
-class KittiSegmentationExtractor(_KittiExtractor):
+class KittiSegmentationBase(_KittiBase):
     def __init__(self, path):
         super().__init__(path, task=KittiTask.segmentation)
 
 
-class KittiDetectionExtractor(_KittiExtractor):
+class KittiDetectionBase(_KittiBase):
     def __init__(self, path):
         super().__init__(path, task=KittiTask.detection)

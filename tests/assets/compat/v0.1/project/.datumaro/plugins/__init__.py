@@ -1,7 +1,7 @@
-from datumaro.components.dataset_base import DatasetItem, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
 
 
-class MyExtractor(SourceExtractor):
+class MyBase(SubsetBase):
     def __iter__(self):
         yield from [
             DatasetItem("1"),

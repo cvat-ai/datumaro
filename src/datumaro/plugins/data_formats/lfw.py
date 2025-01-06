@@ -9,7 +9,7 @@ import re
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories, Points
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Converter
-from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util.image import find_images
@@ -26,7 +26,7 @@ class LfwPath:
     PATTERN = re.compile(r"([\w-]+)_([-\d]+)")
 
 
-class LfwExtractor(SourceExtractor):
+class LfwBase(SubsetBase):
     def __init__(self, path, subset=None):
         if not osp.isfile(path):
             raise FileNotFoundError("Can't read annotation file '%s'" % path)

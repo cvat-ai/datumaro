@@ -40,12 +40,12 @@ from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem
 from datumaro.components.format_detection import FormatDetectionContext, FormatRequirementsUnmet
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.yolo.base import (
-    YoloExtractor,
-    YoloUltralyticsClassificationExtractor,
-    YoloUltralyticsDetectionExtractor,
-    YoloUltralyticsOrientedBoxesExtractor,
-    YoloUltralyticsPoseExtractor,
-    YoloUltralyticsSegmentationExtractor,
+    YoloBase,
+    YoloUltralyticsClassificationBase,
+    YoloUltralyticsDetectionBase,
+    YoloUltralyticsOrientedBoxesBase,
+    YoloUltralyticsPoseBase,
+    YoloUltralyticsSegmentationBase,
 )
 from datumaro.plugins.data_formats.yolo.exporter import (
     YoloConverter,
@@ -1519,7 +1519,7 @@ class YoloUltralyticsClassificationImporterTest(YoloImporterTest):
 
 class YoloExtractorTest:
     IMPORTER = YoloImporter
-    EXTRACTOR = YoloExtractor
+    EXTRACTOR = YoloBase
 
     def _prepare_dataset(self, path: str, anno=None) -> Dataset:
         if anno is None:
@@ -1640,7 +1640,7 @@ class YoloExtractorTest:
 
 class YoloUltralyticsDetectionExtractorTest(YoloExtractorTest):
     IMPORTER = YoloUltralyticsDetectionImporter
-    EXTRACTOR = YoloUltralyticsDetectionExtractor
+    EXTRACTOR = YoloUltralyticsDetectionBase
 
     @staticmethod
     def _get_annotation_dir(subset="train"):
@@ -1689,7 +1689,7 @@ class YoloUltralyticsDetectionExtractorTest(YoloExtractorTest):
 
 class YoloUltralyticsSegmentationExtractorTest(YoloUltralyticsDetectionExtractorTest):
     IMPORTER = YoloUltralyticsSegmentationImporter
-    EXTRACTOR = YoloUltralyticsSegmentationExtractor
+    EXTRACTOR = YoloUltralyticsSegmentationBase
 
     def _prepare_dataset(self, path: str, anno=None) -> Dataset:
         return super()._prepare_dataset(
@@ -1719,7 +1719,7 @@ class YoloUltralyticsSegmentationExtractorTest(YoloUltralyticsDetectionExtractor
 
 class YoloUltralyticsOrientedBoxesExtractorTest(YoloUltralyticsDetectionExtractorTest):
     IMPORTER = YoloUltralyticsOrientedBoxesImporter
-    EXTRACTOR = YoloUltralyticsOrientedBoxesExtractor
+    EXTRACTOR = YoloUltralyticsOrientedBoxesBase
 
     def _prepare_dataset(self, path: str, anno=None) -> Dataset:
         return super()._prepare_dataset(
@@ -1756,7 +1756,7 @@ class YoloUltralyticsOrientedBoxesExtractorTest(YoloUltralyticsDetectionExtracto
 
 class YoloUltralyticsPoseExtractorTest(YoloUltralyticsDetectionExtractorTest):
     IMPORTER = YoloUltralyticsPoseImporter
-    EXTRACTOR = YoloUltralyticsPoseExtractor
+    EXTRACTOR = YoloUltralyticsPoseBase
 
     def _prepare_dataset(self, path: str, anno=None) -> Dataset:
         dataset = Dataset.from_iterable(
@@ -1965,6 +1965,6 @@ class YoloUltralyticsClassificationExtractorTest:
             ],
             categories=["test_label"],
         )
-        expected.export(test_dir, YoloUltralyticsClassificationExtractor.NAME, save_media=True)
+        expected.export(test_dir, YoloUltralyticsClassificationBase.NAME, save_media=True)
         actual = Dataset.import_from(test_dir, YoloUltralyticsClassificationImporter.NAME)
         compare_datasets(helper_tc, expected, actual)

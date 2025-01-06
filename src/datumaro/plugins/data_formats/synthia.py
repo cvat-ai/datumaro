@@ -8,7 +8,7 @@ from collections import OrderedDict
 import numpy as np
 
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, MaskCategories
-from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util.image import find_images, load_image
@@ -95,7 +95,7 @@ def parse_label_map(path):
     return label_map
 
 
-class SynthiaExtractor(SourceExtractor):
+class SynthiaBase(SubsetBase):
     def __init__(self, path):
         if not osp.isdir(path):
             raise FileNotFoundError("Can't read dataset directory '%s'" % path)

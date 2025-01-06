@@ -7,8 +7,8 @@ import numpy as np
 
 from datumaro.components.annotation import AnnotationType, Bbox, LabelCategories, Mask
 from datumaro.components.dataset import Dataset
-from datumaro.components.environment import Environment
 from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.environment import Environment
 from datumaro.components.media import ByteImage, Image
 from datumaro.util.image import encode_image
 from datumaro.util.tf_util import check_import

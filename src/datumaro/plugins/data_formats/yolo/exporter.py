@@ -25,9 +25,9 @@ from datumaro.components.annotation import (
     Skeleton,
 )
 from datumaro.components.dataset import DatasetPatch, ItemStatus
+from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, IDataset
 from datumaro.components.errors import DatasetExportError, MediaTypeError
 from datumaro.components.exporter import Exporter
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, IDataset
 from datumaro.components.media import Image
 from datumaro.util import dump_json_file, str_to_bool
 from datumaro.util.os_util import split_path

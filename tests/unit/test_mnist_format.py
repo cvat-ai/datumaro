@@ -5,8 +5,8 @@ import numpy as np
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
 from datumaro.components.dataset import Dataset
-from datumaro.components.environment import Environment
 from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.environment import Environment
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.mnist import MnistExporter, MnistImporter
 
@@ -181,9 +181,7 @@ class MnistFormatTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            MnistExporter.convert(
-                source_dataset, test_dir, save_media=True, save_dataset_meta=True
-            )
+            MnistExporter.convert(source_dataset, test_dir, save_media=True, save_dataset_meta=True)
             parsed_dataset = Dataset.import_from(test_dir, "mnist")
 
             self.assertTrue(osp.isfile(osp.join(test_dir, "dataset_meta.json")))

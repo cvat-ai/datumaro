@@ -3,8 +3,8 @@ from unittest import TestCase
 import numpy as np
 
 from datumaro.components.dataset import Dataset
-from datumaro.components.environment import Environment
 from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.environment import Environment
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.market1501 import Market1501Exporter, Market1501Importer
 

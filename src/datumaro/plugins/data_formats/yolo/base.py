@@ -27,12 +27,12 @@ from datumaro.components.annotation import (
     Polygon,
     Skeleton,
 )
+from datumaro.components.dataset_base import CategoriesInfo, DatasetBase, DatasetItem, SubsetBase
 from datumaro.components.errors import (
     DatasetImportError,
     InvalidAnnotationError,
     UndeclaredLabelError,
 )
-from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, DatasetBase, SubsetBase
 from datumaro.components.media import Image
 from datumaro.util import parse_json_file, take_by
 from datumaro.util.image import (

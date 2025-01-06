@@ -20,8 +20,8 @@ from datumaro.components.annotation import (
     RleMask,
     Skeleton,
 )
-from datumaro.components.errors import DatasetImportError, InvalidAnnotationError
 from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
+from datumaro.components.errors import DatasetImportError, InvalidAnnotationError
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image, MediaElement, PointCloud
 from datumaro.util import parse_json, parse_json_file, take_by

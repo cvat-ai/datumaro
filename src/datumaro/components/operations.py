@@ -42,6 +42,7 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.dataset import Dataset, DatasetItemStorage, IDataset
+from datumaro.components.dataset_base import CategoriesInfo, DatasetItem
 from datumaro.components.errors import (
     AnnotationsTooCloseError,
     ConflictingCategoriesError,
@@ -58,7 +59,6 @@ from datumaro.components.errors import (
     VideoMergeError,
     WrongGroupError,
 )
-from datumaro.components.dataset_base import CategoriesInfo, DatasetItem
 from datumaro.components.media import Image, MediaElement, MultiframeImage, PointCloud, Video
 from datumaro.util import filter_dict, find
 from datumaro.util.annotation_util import (

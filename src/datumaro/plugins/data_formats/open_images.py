@@ -21,6 +21,7 @@ from attr import attrs
 
 from datumaro.components.annotation import AnnotationType, Bbox, Label, LabelCategories, Mask
 from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, Importer
 from datumaro.components.errors import (
     DatasetError,
     MediaTypeError,
@@ -28,7 +29,6 @@ from datumaro.components.errors import (
     UndefinedLabel,
 )
 from datumaro.components.exporter import Exporter
-from datumaro.components.dataset_base import DatasetItem, DatasetBase, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.components.validator import Severity

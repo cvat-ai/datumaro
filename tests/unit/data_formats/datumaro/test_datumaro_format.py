@@ -21,8 +21,8 @@ from datumaro.components.annotation import (
     PolyLine,
     Skeleton,
 )
-from datumaro.components.environment import Environment
 from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.environment import Environment
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
 from datumaro.plugins.data_formats.datumaro.base import DatumaroImporter

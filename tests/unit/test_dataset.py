@@ -19,6 +19,17 @@ from datumaro.components.annotation import (
     PolyLine,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, ItemStatus, eager_mode
+from datumaro.components.dataset_base import (
+    DEFAULT_SUBSET_NAME,
+    DatasetBase,
+    DatasetItem,
+    FailingImportErrorPolicy,
+    ImportErrorPolicy,
+    ItemTransform,
+    ProgressReporter,
+    SubsetBase,
+    Transform,
+)
 from datumaro.components.dataset_filter import (
     DatasetItemEncoder,
     XPathAnnotationsFilter,
@@ -38,17 +49,6 @@ from datumaro.components.errors import (
     UnknownFormatError,
 )
 from datumaro.components.exporter import Exporter
-from datumaro.components.dataset_base import (
-    DEFAULT_SUBSET_NAME,
-    DatasetItem,
-    DatasetBase,
-    FailingImportErrorPolicy,
-    ImportErrorPolicy,
-    ItemTransform,
-    ProgressReporter,
-    SubsetBase,
-    Transform,
-)
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement, Video
 from datumaro.components.progress_reporting import NullProgressReporter

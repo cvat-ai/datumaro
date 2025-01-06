@@ -13,9 +13,9 @@ from glob import iglob
 import numpy as np
 
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
-from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.media import Image
 from datumaro.util.image import find_images, load_image, save_image
 from datumaro.util.mask_tools import merge_masks

@@ -21,9 +21,9 @@ from datumaro.components.annotation import (
     MaskCategories,
 )
 from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
-from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util import find, str_to_bool

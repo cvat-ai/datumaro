@@ -40,13 +40,11 @@ from .components.dataset import (
     ItemStatus,
     eager_mode,
 )
-from .components.environment import Environment, PluginRegistry
-from .components.exporter import Exporter, ExportErrorPolicy, FailingExportErrorPolicy
 from .components.dataset_base import (
     DEFAULT_SUBSET_NAME,
     CategoriesInfo,
-    DatasetItem,
     DatasetBase,
+    DatasetItem,
     FailingImportErrorPolicy,
     IDataset,
     Importer,
@@ -55,6 +53,8 @@ from .components.dataset_base import (
     SubsetBase,
     Transform,
 )
+from .components.environment import Environment, PluginRegistry
+from .components.exporter import Exporter, ExportErrorPolicy, FailingExportErrorPolicy
 from .components.hl_ops import (  # pylint: disable=redefined-builtin
     export,
     filter,

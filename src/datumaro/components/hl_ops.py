@@ -12,7 +12,7 @@ from datumaro.components.dataset import Dataset, DatasetItemStorageDatasetView, 
 from datumaro.components.dataset_filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.environment import Environment
 from datumaro.components.exporter import Converter
-from datumaro.components.extractor import Transform
+from datumaro.components.dataset_base import Transform
 from datumaro.components.launcher import Launcher, ModelTransform
 from datumaro.components.operations import ExactMerge
 from datumaro.components.validator import TaskType, Validator

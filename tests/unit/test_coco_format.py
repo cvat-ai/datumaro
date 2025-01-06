@@ -31,7 +31,7 @@ from datumaro.components.errors import (
     MissingFieldError,
     UndeclaredLabelError,
 )
-from datumaro.components.extractor import DatasetItem
+from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.coco.base import CocoInstancesExtractor
 from datumaro.plugins.data_formats.coco.exporter import (

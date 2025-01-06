@@ -9,7 +9,7 @@ from typing import List, Mapping, Optional, Tuple
 
 from datumaro.components.annotation import AnnotationType
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.extractor import DatasetItem, IExtractor, Transform
+from datumaro.components.dataset_base import DatasetItem, IExtractor, Transform
 from datumaro.util import cast
 
 

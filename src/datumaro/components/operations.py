@@ -58,7 +58,7 @@ from datumaro.components.errors import (
     VideoMergeError,
     WrongGroupError,
 )
-from datumaro.components.extractor import CategoriesInfo, DatasetItem
+from datumaro.components.dataset_base import CategoriesInfo, DatasetItem
 from datumaro.components.media import Image, MediaElement, MultiframeImage, PointCloud, Video
 from datumaro.util import filter_dict, find
 from datumaro.util.annotation_util import (

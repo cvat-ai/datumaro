@@ -27,7 +27,7 @@ from datumaro.components.annotation import (
 from datumaro.components.dataset import ItemStatus
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem
+from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
 from datumaro.util.annotation_util import make_label_id_mapping

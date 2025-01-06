@@ -21,7 +21,7 @@ from datumaro.components.annotation import (
     Skeleton,
 )
 from datumaro.components.errors import DatasetImportError, InvalidAnnotationError
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image, MediaElement, PointCloud
 from datumaro.util import parse_json, parse_json_file, take_by

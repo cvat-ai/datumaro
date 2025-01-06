@@ -8,7 +8,7 @@ from enum import Enum, auto
 from typing import Optional
 
 from datumaro.components.annotation import AnnotationType, LabelCategories, MaskCategories, RgbColor
-from datumaro.components.extractor import CategoriesInfo
+from datumaro.components.dataset_base import CategoriesInfo
 from datumaro.util import find
 from datumaro.util.mask_tools import generate_colormap
 

@@ -42,7 +42,7 @@ from .components.dataset import (
 )
 from .components.environment import Environment, PluginRegistry
 from .components.exporter import Converter, ExportErrorPolicy, FailingExportErrorPolicy
-from .components.extractor import (
+from .components.dataset_base import (
     DEFAULT_SUBSET_NAME,
     CategoriesInfo,
     DatasetItem,

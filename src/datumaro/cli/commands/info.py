@@ -9,7 +9,7 @@ from typing import Any, Dict, Type, cast
 from datumaro.components.annotation import LabelCategories
 from datumaro.components.dataset import Dataset
 from datumaro.components.errors import DatasetMergeError, MissingObjectError, ProjectNotFoundError
-from datumaro.components.extractor import AnnotationType
+from datumaro.components.dataset_base import AnnotationType
 from datumaro.components.media import Image, MediaElement, MultiframeImage, PointCloud, Video
 from datumaro.util import dump_json
 from datumaro.util.scope import scope_add, scoped

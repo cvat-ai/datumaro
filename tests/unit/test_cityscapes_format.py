@@ -10,7 +10,7 @@ import datumaro.plugins.data_formats.cityscapes as Cityscapes
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, MaskCategories
 from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
-from datumaro.components.extractor import DatasetItem, Extractor
+from datumaro.components.dataset_base import DatasetItem, Extractor
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.cityscapes import (
     TRAIN_CITYSCAPES_LABEL_MAP,

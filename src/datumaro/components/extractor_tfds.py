@@ -14,7 +14,7 @@ import attrs
 from attrs import field, frozen
 
 from datumaro.components.annotation import AnnotationType, Bbox, Label, LabelCategories
-from datumaro.components.extractor import CategoriesInfo, DatasetItem, IExtractor
+from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, IExtractor
 from datumaro.components.media import ByteImage, Image, MediaElement
 from datumaro.util.tf_util import import_tf
 

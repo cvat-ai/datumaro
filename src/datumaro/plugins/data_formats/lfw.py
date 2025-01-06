@@ -9,7 +9,7 @@ import re
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories, Points
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util.image import find_images

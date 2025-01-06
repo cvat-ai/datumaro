@@ -27,7 +27,7 @@ from datumaro.components.errors import (
     MissingFieldError,
     UndeclaredLabelError,
 )
-from datumaro.components.extractor import DatasetItem, Extractor
+from datumaro.components.dataset_base import DatasetItem, Extractor
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.voc.exporter import (
     VocActionConverter,

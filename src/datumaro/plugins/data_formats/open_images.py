@@ -28,7 +28,7 @@ from datumaro.components.errors import (
     UndefinedLabel,
 )
 from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Extractor, Importer
+from datumaro.components.dataset_base import DatasetItem, Extractor, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.components.validator import Severity

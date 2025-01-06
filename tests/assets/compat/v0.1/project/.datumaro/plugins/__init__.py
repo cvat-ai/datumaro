@@ -1,4 +1,4 @@
-from datumaro.components.extractor import DatasetItem, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, SourceExtractor
 
 
 class MyExtractor(SourceExtractor):

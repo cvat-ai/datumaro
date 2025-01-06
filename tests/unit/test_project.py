@@ -25,7 +25,7 @@ from datumaro.components.errors import (
     UnexpectedUrlError,
     UnknownTargetError,
 )
-from datumaro.components.extractor import DatasetItem, Extractor, ItemTransform
+from datumaro.components.dataset_base import DatasetItem, Extractor, ItemTransform
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image
 from datumaro.components.project import DiffStatus, Project

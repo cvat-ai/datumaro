@@ -18,7 +18,7 @@ from datumaro.components.annotation import (
     Polygon,
     PolyLine,
 )
-from datumaro.components.extractor import ItemTransform
+from datumaro.components.dataset_base import ItemTransform
 from datumaro.components.media import Image
 
 

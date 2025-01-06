@@ -37,7 +37,7 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.errors import DatumaroError
-from datumaro.components.extractor import (
+from datumaro.components.dataset_base import (
     DEFAULT_SUBSET_NAME,
     DatasetItem,
     IExtractor,

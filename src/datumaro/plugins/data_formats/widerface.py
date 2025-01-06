@@ -9,7 +9,7 @@ import re
 from datumaro.components.annotation import AnnotationType, Bbox, Label, LabelCategories
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SourceExtractor
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool

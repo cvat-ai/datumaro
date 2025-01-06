@@ -12,7 +12,7 @@ import numpy as np
 from datumaro.components.annotation import AnnotationType, Bbox, Label, LabelCategories, Mask
 from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
-from datumaro.components.extractor import DatasetItem
+from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.open_images import OpenImagesConverter, OpenImagesImporter
 

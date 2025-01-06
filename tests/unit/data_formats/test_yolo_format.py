@@ -36,7 +36,7 @@ from datumaro.components.errors import (
     ItemImportError,
     UndeclaredLabelError,
 )
-from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem
+from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem
 from datumaro.components.format_detection import FormatDetectionContext, FormatRequirementsUnmet
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.yolo.base import (

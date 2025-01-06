@@ -5,7 +5,7 @@ import glob
 import logging as log
 import os.path as osp
 
-from datumaro.components.extractor import DEFAULT_SUBSET_NAME, Importer
+from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, Importer
 
 from .base import MapillaryVistasInstancesExtractor, MapillaryVistasPanopticExtractor
 from .format import MapillaryVistasPath, MapillaryVistasTask

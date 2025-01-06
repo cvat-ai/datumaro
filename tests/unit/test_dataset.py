@@ -38,7 +38,7 @@ from datumaro.components.errors import (
     UnknownFormatError,
 )
 from datumaro.components.exporter import Converter
-from datumaro.components.extractor import (
+from datumaro.components.dataset_base import (
     DEFAULT_SUBSET_NAME,
     DatasetItem,
     Extractor,

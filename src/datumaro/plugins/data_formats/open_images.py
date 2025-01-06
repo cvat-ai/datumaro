@@ -27,7 +27,7 @@ from datumaro.components.errors import (
     RepeatedItemError,
     UndefinedLabel,
 )
-from datumaro.components.exporter import Converter
+from datumaro.components.exporter import Exporter
 from datumaro.components.dataset_base import DatasetItem, DatasetBase, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
@@ -697,7 +697,7 @@ class _AnnotationWriter:
                 os.unlink(osp.join(self._annotations_dir, file_name))
 
 
-class OpenImagesConverter(Converter):
+class OpenImagesExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".jpg"
 
     def apply(self):

@@ -9,7 +9,7 @@ import os.path as osp
 
 from datumaro.components.annotation import AnnotationType, Bbox, Label, LabelCategories, Points
 from datumaro.components.errors import MediaTypeError
-from datumaro.components.exporter import Converter
+from datumaro.components.exporter import Exporter
 from datumaro.components.dataset_base import DatasetItem, DatasetBase, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
@@ -218,7 +218,7 @@ class VggFace2Importer(Importer):
         return []
 
 
-class VggFace2Converter(Converter):
+class VggFace2Exporter(Exporter):
     DEFAULT_IMAGE_EXT = VggFace2Path.IMAGE_EXT
 
     def apply(self):

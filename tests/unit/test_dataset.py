@@ -37,7 +37,7 @@ from datumaro.components.errors import (
     RepeatedItemError,
     UnknownFormatError,
 )
-from datumaro.components.exporter import Converter
+from datumaro.components.exporter import Exporter
 from datumaro.components.dataset_base import (
     DEFAULT_SUBSET_NAME,
     DatasetItem,
@@ -1667,7 +1667,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_inplace_save_writes_only_updated_data(self):
-        class CustomConverter(Converter):
+        class CustomExporter(Exporter):
             DEFAULT_IMAGE_EXT = ".jpg"
 
             def apply(self):
@@ -1682,7 +1682,7 @@ class DatasetTest(TestCase):
                         self._save_image(item, name=name)
 
         env = Environment()
-        env.converters.items = {"test": CustomConverter}
+        env.converters.items = {"test": CustomExporter}
 
         with TestDir() as path:
             dataset = Dataset.from_iterable(
@@ -1937,7 +1937,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_PROGRESS_REPORTING)
     def test_can_report_progress_from_converter(self):
-        class TestConverter(Converter):
+        class TestExporter(Exporter):
             DEFAULT_IMAGE_EXT = ".jpg"
 
             def apply(self):
@@ -1955,7 +1955,7 @@ class DatasetTest(TestCase):
 
         with TestDir() as test_dir:
             Dataset(media_type=MediaElement).export(
-                test_dir, TestConverter, progress_reporter=progress_reporter
+                test_dir, TestExporter, progress_reporter=progress_reporter
             )
 
         period_mock.assert_called_once()
@@ -1965,7 +1965,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_errors_from_converter(self):
-        class TestConverter(Converter):
+        class TestExporter(Exporter):
             DEFAULT_IMAGE_EXT = ".jpg"
 
             def apply(self):
@@ -1984,7 +1984,7 @@ class DatasetTest(TestCase):
 
         with TestDir() as test_dir:
             Dataset(media_type=MediaElement).export(
-                test_dir, TestConverter, error_policy=error_policy
+                test_dir, TestExporter, error_policy=error_policy
             )
 
         error_policy.report_item_error.assert_called()

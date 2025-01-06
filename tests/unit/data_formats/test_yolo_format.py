@@ -48,12 +48,12 @@ from datumaro.plugins.data_formats.yolo.base import (
     YoloUltralyticsSegmentationBase,
 )
 from datumaro.plugins.data_formats.yolo.exporter import (
-    YoloConverter,
-    YoloUltralyticsClassificationConverter,
-    YoloUltralyticsDetectionConverter,
-    YoloUltralyticsOrientedBoxesConverter,
-    YoloUltralyticsPoseConverter,
-    YoloUltralyticsSegmentationConverter,
+    YoloExporter,
+    YoloUltralyticsClassificationExporter,
+    YoloUltralyticsDetectionExporter,
+    YoloUltralyticsOrientedBoxesExporter,
+    YoloUltralyticsPoseExporter,
+    YoloUltralyticsSegmentationExporter,
 )
 from datumaro.plugins.data_formats.yolo.importer import (
     YoloImporter,
@@ -128,8 +128,8 @@ class CompareDatasetsRotationMixin(CompareDatasetMixin):
         )
 
 
-class YoloConverterTest(CompareDatasetMixin):
-    CONVERTER = YoloConverter
+class YoloExporterTest(CompareDatasetMixin):
+    CONVERTER = YoloExporter
     IMPORTER = YoloImporter
 
     def _generate_random_bbox(self, n_of_labels=10, label=None, **kwargs):
@@ -437,8 +437,8 @@ class YoloConverterTest(CompareDatasetMixin):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
 
-class YoloUltralyticsDetectionConverterTest(YoloConverterTest):
-    CONVERTER = YoloUltralyticsDetectionConverter
+class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
+    CONVERTER = YoloUltralyticsDetectionExporter
     IMPORTER = YoloUltralyticsDetectionImporter
 
     @staticmethod
@@ -623,8 +623,8 @@ class YoloUltralyticsDetectionConverterTest(YoloConverterTest):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
 
-class YoloUltralyticsSegmentationConverterTest(YoloUltralyticsDetectionConverterTest):
-    CONVERTER = YoloUltralyticsSegmentationConverter
+class YoloUltralyticsSegmentationExporterTest(YoloUltralyticsDetectionExporterTest):
+    CONVERTER = YoloUltralyticsSegmentationExporter
     IMPORTER = YoloUltralyticsSegmentationImporter
 
     def _generate_random_annotation(self, n_of_labels=10, label=None):
@@ -638,10 +638,10 @@ class YoloUltralyticsSegmentationConverterTest(YoloUltralyticsDetectionConverter
         pass
 
 
-class YoloUltralyticsOrientedBoxesConverterTest(
-    CompareDatasetsRotationMixin, YoloUltralyticsDetectionConverterTest
+class YoloUltralyticsOrientedBoxesExporterTest(
+    CompareDatasetsRotationMixin, YoloUltralyticsDetectionExporterTest
 ):
-    CONVERTER = YoloUltralyticsOrientedBoxesConverter
+    CONVERTER = YoloUltralyticsOrientedBoxesExporter
     IMPORTER = YoloUltralyticsOrientedBoxesImporter
 
     def _generate_random_annotation(self, n_of_labels=10, label=None):
@@ -670,8 +670,8 @@ class YoloUltralyticsOrientedBoxesConverterTest(
         self.compare_datasets(source_dataset, parsed_dataset)
 
 
-class YoloUltralyticsPoseConverterTest(YoloUltralyticsDetectionConverterTest):
-    CONVERTER = YoloUltralyticsPoseConverter
+class YoloUltralyticsPoseExporterTest(YoloUltralyticsDetectionExporterTest):
+    CONVERTER = YoloUltralyticsPoseExporter
     IMPORTER = YoloUltralyticsPoseImporter
 
     def _generate_random_skeleton_annotation(self, skeleton_label_to_point_labels, n_of_labels=10):
@@ -960,8 +960,8 @@ class YoloUltralyticsPoseConverterTest(YoloUltralyticsDetectionConverterTest):
         self.compare_datasets(expected_dataset, parsed_dataset)
 
 
-class YoloUltralyticsClassificationConverterTest(YoloConverterTest):
-    CONVERTER = YoloUltralyticsClassificationConverter
+class YoloUltralyticsClassificationExporterTest(YoloExporterTest):
+    CONVERTER = YoloUltralyticsClassificationExporter
     IMPORTER = YoloUltralyticsClassificationImporter
 
     @staticmethod

@@ -33,7 +33,7 @@ from datumaro.components.annotation import (
     _Shape,
 )
 from datumaro.components.dataset import ItemStatus
-from datumaro.components.exporter import Converter
+from datumaro.components.exporter import Exporter
 from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, CategoriesInfo, DatasetItem
 from datumaro.components.media import Image, MediaElement, PointCloud
 from datumaro.util import cast, dump_json_file
@@ -42,8 +42,8 @@ from .format import DatumaroPath
 
 
 class _SubsetWriter:
-    def __init__(self, context: DatumaroConverter):
-        self._context: DatumaroConverter = context
+    def __init__(self, context: DatumaroExporter):
+        self._context: DatumaroExporter = context
 
         self._data = {
             "info": {},
@@ -349,7 +349,7 @@ class _SubsetWriter:
         return converted
 
 
-class DatumaroConverter(Converter):
+class DatumaroExporter(Exporter):
     DEFAULT_IMAGE_EXT = DatumaroPath.IMAGE_EXT
 
     def apply(self):

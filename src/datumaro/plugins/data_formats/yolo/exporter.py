@@ -26,7 +26,7 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.dataset import DatasetPatch, ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError
-from datumaro.components.exporter import Converter
+from datumaro.components.exporter import Exporter
 from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, IDataset
 from datumaro.components.media import Image
 from datumaro.util import dump_json_file, str_to_bool
@@ -93,7 +93,7 @@ def _resolve_subsets(initial_subsets: Dict[str, IDataset]) -> Dict[str, Iterable
     return subsets
 
 
-class YoloConverter(Converter):
+class YoloExporter(Exporter):
     # https://github.com/AlexeyAB/darknet#how-to-train-to-detect-your-custom-objects
     DEFAULT_IMAGE_EXT = ".jpg"
     RESERVED_CONFIG_KEYS = YoloPath.RESERVED_CONFIG_KEYS
@@ -297,7 +297,7 @@ class YoloConverter(Converter):
                 os.remove(ann_path)
 
 
-class YoloUltralyticsDetectionConverter(YoloConverter):
+class YoloUltralyticsDetectionExporter(YoloExporter):
     RESERVED_CONFIG_KEYS = YoloUltralyticsPath.RESERVED_CONFIG_KEYS
 
     def __init__(
@@ -375,7 +375,7 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
         return anno_line
 
 
-class YoloUltralyticsSegmentationConverter(YoloUltralyticsDetectionConverter):
+class YoloUltralyticsSegmentationExporter(YoloUltralyticsDetectionExporter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Polygon):
             return
@@ -384,7 +384,7 @@ class YoloUltralyticsSegmentationConverter(YoloUltralyticsDetectionConverter):
         return f"{self._map_labels_for_save[anno.label]} {string_values}{self._make_track_id_suffix(anno)}\n"
 
 
-class YoloUltralyticsOrientedBoxesConverter(YoloUltralyticsDetectionConverter):
+class YoloUltralyticsOrientedBoxesExporter(YoloUltralyticsDetectionExporter):
     def _make_annotation_line(self, width: int, height: int, anno: Annotation) -> Optional[str]:
         if anno.label is None or not isinstance(anno, Bbox):
             return
@@ -394,7 +394,7 @@ class YoloUltralyticsOrientedBoxesConverter(YoloUltralyticsDetectionConverter):
         return f"{self._map_labels_for_save[anno.label]} {string_values}{self._make_track_id_suffix(anno)}\n"
 
 
-class YoloUltralyticsPoseConverter(YoloUltralyticsDetectionConverter):
+class YoloUltralyticsPoseExporter(YoloUltralyticsDetectionExporter):
     @cached_property
     def _labels_to_save(self) -> List[int]:
         point_categories = self._extractor.categories().get(
@@ -448,7 +448,7 @@ class YoloUltralyticsPoseConverter(YoloUltralyticsDetectionConverter):
         )
 
 
-class YoloUltralyticsClassificationConverter(Converter):
+class YoloUltralyticsClassificationExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".jpg"
 
     def apply(self):

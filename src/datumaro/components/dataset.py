@@ -27,7 +27,7 @@ from datumaro.components.errors import (
     RepeatedItemError,
     UnknownFormatError,
 )
-from datumaro.components.exporter import Converter, ExportContext, ExportErrorPolicy, _ExportFail
+from datumaro.components.exporter import Exporter, ExportContext, ExportErrorPolicy, _ExportFail
 from datumaro.components.dataset_base import (
     DEFAULT_SUBSET_NAME,
     CategoriesInfo,
@@ -208,7 +208,7 @@ class ItemStatus(Enum):
 class DatasetPatch:
     class DatasetPatchWrapper(DatasetItemStorageDatasetView):
         # The purpose of this class is to indicate that the input dataset is
-        # a patch and autofill patch info in Converter
+        # a patch and autofill patch info in Exporter
         def __init__(self, patch: DatasetPatch, parent: IDataset):
             super().__init__(patch.data, parent.categories(), parent.media_type())
             self.patch = patch
@@ -1022,7 +1022,7 @@ class Dataset(IDataset):
     def export(
         self,
         save_dir: str,
-        format: Union[str, Type[Converter]],
+        format: Union[str, Type[Exporter]],
         *,
         progress_reporter: Optional[ProgressReporter] = None,
         error_policy: Optional[ExportErrorPolicy] = None,
@@ -1051,7 +1051,7 @@ class Dataset(IDataset):
         else:
             converter = format
 
-        if not (inspect.isclass(converter) and issubclass(converter, Converter)):
+        if not (inspect.isclass(converter) and issubclass(converter, Exporter)):
             raise TypeError("Unexpected 'format' argument type: %s" % type(converter))
 
         save_dir = osp.abspath(save_dir)

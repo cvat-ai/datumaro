@@ -12,7 +12,7 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.dataset_base import DatasetItem, DatasetBase
 from datumaro.components.media import Image
-from datumaro.plugins.data_formats.camvid import CamvidConverter, CamvidImporter
+from datumaro.plugins.data_formats.camvid import CamvidExporter, CamvidImporter
 from datumaro.util.meta_file_util import parse_meta_file
 
 from tests.requirements import Requirements, mark_requirement
@@ -41,7 +41,7 @@ class CamvidFormatTest(TestCase):
                 [], categories=Camvid.make_camvid_categories(src_label_map)
             )
 
-            CamvidConverter.convert(source_dataset, test_dir, save_dataset_meta=True)
+            CamvidExporter.convert(source_dataset, test_dir, save_dataset_meta=True)
             dst_label_map = parse_meta_file(test_dir)
 
             self.assertEqual(src_label_map, dst_label_map)
@@ -115,7 +115,7 @@ class CamvidImportTest(TestCase):
         self.assertEqual([CamvidImporter.NAME], detected_formats)
 
 
-class CamvidConverterTest(TestCase):
+class CamvidExporterTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def _test_save_and_load(
         self, source_dataset, converter, test_dir, target_dataset=None, importer_args=None, **kwargs
@@ -152,7 +152,7 @@ class CamvidConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                TestExtractor(), partial(CamvidConverter.convert, label_map="camvid"), test_dir
+                TestExtractor(), partial(CamvidExporter.convert, label_map="camvid"), test_dir
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -194,7 +194,7 @@ class CamvidConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 TestExtractor(),
-                partial(CamvidConverter.convert, label_map="camvid", apply_colormap=False),
+                partial(CamvidExporter.convert, label_map="camvid", apply_colormap=False),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -226,7 +226,7 @@ class CamvidConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                TestExtractor(), partial(CamvidConverter.convert, label_map="camvid"), test_dir
+                TestExtractor(), partial(CamvidExporter.convert, label_map="camvid"), test_dir
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -248,7 +248,7 @@ class CamvidConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                TestExtractor(), partial(CamvidConverter.convert, label_map="camvid"), test_dir
+                TestExtractor(), partial(CamvidExporter.convert, label_map="camvid"), test_dir
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -267,7 +267,7 @@ class CamvidConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                TestExtractor(), partial(CamvidConverter.convert, label_map="camvid"), test_dir
+                TestExtractor(), partial(CamvidExporter.convert, label_map="camvid"), test_dir
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -312,7 +312,7 @@ class CamvidConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 SrcExtractor(),
-                partial(CamvidConverter.convert, label_map="source"),
+                partial(CamvidExporter.convert, label_map="source"),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -358,7 +358,7 @@ class CamvidConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 SrcExtractor(),
-                partial(CamvidConverter.convert, label_map="source"),
+                partial(CamvidExporter.convert, label_map="source"),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -418,7 +418,7 @@ class CamvidConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 SrcExtractor(),
-                partial(CamvidConverter.convert, save_media=True),
+                partial(CamvidExporter.convert, save_media=True),
                 test_dir,
                 require_media=True,
                 target_dataset=DstExtractor(),
@@ -528,7 +528,7 @@ class CamvidConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 SrcExtractor(),
-                partial(CamvidConverter.convert, label_map="source", save_dataset_meta=True),
+                partial(CamvidExporter.convert, label_map="source", save_dataset_meta=True),
                 test_dir,
                 target_dataset=DstExtractor(),
             )

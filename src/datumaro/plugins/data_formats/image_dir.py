@@ -6,7 +6,7 @@ import logging as log
 import os
 import os.path as osp
 
-from datumaro.components.exporter import Converter
+from datumaro.components.exporter import Exporter
 from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.media import Image
 from datumaro.util.image import find_images
@@ -44,7 +44,7 @@ class ImageDirBase(SubsetBase):
             self._items.append(DatasetItem(id=item_id, subset=self._subset, media=Image(path=path)))
 
 
-class ImageDirConverter(Converter):
+class ImageDirExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".jpg"
 
     def apply(self):

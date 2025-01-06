@@ -22,7 +22,7 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.dataset import ItemStatus
 from datumaro.components.errors import MediaTypeError
-from datumaro.components.exporter import Converter
+from datumaro.components.exporter import Exporter
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image
 from datumaro.util import cast, dump_json_file, find, str_to_bool
@@ -37,7 +37,7 @@ class SegmentationMode(Enum):
     mask = auto()
 
 
-class _TaskConverter:
+class _TaskExporter:
     def __init__(self, context):
         self._min_ann_id = 1
         self._context = context
@@ -115,7 +115,7 @@ class _TaskConverter:
         return {k: v for k, v in ann.attributes.items() if k not in {"is_crowd", "score"}}
 
 
-class _ImageInfoConverter(_TaskConverter):
+class _ImageInfoExporter(_TaskExporter):
     def is_empty(self):
         return len(self._data["images"]) == 0
 
@@ -126,7 +126,7 @@ class _ImageInfoConverter(_TaskConverter):
         pass
 
 
-class _CaptionsConverter(_TaskConverter):
+class _CaptionsExporter(_TaskExporter):
     def save_categories(self, dataset):
         pass
 
@@ -157,7 +157,7 @@ class _CaptionsConverter(_TaskConverter):
             self.annotations.append(elem)
 
 
-class _InstancesConverter(_TaskConverter):
+class _InstancesExporter(_TaskExporter):
     def save_categories(self, dataset):
         label_categories = dataset.categories().get(AnnotationType.label)
         if label_categories is None:
@@ -337,7 +337,7 @@ class _InstancesConverter(_TaskConverter):
         return elem
 
 
-class _KeypointsConverter(_InstancesConverter):
+class _KeypointsExporter(_InstancesExporter):
     def save_categories(self, dataset):
         label_categories = dataset.categories().get(AnnotationType.label)
         if label_categories is None:
@@ -452,7 +452,7 @@ class _KeypointsConverter(_InstancesConverter):
         return elem
 
 
-class _LabelsConverter(_TaskConverter):
+class _LabelsExporter(_TaskExporter):
     def save_categories(self, dataset):
         label_categories = dataset.categories().get(AnnotationType.label)
         if label_categories is None:
@@ -492,11 +492,11 @@ class _LabelsConverter(_TaskConverter):
             self.annotations.append(elem)
 
 
-class _StuffConverter(_InstancesConverter):
+class _StuffExporter(_InstancesExporter):
     pass
 
 
-class _PanopticConverter(_TaskConverter):
+class _PanopticExporter(_TaskExporter):
     def write(self, path):
         dump_json_file(path, self._data)
 
@@ -559,7 +559,7 @@ class _PanopticConverter(_TaskConverter):
         self.annotations.append(elem)
 
 
-class CocoConverter(Converter):
+class CocoExporter(Exporter):
     @staticmethod
     def _split_tasks_string(s):
         return [CocoTask[i.strip()] for i in s.split(",")]
@@ -637,13 +637,13 @@ class CocoConverter(Converter):
     DEFAULT_IMAGE_EXT = CocoPath.IMAGE_EXT
 
     _TASK_CONVERTER = {
-        CocoTask.image_info: _ImageInfoConverter,
-        CocoTask.instances: _InstancesConverter,
-        CocoTask.person_keypoints: _KeypointsConverter,
-        CocoTask.captions: _CaptionsConverter,
-        CocoTask.labels: _LabelsConverter,
-        CocoTask.panoptic: _PanopticConverter,
-        CocoTask.stuff: _StuffConverter,
+        CocoTask.image_info: _ImageInfoExporter,
+        CocoTask.instances: _InstancesExporter,
+        CocoTask.person_keypoints: _KeypointsExporter,
+        CocoTask.captions: _CaptionsExporter,
+        CocoTask.labels: _LabelsExporter,
+        CocoTask.panoptic: _PanopticExporter,
+        CocoTask.stuff: _StuffExporter,
     }
 
     def __init__(
@@ -803,7 +803,7 @@ class CocoConverter(Converter):
             if not (status == ItemStatus.removed or not item.media):
                 continue
 
-            # Converter supports saving in separate dirs and common image dir
+            # Exporter supports saving in separate dirs and common image dir
 
             image_path = osp.join(images_dir, conv._make_image_filename(item))
             if osp.isfile(image_path):
@@ -814,43 +814,43 @@ class CocoConverter(Converter):
                 os.unlink(image_path)
 
 
-class CocoInstancesConverter(CocoConverter):
+class CocoInstancesExporter(CocoExporter):
     def __init__(self, *args, **kwargs):
         kwargs["tasks"] = CocoTask.instances
         super().__init__(*args, **kwargs)
 
 
-class CocoImageInfoConverter(CocoConverter):
+class CocoImageInfoExporter(CocoExporter):
     def __init__(self, *args, **kwargs):
         kwargs["tasks"] = CocoTask.image_info
         super().__init__(*args, **kwargs)
 
 
-class CocoPersonKeypointsConverter(CocoConverter):
+class CocoPersonKeypointsExporter(CocoExporter):
     def __init__(self, *args, **kwargs):
         kwargs["tasks"] = CocoTask.person_keypoints
         super().__init__(*args, **kwargs)
 
 
-class CocoCaptionsConverter(CocoConverter):
+class CocoCaptionsExporter(CocoExporter):
     def __init__(self, *args, **kwargs):
         kwargs["tasks"] = CocoTask.captions
         super().__init__(*args, **kwargs)
 
 
-class CocoLabelsConverter(CocoConverter):
+class CocoLabelsExporter(CocoExporter):
     def __init__(self, *args, **kwargs):
         kwargs["tasks"] = CocoTask.labels
         super().__init__(*args, **kwargs)
 
 
-class CocoPanopticConverter(CocoConverter):
+class CocoPanopticExporter(CocoExporter):
     def __init__(self, *args, **kwargs):
         kwargs["tasks"] = CocoTask.panoptic
         super().__init__(*args, **kwargs)
 
 
-class CocoStuffConverter(CocoConverter):
+class CocoStuffExporter(CocoExporter):
     def __init__(self, *args, **kwargs):
         kwargs["tasks"] = CocoTask.stuff
         kwargs["segmentation_mode"] = SegmentationMode.mask

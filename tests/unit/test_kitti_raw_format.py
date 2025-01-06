@@ -9,7 +9,7 @@ from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
 from datumaro.plugins.data_formats.kitti_raw.base import KittiRawImporter
-from datumaro.plugins.data_formats.kitti_raw.exporter import KittiRawConverter
+from datumaro.plugins.data_formats.kitti_raw.exporter import KittiRawExporter
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path
@@ -95,7 +95,7 @@ class KittiRawImporterTest(TestCase):
         compare_datasets_3d(self, expected_dataset, parsed_dataset, require_point_cloud=True)
 
 
-class KittiRawConverterTest(TestCase):
+class KittiRawExporterTest(TestCase):
     pcd1 = osp.abspath(osp.join(DUMMY_DATASET_DIR, "velodyne_points", "data", "0000000000.pcd"))
     pcd2 = osp.abspath(osp.join(DUMMY_DATASET_DIR, "velodyne_points", "data", "0000000001.pcd"))
     pcd3 = osp.abspath(osp.join(DUMMY_DATASET_DIR, "velodyne_points", "data", "0000000002.pcd"))
@@ -245,7 +245,7 @@ class KittiRawConverterTest(TestCase):
 
             self._test_save_and_load(
                 source_dataset,
-                partial(KittiRawConverter.convert, save_media=True),
+                partial(KittiRawExporter.convert, save_media=True),
                 test_dir,
                 target_dataset=target_dataset,
                 require_point_cloud=True,
@@ -258,7 +258,7 @@ class KittiRawConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(source_dataset, KittiRawConverter.convert, test_dir)
+            self._test_save_and_load(source_dataset, KittiRawExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_reindex_frames(self):
@@ -273,7 +273,7 @@ class KittiRawConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(KittiRawConverter.convert, reindex=True),
+                partial(KittiRawExporter.convert, reindex=True),
                 test_dir,
                 target_dataset=expected_dataset,
             )
@@ -295,7 +295,7 @@ class KittiRawConverterTest(TestCase):
 
         with TestDir() as test_dir:
             with self.assertRaisesRegex(Exception, "track_id"):
-                KittiRawConverter.convert(source_dataset, test_dir)
+                KittiRawExporter.convert(source_dataset, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_reindex_allows_single_annotations(self):
@@ -333,7 +333,7 @@ class KittiRawConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(KittiRawConverter.convert, reindex=True),
+                partial(KittiRawExporter.convert, reindex=True),
                 test_dir,
                 target_dataset=expected_dataset,
             )
@@ -381,7 +381,7 @@ class KittiRawConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(KittiRawConverter.convert, allow_attrs=True),
+                partial(KittiRawExporter.convert, allow_attrs=True),
                 test_dir,
                 target_dataset=target_dataset,
             )
@@ -428,7 +428,7 @@ class KittiRawConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                source_dataset, KittiRawConverter.convert, test_dir, target_dataset=target_dataset
+                source_dataset, KittiRawExporter.convert, test_dir, target_dataset=target_dataset
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -440,7 +440,7 @@ class KittiRawConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(source_dataset, KittiRawConverter.convert, test_dir)
+            self._test_save_and_load(source_dataset, KittiRawExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_arbitrary_paths(self):
@@ -486,7 +486,7 @@ class KittiRawConverterTest(TestCase):
 
             self._test_save_and_load(
                 source_dataset,
-                partial(KittiRawConverter.convert, save_media=True),
+                partial(KittiRawExporter.convert, save_media=True),
                 test_dir,
                 target_dataset=target_dataset,
                 require_point_cloud=True,
@@ -541,7 +541,7 @@ class KittiRawConverterTest(TestCase):
 
             self._test_save_and_load(
                 source_dataset,
-                partial(KittiRawConverter.convert, save_media=True),
+                partial(KittiRawExporter.convert, save_media=True),
                 test_dir,
                 target_dataset=target_dataset,
                 require_point_cloud=True,
@@ -654,7 +654,7 @@ class KittiRawConverterTest(TestCase):
 
             self._test_save_and_load(
                 source_dataset,
-                partial(KittiRawConverter.convert, save_media=True, save_dataset_meta=True),
+                partial(KittiRawExporter.convert, save_media=True, save_dataset_meta=True),
                 test_dir,
                 target_dataset=target_dataset,
                 require_point_cloud=True,

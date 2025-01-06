@@ -9,14 +9,14 @@ from datumaro.components.dataset import Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.data_formats.mot import MotSeqGtConverter, MotSeqImporter
+from datumaro.plugins.data_formats.mot import MotSeqGtExporter, MotSeqImporter
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import TestDir, check_save_and_load, compare_datasets
 
 
-class MotConverterTest(TestCase):
+class MotExporterTest(TestCase):
     def _test_save_and_load(
         self, source_dataset, converter, test_dir, target_dataset=None, importer_args=None, **kwargs
     ):
@@ -160,7 +160,7 @@ class MotConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(MotSeqGtConverter.convert, save_media=True),
+                partial(MotSeqGtExporter.convert, save_media=True),
                 test_dir,
                 target_dataset=target_dataset,
                 require_media=True,
@@ -212,7 +212,7 @@ class MotConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                source_dataset, partial(MotSeqGtConverter.convert, save_media=False), test_dir
+                source_dataset, partial(MotSeqGtExporter.convert, save_media=False), test_dir
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -248,7 +248,7 @@ class MotConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 expected,
-                partial(MotSeqGtConverter.convert, save_media=True),
+                partial(MotSeqGtExporter.convert, save_media=True),
                 test_dir,
                 require_media=True,
             )
@@ -300,7 +300,7 @@ class MotConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(MotSeqGtConverter.convert, save_media=True, save_dataset_meta=True),
+                partial(MotSeqGtExporter.convert, save_media=True, save_dataset_meta=True),
                 test_dir,
                 require_media=True,
             )

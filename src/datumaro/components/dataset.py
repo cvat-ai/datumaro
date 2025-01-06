@@ -33,7 +33,7 @@ from datumaro.components.dataset_base import (
     CategoriesInfo,
     DatasetItem,
     Extractor,
-    IExtractor,
+    IDataset,
     ImportContext,
     ImportErrorPolicy,
     ItemTransform,
@@ -51,7 +51,7 @@ from datumaro.util.scope import on_error_do, scoped
 
 DEFAULT_FORMAT = "datumaro"
 
-IDataset = IExtractor
+IDataset = IDataset
 
 
 class DatasetItemStorage:
@@ -665,7 +665,7 @@ class DatasetStorage(IDataset):
         if not (self.is_cache_initialized() or self._is_unchanged_wrapper):
             self._flush_changes = True
 
-    def update(self, source: Union[DatasetPatch, IExtractor, Iterable[DatasetItem]]):
+    def update(self, source: Union[DatasetPatch, IDataset, Iterable[DatasetItem]]):
         # TODO: provide a more efficient implementation with patch reuse
 
         if isinstance(source, DatasetPatch):
@@ -677,7 +677,7 @@ class DatasetStorage(IDataset):
                     self.remove(*item_id)
                 else:
                     self.put(source.data.get(*item_id))
-        elif isinstance(source, IExtractor):
+        elif isinstance(source, IDataset):
             for item in ProjectLabels(
                 source, self.categories().get(AnnotationType.label, LabelCategories())
             ):
@@ -884,7 +884,7 @@ class Dataset(IDataset):
         else:
             return self.transform(XPathDatasetFilter, xpath=expr)
 
-    def update(self, source: Union[DatasetPatch, IExtractor, Iterable[DatasetItem]]) -> Dataset:
+    def update(self, source: Union[DatasetPatch, IDataset, Iterable[DatasetItem]]) -> Dataset:
         """
         Updates items of the current dataset from another dataset or an
         iterable (the source). Items from the source overwrite matching

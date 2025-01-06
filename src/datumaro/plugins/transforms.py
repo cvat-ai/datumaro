@@ -40,7 +40,7 @@ from datumaro.components.errors import DatumaroError
 from datumaro.components.dataset_base import (
     DEFAULT_SUBSET_NAME,
     DatasetItem,
-    IExtractor,
+    IDataset,
     ItemTransform,
     Transform,
 )
@@ -646,7 +646,7 @@ class RemapLabels(ItemTransform, CliPlugin):
 
     def __init__(
         self,
-        extractor: IExtractor,
+        extractor: IDataset,
         mapping: Union[Dict[str, str], List[Tuple[str, str]]],
         default: Union[None, str, DefaultAction] = None,
     ):
@@ -780,7 +780,7 @@ class ProjectLabels(ItemTransform):
 
     def __init__(
         self,
-        extractor: IExtractor,
+        extractor: IDataset,
         dst_labels: Union[Iterable[Union[str, Tuple[str, str]]], LabelCategories],
     ):
         super().__init__(extractor)
@@ -950,7 +950,7 @@ class ResizeTransform(ItemTransform):
 
     def __init__(
         self,
-        extractor: IExtractor,
+        extractor: IDataset,
         *,
         width: Optional[int] = None,
         height: Optional[int] = None,
@@ -1104,7 +1104,7 @@ class RemoveItems(ItemTransform):
         )
         return parser
 
-    def __init__(self, extractor: IExtractor, ids: Iterable[Tuple[str, str]]):
+    def __init__(self, extractor: IDataset, ids: Iterable[Tuple[str, str]]):
         super().__init__(extractor)
         self._ids = set(tuple(v) for v in (ids or []))
 
@@ -1151,7 +1151,7 @@ class RemoveAnnotations(ItemTransform):
         )
         return parser
 
-    def __init__(self, extractor: IExtractor, *, ids: Optional[Iterable[Tuple[str, str]]] = None):
+    def __init__(self, extractor: IDataset, *, ids: Optional[Iterable[Tuple[str, str]]] = None):
         super().__init__(extractor)
         self._ids = set(tuple(v) for v in (ids or []))
 
@@ -1215,7 +1215,7 @@ class RemoveAttributes(ItemTransform):
 
     def __init__(
         self,
-        extractor: IExtractor,
+        extractor: IDataset,
         ids: Optional[Iterable[Tuple[str, str]]] = None,
         attributes: Optional[Iterable[str]] = None,
     ):

@@ -27,7 +27,7 @@ from datumaro.components.annotation import (
 from datumaro.components.dataset import DatasetPatch, ItemStatus
 from datumaro.components.errors import DatasetExportError, MediaTypeError
 from datumaro.components.exporter import Converter
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, IExtractor
+from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, IDataset
 from datumaro.components.media import Image
 from datumaro.util import dump_json_file, str_to_bool
 from datumaro.util.os_util import split_path
@@ -73,7 +73,7 @@ def _bbox_annotation_as_polygon(bbox: Bbox) -> List[float]:
     return points
 
 
-def _resolve_subsets(initial_subsets: Dict[str, IExtractor]) -> Dict[str, Iterable]:
+def _resolve_subsets(initial_subsets: Dict[str, IDataset]) -> Dict[str, Iterable]:
     assert YoloPath.DEFAULT_SUBSET_NAME.lower() != DEFAULT_SUBSET_NAME.lower()
 
     subsets: Dict[str, Iterable] = {
@@ -110,7 +110,7 @@ class YoloConverter(Converter):
         return parser
 
     def __init__(
-        self, extractor: IExtractor, save_dir: str, *, add_path_prefix: bool = True, **kwargs
+        self, extractor: IDataset, save_dir: str, *, add_path_prefix: bool = True, **kwargs
     ) -> None:
         super().__init__(extractor, save_dir, **kwargs)
 
@@ -269,7 +269,7 @@ class YoloConverter(Converter):
         return osp.join(save_dir, f"obj_{subset}_data")
 
     @classmethod
-    def patch(cls, dataset: IExtractor, patch: DatasetPatch, save_dir: str, **kwargs):
+    def patch(cls, dataset: IDataset, patch: DatasetPatch, save_dir: str, **kwargs):
         conv = cls(dataset, save_dir=save_dir, **kwargs)
         conv._patch = patch
         conv.apply()
@@ -302,7 +302,7 @@ class YoloUltralyticsDetectionConverter(YoloConverter):
 
     def __init__(
         self,
-        extractor: IExtractor,
+        extractor: IDataset,
         save_dir: str,
         *,
         add_path_prefix: bool = True,

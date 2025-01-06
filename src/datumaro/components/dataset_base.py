@@ -181,7 +181,7 @@ class DatasetItem:
 CategoriesInfo = Dict[AnnotationType, Categories]
 
 
-class IExtractor:
+class IDataset:
     def __iter__(self) -> Iterator[DatasetItem]:
         """
         Provides sequential access to dataset items.
@@ -194,13 +194,13 @@ class IExtractor:
     def __bool__(self):  # avoid __len__ use for truth checking
         return True
 
-    def subsets(self) -> Dict[str, IExtractor]:
+    def subsets(self) -> Dict[str, IDataset]:
         """
         Enumerates subsets in the dataset. Each subset can be a dataset itself.
         """
         raise NotImplementedError()
 
-    def get_subset(self, name) -> IExtractor:
+    def get_subset(self, name) -> IDataset:
         raise NotImplementedError()
 
     def categories(self) -> CategoriesInfo:
@@ -226,7 +226,7 @@ class IExtractor:
         raise NotImplementedError()
 
 
-class _ExtractorBase(IExtractor):
+class _DatasetBase(IDataset):
     def __init__(self, *, length: Optional[int] = None, subsets: Optional[Sequence[str]] = None):
         self._length = length
         self._subsets = subsets
@@ -248,7 +248,7 @@ class _ExtractorBase(IExtractor):
             self._init_cache()
         return self._length
 
-    def subsets(self) -> Dict[str, IExtractor]:
+    def subsets(self) -> Dict[str, IDataset]:
         if self._subsets is None:
             self._init_cache()
         return {name or DEFAULT_SUBSET_NAME: self.get_subset(name) for name in self._subsets}
@@ -272,7 +272,7 @@ class _ExtractorBase(IExtractor):
         return method(self, *args, **kwargs)
 
     def select(self, pred):
-        class _DatasetFilter(_ExtractorBase):
+        class _DatasetFilter(_DatasetBase):
             def __iter__(_):
                 return filter(pred, iter(self))
 
@@ -356,7 +356,7 @@ class NullImportContext(ImportContext):
     pass
 
 
-class Extractor(_ExtractorBase, CliPlugin):
+class Extractor(_DatasetBase, CliPlugin):
     """
     A base class for user-defined and built-in extractors.
     Should be used in cases, where SourceExtractor is not enough,
@@ -507,7 +507,7 @@ class Importer(CliPlugin):
         return sources
 
 
-class Transform(_ExtractorBase, CliPlugin):
+class Transform(_DatasetBase, CliPlugin):
     """
     A base class for dataset transformations that change dataset items
     or their annotations.
@@ -517,7 +517,7 @@ class Transform(_ExtractorBase, CliPlugin):
     def wrap_item(item, **kwargs):
         return item.wrap(**kwargs)
 
-    def __init__(self, extractor: IExtractor):
+    def __init__(self, extractor: IDataset):
         super().__init__()
 
         self._extractor = extractor

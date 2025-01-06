@@ -48,7 +48,7 @@ from .components.dataset_base import (
     DatasetItem,
     Extractor,
     FailingImportErrorPolicy,
-    IExtractor,
+    IDataset,
     Importer,
     ImportErrorPolicy,
     ItemTransform,

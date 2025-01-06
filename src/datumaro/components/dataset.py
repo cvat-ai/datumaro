@@ -51,8 +51,6 @@ from datumaro.util.scope import on_error_do, scoped
 
 DEFAULT_FORMAT = "datumaro"
 
-IDataset = IDataset
-
 
 class DatasetItemStorage:
     def __init__(self):

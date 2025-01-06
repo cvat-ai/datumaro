@@ -46,7 +46,6 @@ from .components.dataset_base import (
     DatasetBase,
     DatasetItem,
     FailingImportErrorPolicy,
-    IDataset,
     Importer,
     ImportErrorPolicy,
     ItemTransform,

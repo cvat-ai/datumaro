@@ -356,7 +356,7 @@ class NullImportContext(ImportContext):
     pass
 
 
-class Extractor(_DatasetBase, CliPlugin):
+class DatasetBase(_DatasetBase, CliPlugin):
     """
     A base class for user-defined and built-in extractors.
     Should be used in cases, where SourceExtractor is not enough,
@@ -380,7 +380,7 @@ class Extractor(_DatasetBase, CliPlugin):
         return self._media_type
 
 
-class SourceExtractor(Extractor):
+class SourceExtractor(DatasetBase):
     """
     A base class for simple, single-subset extractors.
     Should be used by default for user-defined extractors.

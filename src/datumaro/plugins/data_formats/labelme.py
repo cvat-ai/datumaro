@@ -14,7 +14,7 @@ from defusedxml import ElementTree
 from datumaro.components.annotation import AnnotationType, Bbox, LabelCategories, Mask, Polygon
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Converter
-from datumaro.components.dataset_base import DatasetItem, Extractor, Importer
+from datumaro.components.dataset_base import DatasetItem, DatasetBase, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util import cast, escape, unescape
@@ -42,7 +42,7 @@ class LabelMePath:
     ]
 
 
-class LabelMeExtractor(Extractor):
+class LabelMeBase(DatasetBase):
     def __init__(self, path):
         assert osp.isdir(path), path
         super().__init__()
@@ -348,7 +348,7 @@ class LabelMeImporter(Importer):
             subsets.append(
                 {
                     "url": osp.normpath(path),
-                    "format": LabelMeExtractor.NAME,
+                    "format": LabelMeBase.NAME,
                 }
             )
         except StopIteration:

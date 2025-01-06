@@ -27,7 +27,7 @@ from datumaro.components.errors import (
     MissingFieldError,
     UndeclaredLabelError,
 )
-from datumaro.components.dataset_base import DatasetItem, Extractor
+from datumaro.components.dataset_base import DatasetItem, DatasetBase
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.voc.exporter import (
     VocActionConverter,
@@ -141,7 +141,7 @@ class VocFormatTest(TestCase):
                 VOC.VocLabelMap.parse_from_file(path)
 
 
-class TestExtractorBase(Extractor):
+class TestExtractorBase(DatasetBase):
     def _label(self, voc_label):
         return self.categories()[AnnotationType.label].find(voc_label)[0]
 

@@ -75,7 +75,7 @@ class Environment:
         from datumaro.components.dataset_generator import DatasetGenerator
         from datumaro.components.exporter import Converter
         from datumaro.components.dataset_base import (
-            Extractor,
+            DatasetBase,
             Importer,
             ItemTransform,
             SourceExtractor,
@@ -85,7 +85,7 @@ class Environment:
         from datumaro.components.validator import Validator
 
         _filter = self._make_filter
-        self._extractors = PluginRegistry(_filter(Extractor, skip=SourceExtractor))
+        self._extractors = PluginRegistry(_filter(DatasetBase, skip=SourceExtractor))
         self._importers = PluginRegistry(_filter(Importer))
         self._launchers = PluginRegistry(_filter(Launcher))
         self._converters = PluginRegistry(_filter(Converter))

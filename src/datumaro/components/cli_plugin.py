@@ -16,11 +16,11 @@ def plugin_types() -> List[Type["CliPlugin"]]:
     global _plugin_types
     if _plugin_types is None:
         from datumaro.components.exporter import Converter
-        from datumaro.components.dataset_base import Extractor, Importer, Transform
+        from datumaro.components.dataset_base import DatasetBase, Importer, Transform
         from datumaro.components.launcher import Launcher
         from datumaro.components.validator import Validator
 
-        _plugin_types = [Launcher, Extractor, Transform, Importer, Converter, Validator]
+        _plugin_types = [Launcher, DatasetBase, Transform, Importer, Converter, Validator]
 
     return _plugin_types
 

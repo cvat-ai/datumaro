@@ -9,7 +9,7 @@ import os.path as osp
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
 from datumaro.components.dataset import DatasetItem
-from datumaro.components.dataset_base import Extractor, Importer
+from datumaro.components.dataset_base import DatasetBase, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util.image import find_images
@@ -21,7 +21,7 @@ class MarsPath:
     IMAGE_NAME_POSTFIX = "C[0-9]" + "T" + "[0-9]" * 4 + "F" + "[0-9]" * 3 + ".*"
 
 
-class MarsExtractor(Extractor):
+class MarsBase(DatasetBase):
     def __init__(self, path):
         assert osp.isdir(path), path
         super().__init__()

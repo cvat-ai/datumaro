@@ -32,7 +32,7 @@ from datumaro.components.dataset_base import (
     DEFAULT_SUBSET_NAME,
     CategoriesInfo,
     DatasetItem,
-    Extractor,
+    DatasetBase,
     IDataset,
     ImportContext,
     ImportErrorPolicy,
@@ -589,7 +589,7 @@ class DatasetStorage(IDataset):
 
         item = self._storage.get(id, subset)
         if item is None and not self.is_cache_initialized():
-            if self._source.get.__func__ == Extractor.get or self._transforms:
+            if self._source.get.__func__ == DatasetBase.get or self._transforms:
                 # can be improved if IDataset is ABC
                 self.init_cache()
                 item = self._storage.get(id, subset)
@@ -741,7 +741,7 @@ class Dataset(IDataset):
         if not categories:
             categories = {}
 
-        class _extractor(Extractor):
+        class _extractor(DatasetBase):
             def __init__(self):
                 super().__init__(
                     length=len(iterable) if hasattr(iterable, "__len__") else None,

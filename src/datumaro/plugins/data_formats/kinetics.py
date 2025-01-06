@@ -7,7 +7,7 @@ import os
 import os.path as osp
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
-from datumaro.components.dataset_base import DatasetItem, Extractor, Importer
+from datumaro.components.dataset_base import DatasetItem, DatasetBase, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Video
 from datumaro.plugins.data_formats.video import VIDEO_EXTENSIONS
@@ -15,7 +15,7 @@ from datumaro.util import parse_json, parse_json_file
 from datumaro.util.os_util import find_files
 
 
-class KineticsExtractor(Extractor):
+class KineticsBase(DatasetBase):
     def __init__(self, path):
         if not osp.isdir(path):
             raise FileNotFoundError("Can't read dataset directory '%s'" % path)
@@ -158,5 +158,5 @@ class KineticsImporter(Importer):
     @classmethod
     def find_sources(cls, path):
         if find_files(path, ["csv", "json"]):
-            return [{"url": path, "format": KineticsExtractor.NAME}]
+            return [{"url": path, "format": KineticsBase.NAME}]
         return []

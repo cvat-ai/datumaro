@@ -17,7 +17,7 @@ from datumaro.components.annotation import (
     Mask,
     Polygon,
 )
-from datumaro.components.dataset_base import DatasetItem, Extractor, Importer
+from datumaro.components.dataset_base import DatasetItem, DatasetBase, Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util import parse_json
@@ -35,7 +35,7 @@ class Ade20k2020Path:
     )
 
 
-class Ade20k2020Extractor(Extractor):
+class Ade20K2020Base(DatasetBase):
     def __init__(self, path):
         if not osp.isdir(path):
             raise FileNotFoundError("Can't read dataset directory '%s'" % path)
@@ -237,7 +237,7 @@ class Ade20k2020Importer(Importer):
                     return [
                         {
                             "url": path,
-                            "format": Ade20k2020Extractor.NAME,
+                            "format": Ade20K2020Base.NAME,
                         }
                     ]
         return []

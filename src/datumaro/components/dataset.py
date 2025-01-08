@@ -13,7 +13,6 @@ from contextlib import contextmanager
 from copy import copy
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Type, Union
 
-from datumaro.components.dataset_storage import DatasetPatch
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.config_model import Source
 from datumaro.components.dataset_base import (
@@ -27,9 +26,7 @@ from datumaro.components.dataset_base import (
     Transform,
     _ImportFail,
 )
-from datumaro.util.definitions import DEFAULT_SUBSET_NAME
-from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
-from datumaro.components.dataset_storage import DatasetStorage
+from datumaro.components.dataset_storage import DatasetPatch, DatasetStorage
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     MultipleFormatsMatchError,
@@ -37,9 +34,11 @@ from datumaro.components.errors import (
     UnknownFormatError,
 )
 from datumaro.components.exporter import ExportContext, Exporter, ExportErrorPolicy, _ExportFail
+from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.launcher import Launcher, ModelTransform
 from datumaro.components.media import Image, MediaElement
 from datumaro.components.progress_reporting import NullProgressReporter, ProgressReporter
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.util.log_utils import logging_disabled
 from datumaro.util.os_util import rmtree
 from datumaro.util.scope import on_error_do, scoped

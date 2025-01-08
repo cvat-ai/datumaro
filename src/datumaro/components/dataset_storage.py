@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple, Union, Optional, Type, Iterable, List, Iterator
+from typing import Dict, Iterable, Iterator, List, Optional, Tuple, Type, Union
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.dataset_base import (
-    _ImportFail,
     CategoriesInfo,
     DatasetBase,
     DatasetItem,
     IDataset,
+    ItemTransform,
     Transform,
-    ItemTransform
+    _ImportFail,
 )
-from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.dataset_item_storage import (
     DatasetItemStorage,
     DatasetItemStorageDatasetView,
@@ -27,6 +26,7 @@ from datumaro.components.errors import (
 from datumaro.components.media import MediaElement
 from datumaro.plugins.transforms import ProjectLabels
 from datumaro.util import is_method_redefined
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 __all__ = ["DatasetPatch", "DatasetStorage"]
 

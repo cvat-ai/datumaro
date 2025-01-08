@@ -19,7 +19,6 @@ from datumaro.components.annotation import (
     PolyLine,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, eager_mode
-from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.dataset_base import (
     DatasetBase,
     DatasetItem,
@@ -30,12 +29,7 @@ from datumaro.components.dataset_base import (
     SubsetBase,
     Transform,
 )
-from datumaro.util.definitions import DEFAULT_SUBSET_NAME
-from datumaro.components.filter import (
-    DatasetItemEncoder,
-    XPathAnnotationsFilter,
-    XPathDatasetFilter,
-)
+from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     ConflictingCategoriesError,
@@ -50,9 +44,15 @@ from datumaro.components.errors import (
     UnknownFormatError,
 )
 from datumaro.components.exporter import Exporter
+from datumaro.components.filter import (
+    DatasetItemEncoder,
+    XPathAnnotationsFilter,
+    XPathDatasetFilter,
+)
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement, Video
 from datumaro.components.progress_reporting import NullProgressReporter
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir, compare_datasets, compare_datasets_strict

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from copy import copy
 from enum import Enum, auto
-from typing import Iterator, Union, Optional, Any, Tuple, Type
+from typing import Any, Iterator, Optional, Tuple, Type, Union
 
-from datumaro.components.dataset_base import DatasetItem, IDataset, CategoriesInfo, MediaElement
+from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, IDataset, MediaElement
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 __all__ = ["ItemStatus", "DatasetItemStorage", "DatasetItemStorageDatasetView"]

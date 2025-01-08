@@ -27,7 +27,6 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.dataset import Dataset
 from datumaro.components.dataset_base import DatasetItem
-from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     AnnotationImportError,
@@ -64,6 +63,7 @@ from datumaro.plugins.data_formats.yolo.importer import (
     YoloUltralyticsPoseImporter,
     YoloUltralyticsSegmentationImporter,
 )
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.util.image import save_image
 
 from tests.requirements import Requirements, mark_requirement

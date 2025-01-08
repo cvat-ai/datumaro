@@ -79,8 +79,8 @@ class Environment:
             SubsetBase,
             Transform,
         )
-        from datumaro.components.generator import DatasetGenerator
         from datumaro.components.exporter import Exporter
+        from datumaro.components.generator import DatasetGenerator
         from datumaro.components.launcher import Launcher
         from datumaro.components.validator import Validator
 

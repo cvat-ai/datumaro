@@ -9,11 +9,11 @@ import shutil
 from typing import Dict, Optional, Type, Union
 
 from datumaro.components.dataset import Dataset, IDataset
-from datumaro.components.dataset_item_storage import DatasetItemStorageDatasetView
 from datumaro.components.dataset_base import Transform
-from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
+from datumaro.components.dataset_item_storage import DatasetItemStorageDatasetView
 from datumaro.components.environment import Environment
 from datumaro.components.exporter import Exporter
+from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.launcher import Launcher, ModelTransform
 from datumaro.components.operations import ExactMerge
 from datumaro.components.validator import TaskType, Validator

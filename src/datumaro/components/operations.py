@@ -42,8 +42,8 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.dataset import Dataset, IDataset
-from datumaro.components.dataset_item_storage import DatasetItemStorage
 from datumaro.components.dataset_base import CategoriesInfo, DatasetItem
+from datumaro.components.dataset_item_storage import DatasetItemStorage
 from datumaro.components.errors import (
     AnnotationsTooCloseError,
     ConflictingCategoriesError,

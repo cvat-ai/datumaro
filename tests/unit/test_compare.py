@@ -14,10 +14,10 @@ from datumaro.components.annotation import (
     Skeleton,
 )
 from datumaro.components.dataset_base import DatasetItem
-from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.media import Image
 from datumaro.components.operations import DistanceComparator, ExactComparator
 from datumaro.components.project import Dataset
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 from tests.requirements import Requirements, mark_requirement
 

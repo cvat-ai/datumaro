@@ -304,7 +304,7 @@ or by regular module importing:
 .. code-block:: python
 
    import datumaro as dm
-   from datumaro.plugins.data_formats.yolo.converter import YoloConverter
+   from datumaro.plugins.data_formats.yolo.exporter import YoloConverter
 
    # Import a dataset
    dataset = dm.Dataset.import_from(src_dir, 'voc')

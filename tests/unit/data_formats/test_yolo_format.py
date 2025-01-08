@@ -98,26 +98,10 @@ class CompareDatasetsRotationMixin(CompareDatasetMixin):
             rotation_diff = expected.attributes.get("rotation", 0) - actual.attributes.get(
                 "rotation", 0
             )
-            rotation_diff %= 180
-            rotation_diff = min(rotation_diff, 180 - rotation_diff)
-            assert rotation_diff < 0.01 or abs(rotation_diff - 90) < 0.01
-            if rotation_diff < 0.01:
-                return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
-            if abs(rotation_diff - 90) < 0.01:
-                x, y, w, h = actual.get_bbox()
-                center_x = x + w / 2
-                center_y = y + h / 2
-                new_width = h
-                new_height = w
-                actual = Bbox(
-                    x=center_x - new_width / 2,
-                    y=center_y - new_height / 2,
-                    w=new_width,
-                    h=new_height,
-                    label=actual.label,
-                    attributes=actual.attributes,
-                )
-                return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
+            rotation_diff %= 360
+            rotation_diff = min(rotation_diff, 360 - rotation_diff)
+            assert rotation_diff < 0.01
+            return compare_annotations(expected, actual, ignored_attrs=ignored_attrs)
 
         compare_datasets(
             self.helper_tc,

@@ -45,6 +45,7 @@ from datumaro.util.image import (
 from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_meta_file
 from datumaro.util.os_util import split_path
 
+from .exporter import bbox_annotation_as_polygon
 from .format import (
     YoloPath,
     YoloUltralyticsClassificationFormat,
@@ -521,6 +522,45 @@ class YoloUltralyticsSegmentationBase(YoloUltralyticsDetectionBase):
 
 
 class YoloUltralyticsOrientedBoxesBase(YoloUltralyticsDetectionBase):
+    @staticmethod
+    def _restore_original_rotation(
+        imported_points: list[tuple[float, float]],
+        bbox: Bbox,
+    ) -> Bbox:
+        exported_points = np.array(list(take_by(bbox_annotation_as_polygon(bbox), count=2)))
+        best_shift = min(
+            range(4),
+            key=lambda shift: sum(
+                np.linalg.norm(np.roll(imported_points, -shift, axis=0) - exported_points, axis=1)
+            ),
+        )
+        if best_shift == 0:
+            return bbox
+
+        x, y = bbox.x, bbox.y
+        width, height = bbox.w, bbox.h
+        rotation = bbox.attributes.get("rotation", 0)
+        center_x = x + width / 2
+        center_y = y + height / 2
+        if best_shift == 1:
+            rotation -= 90
+            width, height = height, width
+        elif best_shift == 2:
+            rotation -= 180
+        elif best_shift == 3:
+            rotation -= 270
+            width, height = height, width
+        rotation = rotation % 360
+
+        return Bbox(
+            x=center_x - width / 2,
+            y=center_y - height / 2,
+            w=width,
+            h=height,
+            label=bbox.label,
+            attributes=(dict(rotation=rotation) if abs(rotation) > 0.00001 else {}),
+        )
+
     def _load_one_annotation(
         self, parts: List[str], image_height: int, image_width: int
     ) -> Annotation:
@@ -553,6 +593,7 @@ class YoloUltralyticsOrientedBoxesBase(YoloUltralyticsDetectionBase):
             label=label_id,
             attributes=(dict(rotation=rotation) if abs(rotation) > 0.00001 else {}),
         )
+        bbox = self._restore_original_rotation(points, bbox)
         if len(parts) == 10:
             bbox.attributes["track_id"] = self._parse_field(parts[-1], int, "bbox track id")
         return bbox

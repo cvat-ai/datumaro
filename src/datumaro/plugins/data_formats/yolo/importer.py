@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 
 import yaml
 
-from datumaro import Importer
+from datumaro.components.importer import Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.plugins.data_formats.yolo.base import (
     YoloUltralyticsClassificationBase,

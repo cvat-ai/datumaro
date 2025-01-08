@@ -74,11 +74,11 @@ class Environment:
     def __init__(self):
         from datumaro.components.dataset_base import (
             DatasetBase,
-            Importer,
             ItemTransform,
             SubsetBase,
             Transform,
         )
+        from datumaro.components.importer import Importer
         from datumaro.components.exporter import Exporter
         from datumaro.components.generator import DatasetGenerator
         from datumaro.components.launcher import Launcher

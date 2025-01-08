@@ -11,7 +11,8 @@ from datumaro.components.annotation import (
     Points,
     PointsCategories,
 )
-from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
+from datumaro.components.importer import Importer
 from datumaro.components.errors import DatasetImportError
 from datumaro.components.media import Image
 from datumaro.util.image import find_images

@@ -9,7 +9,8 @@ import scipy.io as spio
 from packaging.version import Version
 
 from datumaro.components.annotation import Bbox, LabelCategories, Points, PointsCategories
-from datumaro.components.dataset_base import AnnotationType, DatasetItem, Importer, SubsetBase
+from datumaro.components.dataset_base import AnnotationType, DatasetItem, SubsetBase
+from datumaro.components.importer import Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 

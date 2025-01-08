@@ -38,12 +38,12 @@ from .components.dataset_base import (
     DatasetBase,
     DatasetItem,
     FailingImportErrorPolicy,
-    Importer,
     ImportErrorPolicy,
     ItemTransform,
     SubsetBase,
     Transform,
 )
+from .components.importer import Importer
 from .components.dataset_item_storage import ItemStatus
 from .components.dataset_storage import DatasetPatch
 from .components.environment import Environment, PluginRegistry

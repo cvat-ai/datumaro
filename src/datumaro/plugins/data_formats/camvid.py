@@ -20,7 +20,8 @@ from datumaro.components.annotation import (
     Mask,
     MaskCategories,
 )
-from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
+from datumaro.components.importer import Importer
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter

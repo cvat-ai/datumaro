@@ -9,7 +9,8 @@ import os.path as osp
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
 from datumaro.components.dataset import DatasetItem
-from datumaro.components.dataset_base import DatasetBase, Importer
+from datumaro.components.dataset_base import DatasetBase
+from datumaro.components.importer import Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util.image import find_images

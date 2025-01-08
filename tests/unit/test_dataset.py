@@ -24,11 +24,10 @@ from datumaro.components.dataset_base import (
     DatasetItem,
     FailingImportErrorPolicy,
     ImportErrorPolicy,
-    ItemTransform,
     ProgressReporter,
     SubsetBase,
-    Transform,
 )
+from datumaro.components.transformer import Transform, ItemTransform
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (

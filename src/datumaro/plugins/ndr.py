@@ -10,7 +10,7 @@ import numpy as np
 from scipy.linalg import orth
 
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.dataset_base import Transform
+from datumaro.components.transformer import Transform
 from datumaro.util import parse_str_enum_value
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 

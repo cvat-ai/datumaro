@@ -8,10 +8,9 @@ from datumaro.components.dataset_base import (
     DatasetBase,
     DatasetItem,
     IDataset,
-    ItemTransform,
-    Transform,
     _ImportFail,
 )
+from datumaro.components.transformer import Transform, ItemTransform
 from datumaro.components.dataset_item_storage import (
     DatasetItemStorage,
     DatasetItemStorageDatasetView,

@@ -36,7 +36,8 @@ from datumaro.components.annotation import (
     RleMask,
 )
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.dataset_base import DatasetItem, IDataset, ItemTransform, Transform
+from datumaro.components.dataset_base import DatasetItem, IDataset
+from datumaro.components.transformer import Transform, ItemTransform
 from datumaro.components.errors import DatumaroError
 from datumaro.components.media import Image
 from datumaro.util import NOTSET, filter_dict, parse_str_enum_value, take_by

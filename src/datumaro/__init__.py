@@ -39,10 +39,9 @@ from .components.dataset_base import (
     DatasetItem,
     FailingImportErrorPolicy,
     ImportErrorPolicy,
-    ItemTransform,
     SubsetBase,
-    Transform,
 )
+from .components.transformer import Transform, ItemTransform
 from .components.importer import Importer
 from .components.dataset_item_storage import ItemStatus
 from .components.dataset_storage import DatasetPatch

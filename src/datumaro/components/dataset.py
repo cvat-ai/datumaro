@@ -22,10 +22,9 @@ from datumaro.components.dataset_base import (
     IDataset,
     ImportContext,
     ImportErrorPolicy,
-    ItemTransform,
-    Transform,
     _ImportFail,
 )
+from datumaro.components.transformer import Transform, ItemTransform
 from datumaro.components.dataset_storage import DatasetPatch, DatasetStorage
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (

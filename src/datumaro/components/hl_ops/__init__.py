@@ -9,7 +9,7 @@ import shutil
 from typing import Dict, Optional, Type, Union
 
 from datumaro.components.dataset import Dataset, IDataset
-from datumaro.components.dataset_base import Transform
+from datumaro.components.transformer import Transform
 from datumaro.components.dataset_item_storage import DatasetItemStorageDatasetView
 from datumaro.components.environment import Environment
 from datumaro.components.exporter import Exporter

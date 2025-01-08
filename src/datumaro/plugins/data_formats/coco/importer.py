@@ -6,9 +6,9 @@ import logging as log
 import os.path as osp
 from glob import glob
 
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, Importer
 from datumaro.components.errors import DatasetNotFoundError
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
+from datumaro.components.importer import Importer
 from datumaro.plugins.data_formats.coco.base import (
     CocoCaptionsBase,
     CocoImageInfoBase,
@@ -18,6 +18,7 @@ from datumaro.plugins.data_formats.coco.base import (
     CocoPersonKeypointsBase,
     CocoStuffBase,
 )
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 from .format import CocoTask
 

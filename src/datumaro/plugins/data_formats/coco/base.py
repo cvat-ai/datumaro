@@ -24,7 +24,7 @@ from datumaro.components.annotation import (
     RleMask,
     Skeleton,
 )
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, SubsetBase
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.errors import (
     DatasetImportError,
     InvalidAnnotationError,
@@ -34,6 +34,7 @@ from datumaro.components.errors import (
 )
 from datumaro.components.media import Image
 from datumaro.util import NOTSET, parse_json_file, take_by
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.util.image import lazy_image, load_image
 from datumaro.util.mask_tools import bgr2index
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file

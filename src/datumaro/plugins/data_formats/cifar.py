@@ -10,10 +10,11 @@ from collections import OrderedDict
 import numpy as np
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
-from datumaro.components.dataset import ItemStatus
-from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
+from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
+from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util import cast
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file

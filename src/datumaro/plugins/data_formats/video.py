@@ -5,9 +5,11 @@
 import os.path as osp
 from typing import Optional
 
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetBase, DatasetItem, Importer
+from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
+from datumaro.components.importer import Importer
 from datumaro.components.media import Video, VideoFrame
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.util.os_util import find_files
 
 # Taken from https://en.wikipedia.org/wiki/Comparison_of_video_container_formats

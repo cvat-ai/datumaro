@@ -18,8 +18,8 @@ from datumaro.components.annotation import (
     Polygon,
     PolyLine,
 )
-from datumaro.components.dataset_base import ItemTransform
 from datumaro.components.media import Image
+from datumaro.components.transformer import ItemTransform
 
 
 class DatasetItemEncoder:

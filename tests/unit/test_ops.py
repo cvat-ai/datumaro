@@ -17,7 +17,7 @@ from datumaro.components.annotation import (
     PolyLine,
 )
 from datumaro.components.dataset import Dataset
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem
+from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image, MultiframeImage, PointCloud
 from datumaro.components.operations import (
     FailedAttrVotingError,
@@ -31,6 +31,7 @@ from datumaro.components.operations import (
     match_segments,
     mean_std,
 )
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path

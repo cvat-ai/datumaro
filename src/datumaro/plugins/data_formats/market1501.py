@@ -6,9 +6,10 @@ import os
 import os.path as osp
 import re
 
-from datumaro.components.dataset_base import DatasetBase, DatasetItem, Importer
+from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
+from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
 from datumaro.util.image import find_images

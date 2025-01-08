@@ -15,10 +15,11 @@ from collections import OrderedDict
 from enum import Enum
 
 from datumaro.components.annotation import AnnotationType, Bbox, LabelCategories
-from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
+from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util import cast
 from datumaro.util.image import find_images

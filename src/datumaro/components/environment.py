@@ -72,16 +72,12 @@ class Environment:
         return issubclass(t, accept) and t not in skip
 
     def __init__(self):
-        from datumaro.components.dataset_base import (
-            DatasetBase,
-            Importer,
-            ItemTransform,
-            SubsetBase,
-            Transform,
-        )
-        from datumaro.components.dataset_generator import DatasetGenerator
+        from datumaro.components.dataset_base import DatasetBase, SubsetBase
         from datumaro.components.exporter import Exporter
+        from datumaro.components.generator import DatasetGenerator
+        from datumaro.components.importer import Importer
         from datumaro.components.launcher import Launcher
+        from datumaro.components.transformer import ItemTransform, Transform
         from datumaro.components.validator import Validator
 
         _filter = self._make_filter

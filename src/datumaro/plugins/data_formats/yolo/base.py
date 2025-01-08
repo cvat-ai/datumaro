@@ -523,20 +523,15 @@ class YoloUltralyticsSegmentationExtractor(YoloUltralyticsDetectionExtractor):
 
 class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
     @staticmethod
-    def _rotate_bbox_to_sync_exported_annotation_with_imported(
+    def _restore_original_rotation(
         imported_points: list[tuple[float, float]],
         bbox: Bbox,
     ) -> Bbox:
-        exported_points = list(take_by(bbox_annotation_as_polygon(bbox), count=2))
+        exported_points = np.array(list(take_by(bbox_annotation_as_polygon(bbox), count=2)))
         best_shift = min(
             range(4),
             key=lambda shift: sum(
-                (
-                    (imported_points[(index + shift) % 4][0] - exported_points[index][0]) ** 2
-                    + (imported_points[(index + shift) % 4][1] - exported_points[index][1]) ** 2
-                )
-                ** 0.5
-                for index in range(4)
+                np.linalg.norm(np.roll(imported_points, -shift, axis=0) - exported_points, axis=1)
             ),
         )
         if best_shift == 0:
@@ -598,7 +593,7 @@ class YoloUltralyticsOrientedBoxesExtractor(YoloUltralyticsDetectionExtractor):
             label=label_id,
             attributes=(dict(rotation=rotation) if abs(rotation) > 0.00001 else {}),
         )
-        bbox = self._rotate_bbox_to_sync_exported_annotation_with_imported(points, bbox)
+        bbox = self._restore_original_rotation(points, bbox)
         if len(parts) == 10:
             bbox.attributes["track_id"] = self._parse_field(parts[-1], int, "bbox track id")
         return bbox

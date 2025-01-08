@@ -17,7 +17,6 @@ from datumaro.components.dataset_storage import DatasetPatch
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.config_model import Source
 from datumaro.components.dataset_base import (
-    DEFAULT_SUBSET_NAME,
     CategoriesInfo,
     DatasetBase,
     DatasetItem,
@@ -28,6 +27,7 @@ from datumaro.components.dataset_base import (
     Transform,
     _ImportFail,
 )
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.dataset_filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.dataset_storage import DatasetStorage
 from datumaro.components.environment import Environment

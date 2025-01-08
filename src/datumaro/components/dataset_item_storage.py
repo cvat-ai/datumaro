@@ -4,7 +4,8 @@ from copy import copy
 from enum import Enum, auto
 from typing import Iterator, Union, Optional, Any, Tuple, Type
 
-from datumaro.components.dataset_base import DatasetItem, DEFAULT_SUBSET_NAME, IDataset, CategoriesInfo, MediaElement
+from datumaro.components.dataset_base import DatasetItem, IDataset, CategoriesInfo, MediaElement
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 __all__ = ["ItemStatus", "DatasetItemStorage", "DatasetItemStorageDatasetView"]
 

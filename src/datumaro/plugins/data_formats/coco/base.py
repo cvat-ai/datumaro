@@ -24,7 +24,8 @@ from datumaro.components.annotation import (
     RleMask,
     Skeleton,
 )
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, SubsetBase
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.errors import (
     DatasetImportError,
     InvalidAnnotationError,

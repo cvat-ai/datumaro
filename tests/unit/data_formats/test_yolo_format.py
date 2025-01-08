@@ -26,7 +26,8 @@ from datumaro.components.annotation import (
     Skeleton,
 )
 from datumaro.components.dataset import Dataset
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem
+from datumaro.components.dataset_base import DatasetItem
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     AnnotationImportError,

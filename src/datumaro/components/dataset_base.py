@@ -29,6 +29,7 @@ import attr
 import numpy as np
 from attr import attrs, define, field
 
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.annotation import Annotation, AnnotationType, Categories
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.errors import (
@@ -42,8 +43,6 @@ from datumaro.components.media import Image, MediaElement, PointCloud
 from datumaro.components.progress_reporting import NullProgressReporter, ProgressReporter
 from datumaro.util import is_method_redefined
 from datumaro.util.attrs_util import default_if_none, not_empty
-
-DEFAULT_SUBSET_NAME = "default"
 
 MediaType = TypeVar("MediaType", bound=MediaElement)
 

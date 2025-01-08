@@ -6,7 +6,8 @@ import logging as log
 import os.path as osp
 from glob import glob
 
-from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, Importer
+from datumaro.components.dataset_base import Importer
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.errors import DatasetNotFoundError
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
 from datumaro.plugins.data_formats.coco.base import (

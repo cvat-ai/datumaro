@@ -21,7 +21,6 @@ from datumaro.components.annotation import (
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, eager_mode
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.dataset_base import (
-    DEFAULT_SUBSET_NAME,
     DatasetBase,
     DatasetItem,
     FailingImportErrorPolicy,
@@ -31,6 +30,7 @@ from datumaro.components.dataset_base import (
     SubsetBase,
     Transform,
 )
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.dataset_filter import (
     DatasetItemEncoder,
     XPathAnnotationsFilter,

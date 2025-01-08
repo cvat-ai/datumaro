@@ -5,7 +5,6 @@ from typing import Dict, Tuple, Union, Optional, Type, Iterable, List, Iterator
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.dataset_base import (
     _ImportFail,
-    DEFAULT_SUBSET_NAME,
     CategoriesInfo,
     DatasetBase,
     DatasetItem,
@@ -13,6 +12,7 @@ from datumaro.components.dataset_base import (
     Transform,
     ItemTransform
 )
+from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.components.dataset_item_storage import (
     DatasetItemStorage,
     DatasetItemStorageDatasetView,

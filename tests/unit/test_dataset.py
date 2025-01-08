@@ -19,6 +19,17 @@ from datumaro.components.annotation import (
     PolyLine,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, ItemStatus, eager_mode
+from datumaro.components.dataset_base import (
+    DEFAULT_SUBSET_NAME,
+    DatasetBase,
+    DatasetItem,
+    FailingImportErrorPolicy,
+    ImportErrorPolicy,
+    ItemTransform,
+    ProgressReporter,
+    SubsetBase,
+    Transform,
+)
 from datumaro.components.dataset_filter import (
     DatasetItemEncoder,
     XPathAnnotationsFilter,
@@ -37,18 +48,7 @@ from datumaro.components.errors import (
     RepeatedItemError,
     UnknownFormatError,
 )
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import (
-    DEFAULT_SUBSET_NAME,
-    DatasetItem,
-    Extractor,
-    FailingImportErrorPolicy,
-    ImportErrorPolicy,
-    ItemTransform,
-    ProgressReporter,
-    SourceExtractor,
-    Transform,
-)
+from datumaro.components.exporter import Exporter
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement, Video
 from datumaro.components.progress_reporting import NullProgressReporter
@@ -60,7 +60,7 @@ from tests.utils.test_utils import TestDir, compare_datasets, compare_datasets_s
 class DatasetTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_create_from_extractors(self):
-        class SrcExtractor1(Extractor):
+        class SrcExtractor1(DatasetBase):
             def __iter__(self):
                 return iter(
                     [
@@ -82,7 +82,7 @@ class DatasetTest(TestCase):
                     ]
                 )
 
-        class SrcExtractor2(Extractor):
+        class SrcExtractor2(DatasetBase):
             def __iter__(self):
                 return iter(
                     [
@@ -96,7 +96,7 @@ class DatasetTest(TestCase):
                     ]
                 )
 
-        class DstExtractor(Extractor):
+        class DstExtractor(DatasetBase):
             def __iter__(self):
                 return iter(
                     [
@@ -125,7 +125,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_create_from_iterable(self):
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 return iter(
                     [
@@ -433,7 +433,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_compute_length_when_created_from_extractor(self):
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 yield from [
                     DatasetItem(1),
@@ -768,7 +768,7 @@ class DatasetTest(TestCase):
     def test_can_create_patch_when_transforms_chained(self):
         expected = Dataset.from_iterable([DatasetItem(2), DatasetItem(3, subset="a")])
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             iter_called = 0
 
             def __iter__(self):
@@ -842,7 +842,7 @@ class DatasetTest(TestCase):
             ]
         )
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             iter_called = 0
 
             def __iter__(self):
@@ -924,7 +924,7 @@ class DatasetTest(TestCase):
             ]
         )
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             iter_called = 0
 
             def __iter__(self):
@@ -981,7 +981,7 @@ class DatasetTest(TestCase):
     def test_can_create_patch_when_transforms_chained_and_source_cached(self):
         expected = Dataset.from_iterable([DatasetItem(2), DatasetItem(3, subset="a")])
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             iter_called = 0
 
             def __iter__(self):
@@ -1050,7 +1050,7 @@ class DatasetTest(TestCase):
     def test_can_do_lazy_put_and_remove(self):
         iter_called = False
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called = True
@@ -1088,7 +1088,7 @@ class DatasetTest(TestCase):
     def test_can_do_lazy_get_on_updated_item(self):
         iter_called = False
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called = True
@@ -1110,7 +1110,7 @@ class DatasetTest(TestCase):
     def test_can_switch_eager_and_lazy_with_cm_global(self):
         iter_called = False
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called = True
@@ -1130,7 +1130,7 @@ class DatasetTest(TestCase):
     def test_can_switch_eager_and_lazy_with_cm_local(self):
         iter_called = False
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called = True
@@ -1153,7 +1153,7 @@ class DatasetTest(TestCase):
     def test_can_do_lazy_select(self):
         iter_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1179,7 +1179,7 @@ class DatasetTest(TestCase):
     def test_can_chain_lazy_transforms(self):
         iter_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1210,7 +1210,7 @@ class DatasetTest(TestCase):
     def test_can_get_len_after_local_transforms(self):
         iter_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1240,7 +1240,7 @@ class DatasetTest(TestCase):
     def test_can_get_len_after_nonlocal_transforms(self):
         iter_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1271,7 +1271,7 @@ class DatasetTest(TestCase):
     def test_can_get_item_after_local_transforms(self):
         iter_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1306,7 +1306,7 @@ class DatasetTest(TestCase):
     def test_can_get_item_after_nonlocal_transforms(self):
         iter_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1342,7 +1342,7 @@ class DatasetTest(TestCase):
     def test_can_get_subsets_after_local_transforms(self):
         iter_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1372,7 +1372,7 @@ class DatasetTest(TestCase):
     def test_can_get_subsets_after_nonlocal_transforms(self):
         iter_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1438,7 +1438,7 @@ class DatasetTest(TestCase):
     def test_cant_do_partial_caching_in_get_when_default(self):
         iter_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1463,7 +1463,7 @@ class DatasetTest(TestCase):
         iter_called = 0
         get_called = 0
 
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 nonlocal iter_called
                 iter_called += 1
@@ -1667,7 +1667,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_inplace_save_writes_only_updated_data(self):
-        class CustomConverter(Converter):
+        class CustomExporter(Exporter):
             DEFAULT_IMAGE_EXT = ".jpg"
 
             def apply(self):
@@ -1682,7 +1682,7 @@ class DatasetTest(TestCase):
                         self._save_image(item, name=name)
 
         env = Environment()
-        env.converters.items = {"test": CustomConverter}
+        env.converters.items = {"test": CustomExporter}
 
         with TestDir() as path:
             dataset = Dataset.from_iterable(
@@ -1806,7 +1806,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_PROGRESS_REPORTING)
     def test_progress_reporter_implies_eager_mode(self):
-        class TestExtractor(SourceExtractor):
+        class TestExtractor(SubsetBase):
             def __init__(self, url, **kwargs):
                 super().__init__(**kwargs)
 
@@ -1823,7 +1823,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_error_reporter_implies_eager_mode(self):
-        class TestExtractor(SourceExtractor):
+        class TestExtractor(SubsetBase):
             def __init__(self, url, **kwargs):
                 super().__init__(**kwargs)
 
@@ -1840,7 +1840,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_PROGRESS_REPORTING)
     def test_can_report_progress_from_extractor(self):
-        class TestExtractor(SourceExtractor):
+        class TestExtractor(SubsetBase):
             def __init__(self, url, **kwargs):
                 super().__init__(**kwargs)
 
@@ -1872,7 +1872,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_PROGRESS_REPORTING)
     def test_can_report_progress_from_extractor_multiple_pbars(self):
-        class TestExtractor(SourceExtractor):
+        class TestExtractor(SubsetBase):
             def __init__(self, url, **kwargs):
                 super().__init__(**kwargs, media_type=MediaElement)
 
@@ -1907,7 +1907,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_errors_from_extractor(self):
-        class TestExtractor(SourceExtractor):
+        class TestExtractor(SubsetBase):
             def __init__(self, url, **kwargs):
                 super().__init__(**kwargs, media_type=MediaElement)
 
@@ -1937,7 +1937,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_PROGRESS_REPORTING)
     def test_can_report_progress_from_converter(self):
-        class TestConverter(Converter):
+        class TestExporter(Exporter):
             DEFAULT_IMAGE_EXT = ".jpg"
 
             def apply(self):
@@ -1955,7 +1955,7 @@ class DatasetTest(TestCase):
 
         with TestDir() as test_dir:
             Dataset(media_type=MediaElement).export(
-                test_dir, TestConverter, progress_reporter=progress_reporter
+                test_dir, TestExporter, progress_reporter=progress_reporter
             )
 
         period_mock.assert_called_once()
@@ -1965,7 +1965,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_errors_from_converter(self):
-        class TestConverter(Converter):
+        class TestExporter(Exporter):
             DEFAULT_IMAGE_EXT = ".jpg"
 
             def apply(self):
@@ -1984,7 +1984,7 @@ class DatasetTest(TestCase):
 
         with TestDir() as test_dir:
             Dataset(media_type=MediaElement).export(
-                test_dir, TestConverter, error_policy=error_policy
+                test_dir, TestExporter, error_policy=error_policy
             )
 
         error_policy.report_item_error.assert_called()
@@ -2050,7 +2050,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERIC_MEDIA)
     def test_can_get_media_type_from_extractor(self):
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __init__(self, **kwargs):
                 super().__init__(media_type=Video, **kwargs)
 
@@ -2117,7 +2117,7 @@ class DatasetFilterTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_item_filter_can_be_applied(self):
-        class TestExtractor(Extractor):
+        class TestExtractor(DatasetBase):
             def __iter__(self):
                 for i in range(4):
                     yield DatasetItem(id=i, subset="train")
@@ -2130,7 +2130,7 @@ class DatasetFilterTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_annotations_filter_can_be_applied(self):
-        class SrcExtractor(Extractor):
+        class SrcExtractor(DatasetBase):
             def __iter__(self):
                 return iter(
                     [
@@ -2152,7 +2152,7 @@ class DatasetFilterTest(TestCase):
                     ]
                 )
 
-        class DstExtractor(Extractor):
+        class DstExtractor(DatasetBase):
             def __iter__(self):
                 return iter(
                     [

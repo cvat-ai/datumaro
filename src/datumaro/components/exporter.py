@@ -14,13 +14,13 @@ import attr
 from attrs import define, field
 
 from datumaro.components.cli_plugin import CliPlugin
+from datumaro.components.dataset_base import DatasetItem, IDataset
 from datumaro.components.errors import (
     AnnotationExportError,
     DatasetExportError,
     DatumaroError,
     ItemExportError,
 )
-from datumaro.components.extractor import DatasetItem, IExtractor
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.progress_reporting import NullProgressReporter, ProgressReporter
 from datumaro.util.meta_file_util import save_meta_file
@@ -91,7 +91,7 @@ class NullExportContext(ExportContext):
     pass
 
 
-class Converter(CliPlugin):
+class Exporter(CliPlugin):
     DEFAULT_IMAGE_EXT = None
 
     @classmethod
@@ -165,7 +165,7 @@ class Converter(CliPlugin):
 
     def __init__(
         self,
-        extractor: IExtractor,
+        extractor: IDataset,
         save_dir: str,
         *,
         save_images=None,  # Deprecated

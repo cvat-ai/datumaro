@@ -9,10 +9,10 @@ import shutil
 from typing import Dict, Optional, Type, Union
 
 from datumaro.components.dataset import Dataset, DatasetItemStorageDatasetView, IDataset
+from datumaro.components.dataset_base import Transform
 from datumaro.components.dataset_filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.environment import Environment
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import Transform
+from datumaro.components.exporter import Exporter
 from datumaro.components.launcher import Launcher, ModelTransform
 from datumaro.components.operations import ExactMerge
 from datumaro.components.validator import TaskType, Validator
@@ -146,7 +146,7 @@ def run_model(
 def export(
     dataset: IDataset,
     path: str,
-    format: Union[str, Type[Converter]],
+    format: Union[str, Type[Exporter]],
     *,
     env: Optional[Environment] = None,
     **kwargs,
@@ -171,7 +171,7 @@ def export(
     else:
         converter = format
 
-    if not (inspect.isclass(converter) and issubclass(converter, Converter)):
+    if not (inspect.isclass(converter) and issubclass(converter, Exporter)):
         raise TypeError("Unexpected 'format' argument type: %s" % type(converter))
 
     path = osp.abspath(path)

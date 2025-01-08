@@ -6,9 +6,9 @@ import os
 import os.path as osp
 import re
 
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, Importer
 from datumaro.components.errors import MediaTypeError
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Extractor, Importer
+from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
 from datumaro.util.image import find_images
@@ -24,7 +24,7 @@ class Market1501Path:
     ATTRIBUTES = ["person_id", "camera_id", "track_id", "frame_id", "bbox_id"]
 
 
-class Market1501Extractor(Extractor):
+class Market1501Base(DatasetBase):
     def __init__(self, path):
         if not osp.isdir(path):
             raise NotADirectoryError("Can't open folder with annotation files '%s'" % path)
@@ -107,10 +107,10 @@ class Market1501Importer(Importer):
             if dirname.startswith(
                 (Market1501Path.BBOX_DIR, Market1501Path.QUERY_DIR, Market1501Path.LIST_PREFIX)
             ):
-                return [{"url": path, "format": Market1501Extractor.NAME}]
+                return [{"url": path, "format": Market1501Base.NAME}]
 
 
-class Market1501Converter(Converter):
+class Market1501Exporter(Exporter):
     DEFAULT_IMAGE_EXT = Market1501Path.IMAGE_EXT
 
     def _make_dir_name(self, item):

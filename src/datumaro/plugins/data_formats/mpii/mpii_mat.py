@@ -9,7 +9,7 @@ import scipy.io as spio
 from packaging.version import Version
 
 from datumaro.components.annotation import Bbox, LabelCategories, Points, PointsCategories
-from datumaro.components.extractor import AnnotationType, DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import AnnotationType, DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 
@@ -21,7 +21,7 @@ else:
     mat_type = spio.matlab.mio5_params.mat_struct
 
 
-class MpiiExtractor(SourceExtractor):
+class MpiiBase(SubsetBase):
     def __init__(self, path):
         if not osp.isfile(path):
             raise FileNotFoundError("Can't read annotation file '%s'" % path)

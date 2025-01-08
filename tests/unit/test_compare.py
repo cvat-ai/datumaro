@@ -13,7 +13,7 @@ from datumaro.components.annotation import (
     PointsCategories,
     Skeleton,
 )
-from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem
+from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem
 from datumaro.components.media import Image
 from datumaro.components.operations import DistanceComparator, ExactComparator
 from datumaro.components.project import Dataset

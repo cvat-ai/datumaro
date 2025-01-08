@@ -6,8 +6,8 @@ import logging as log
 import os
 import os.path as osp
 
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
+from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image
 from datumaro.util.image import find_images
 
@@ -30,10 +30,10 @@ class ImageDirImporter(Importer):
     def find_sources(cls, path):
         if not osp.isdir(path):
             return []
-        return [{"url": path, "format": ImageDirExtractor.NAME}]
+        return [{"url": path, "format": ImageDirBase.NAME}]
 
 
-class ImageDirExtractor(SourceExtractor):
+class ImageDirBase(SubsetBase):
     def __init__(self, url, subset=None):
         super().__init__(subset=subset)
 
@@ -44,7 +44,7 @@ class ImageDirExtractor(SourceExtractor):
             self._items.append(DatasetItem(id=item_id, subset=self._subset, media=Image(path=path)))
 
 
-class ImageDirConverter(Converter):
+class ImageDirExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".jpg"
 
     def apply(self):

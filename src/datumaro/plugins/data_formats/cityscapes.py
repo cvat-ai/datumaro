@@ -22,9 +22,9 @@ from datumaro.components.annotation import (
     RgbColor,
 )
 from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, Importer, SubsetBase
 from datumaro.components.errors import MediaTypeError
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import CategoriesInfo, DatasetItem, Importer, SourceExtractor
+from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util import find
@@ -225,7 +225,7 @@ def write_label_map(path, label_map):
             f.write("%s %s\n" % (color_rgb, label_name))
 
 
-class CityscapesExtractor(SourceExtractor):
+class CityscapesBase(SubsetBase):
     def __init__(self, path, subset=None):
         assert osp.isdir(path), path
 
@@ -381,7 +381,7 @@ class LabelmapType(Enum):
     source = auto()
 
 
-class CityscapesConverter(Converter):
+class CityscapesExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".png"
 
     @staticmethod

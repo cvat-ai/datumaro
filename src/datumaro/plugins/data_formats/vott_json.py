@@ -5,7 +5,7 @@
 import os.path as osp
 
 from datumaro.components.annotation import AnnotationType, Bbox, LabelCategories
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util import parse_json_file
@@ -16,7 +16,7 @@ class VottJsonPath:
     ANNO_FILE_SUFFIX = "-export.json"
 
 
-class VottJsonExtractor(SourceExtractor):
+class VottJsonBase(SubsetBase):
     def __init__(self, path):
         if not osp.isfile(path):
             raise FileNotFoundError("Can't read annotation file '%s'" % path)

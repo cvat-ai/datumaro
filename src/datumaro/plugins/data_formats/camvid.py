@@ -21,9 +21,9 @@ from datumaro.components.annotation import (
     MaskCategories,
 )
 from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.errors import MediaTypeError
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util import find, str_to_bool
@@ -170,7 +170,7 @@ def _parse_annotation_line(line: str) -> Tuple[str, Optional[str]]:
         return objects[0], None
 
 
-class CamvidExtractor(SourceExtractor):
+class CamvidBase(SubsetBase):
     def __init__(self, path, subset=None):
         assert osp.isfile(path), path
         self._path = path
@@ -270,7 +270,7 @@ class LabelmapType(Enum):
     source = auto()
 
 
-class CamvidConverter(Converter):
+class CamvidExporter(Exporter):
     DEFAULT_IMAGE_EXT = CamvidPath.IMAGE_EXT
 
     @staticmethod

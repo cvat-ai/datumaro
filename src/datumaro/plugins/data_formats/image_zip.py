@@ -8,8 +8,8 @@ import os.path as osp
 from enum import Enum
 from zipfile import ZIP_BZIP2, ZIP_DEFLATED, ZIP_LZMA, ZIP_STORED, ZipFile
 
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
+from datumaro.components.exporter import Exporter
 from datumaro.components.media import ByteImage
 from datumaro.util import parse_str_enum_value
 from datumaro.util.image import IMAGE_EXTENSIONS, encode_image
@@ -27,7 +27,7 @@ class ImageZipPath:
     DEFAULT_COMPRESSION = Compression.ZIP_STORED
 
 
-class ImageZipExtractor(SourceExtractor):
+class ImageZipBase(SubsetBase):
     def __init__(self, url, subset=None):
         super().__init__(subset=subset, media_type=ByteImage)
 
@@ -48,7 +48,7 @@ class ImageZipImporter(Importer):
         return cls._find_sources_recursive(path, ".zip", "image_zip")
 
 
-class ImageZipConverter(Converter):
+class ImageZipExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".jpg"
 
     @staticmethod

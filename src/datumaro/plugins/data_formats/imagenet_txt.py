@@ -9,9 +9,9 @@ from typing import Iterable, Optional, Sequence, Tuple, Union
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
 from datumaro.components.cli_plugin import CliPlugin
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.errors import DatasetImportError, MediaTypeError
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
@@ -46,7 +46,7 @@ def _parse_annotation_line(line: str) -> Tuple[str, str, Sequence[int]]:
     return item_id, image, label_ids
 
 
-class ImagenetTxtExtractor(SourceExtractor):
+class ImagenetTxtBase(SubsetBase):
     def __init__(
         self,
         path: str,
@@ -184,7 +184,7 @@ class ImagenetTxtImporter(Importer, CliPlugin):
         return cls._find_sources_recursive(path, ".txt", "imagenet_txt", file_filter=file_filter)
 
 
-class ImagenetTxtConverter(Converter):
+class ImagenetTxtExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".jpg"
 
     def apply(self):

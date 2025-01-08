@@ -14,11 +14,11 @@ import yaml
 from datumaro import Importer
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.plugins.data_formats.yolo.base import (
-    YoloUltralyticsClassificationExtractor,
-    YoloUltralyticsDetectionExtractor,
-    YoloUltralyticsOrientedBoxesExtractor,
-    YoloUltralyticsPoseExtractor,
-    YoloUltralyticsSegmentationExtractor,
+    YoloUltralyticsClassificationBase,
+    YoloUltralyticsDetectionBase,
+    YoloUltralyticsOrientedBoxesBase,
+    YoloUltralyticsPoseBase,
+    YoloUltralyticsSegmentationBase,
 )
 from datumaro.plugins.data_formats.yolo.format import YoloUltralyticsPath, YoloUltralyticsPoseFormat
 
@@ -34,7 +34,7 @@ class YoloImporter(Importer):
 
 
 class YoloUltralyticsDetectionImporter(Importer):
-    EXTRACTOR = YoloUltralyticsDetectionExtractor
+    EXTRACTOR = YoloUltralyticsDetectionBase
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -87,15 +87,15 @@ class YoloUltralyticsDetectionImporter(Importer):
 
 
 class YoloUltralyticsSegmentationImporter(YoloUltralyticsDetectionImporter):
-    EXTRACTOR = YoloUltralyticsSegmentationExtractor
+    EXTRACTOR = YoloUltralyticsSegmentationBase
 
 
 class YoloUltralyticsOrientedBoxesImporter(YoloUltralyticsDetectionImporter):
-    EXTRACTOR = YoloUltralyticsOrientedBoxesExtractor
+    EXTRACTOR = YoloUltralyticsOrientedBoxesBase
 
 
 class YoloUltralyticsPoseImporter(YoloUltralyticsDetectionImporter):
-    EXTRACTOR = YoloUltralyticsPoseExtractor
+    EXTRACTOR = YoloUltralyticsPoseBase
 
     @classmethod
     def _check_config_file(cls, context, config_file):
@@ -120,4 +120,4 @@ class YoloUltralyticsClassificationImporter(Importer):
             subfolder for name in os.listdir(path) if osp.isdir(subfolder := osp.join(path, name))
         ]:
             return []
-        return [{"url": path, "format": YoloUltralyticsClassificationExtractor.NAME}]
+        return [{"url": path, "format": YoloUltralyticsClassificationBase.NAME}]

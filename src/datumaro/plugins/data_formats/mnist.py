@@ -9,9 +9,9 @@ import os.path as osp
 import numpy as np
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.errors import MediaTypeError
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
 
@@ -25,7 +25,7 @@ class MnistPath:
     NONE_LABEL = 255
 
 
-class MnistExtractor(SourceExtractor):
+class MnistBase(SubsetBase):
     def __init__(self, path, subset=None):
         if not osp.isfile(path):
             raise FileNotFoundError("Can't read annotation file '%s'" % path)
@@ -129,7 +129,7 @@ class MnistImporter(Importer):
         )
 
 
-class MnistConverter(Converter):
+class MnistExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".png"
 
     def apply(self):

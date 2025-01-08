@@ -7,7 +7,7 @@ import os.path as osp
 import numpy as np
 
 from datumaro.components.annotation import AnnotationType, Cuboid3d, LabelCategories, Mask
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import MultiframeImage
 from datumaro.util.pickle_util import PickleLoader
@@ -21,7 +21,7 @@ class BratsNumpyPath:
     LABEL_SUFFIX = "_label_cropped"
 
 
-class BratsNumpyExtractor(SourceExtractor):
+class BratsNumpyBase(SubsetBase):
     def __init__(self, path):
         if not osp.isfile(path):
             raise FileNotFoundError("Can't read annotation file '%s'" % path)

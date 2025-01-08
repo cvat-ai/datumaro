@@ -21,6 +21,7 @@ from datumaro.components.annotation import (
     Skeleton,
 )
 from datumaro.components.dataset import Dataset
+from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     AnnotationImportError,
@@ -31,18 +32,17 @@ from datumaro.components.errors import (
     MissingFieldError,
     UndeclaredLabelError,
 )
-from datumaro.components.extractor import DatasetItem
 from datumaro.components.media import Image
-from datumaro.plugins.data_formats.coco.base import CocoInstancesExtractor
+from datumaro.plugins.data_formats.coco.base import CocoInstancesBase
 from datumaro.plugins.data_formats.coco.exporter import (
-    CocoCaptionsConverter,
-    CocoConverter,
-    CocoImageInfoConverter,
-    CocoInstancesConverter,
-    CocoLabelsConverter,
-    CocoPanopticConverter,
-    CocoPersonKeypointsConverter,
-    CocoStuffConverter,
+    CocoCaptionsExporter,
+    CocoExporter,
+    CocoImageInfoExporter,
+    CocoInstancesExporter,
+    CocoLabelsExporter,
+    CocoPanopticExporter,
+    CocoPersonKeypointsExporter,
+    CocoStuffExporter,
 )
 from datumaro.plugins.data_formats.coco.importer import CocoImporter
 from datumaro.util import dump_json_file
@@ -890,7 +890,7 @@ class CocoExtractorTests(TestCase):
     def test_can_report_unexpected_file(self):
         with TestDir() as test_dir:
             with self.assertRaisesRegex(DatasetImportError, "JSON file"):
-                CocoInstancesExtractor(test_dir)
+                CocoInstancesBase(test_dir)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_item_field(self):
@@ -1056,7 +1056,7 @@ class CocoExtractorTests(TestCase):
                     self.assertEqual(capture.exception.__cause__.actual, str(type(value)))
 
 
-class CocoConverterTest(TestCase):
+class CocoExporterTest(TestCase):
     def _test_save_and_load(
         self, source_dataset, converter, test_dir, target_dataset=None, importer_args=None, **kwargs
     ):
@@ -1104,7 +1104,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(expected_dataset, CocoCaptionsConverter.convert, test_dir)
+            self._test_save_and_load(expected_dataset, CocoCaptionsExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_instances(self):
@@ -1227,7 +1227,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                CocoInstancesConverter.convert,
+                CocoInstancesExporter.convert,
                 test_dir,
                 target_dataset=target_dataset,
             )
@@ -1298,7 +1298,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 dataset,
-                partial(CocoPanopticConverter.convert, save_media=True),
+                partial(CocoPanopticExporter.convert, save_media=True),
                 test_dir,
                 require_media=True,
             )
@@ -1346,7 +1346,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(dataset, CocoStuffConverter.convert, test_dir)
+            self._test_save_and_load(dataset, CocoStuffExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_merge_polygons_on_loading(self):
@@ -1398,7 +1398,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                CocoInstancesConverter.convert,
+                CocoInstancesExporter.convert,
                 test_dir,
                 importer_args={"merge_instance_polygons": True},
                 target_dataset=target_dataset,
@@ -1471,7 +1471,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(CocoInstancesConverter.convert, crop_covered=True),
+                partial(CocoInstancesExporter.convert, crop_covered=True),
                 test_dir,
                 target_dataset=target_dataset,
             )
@@ -1545,7 +1545,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(CocoInstancesConverter.convert, segmentation_mode="mask"),
+                partial(CocoInstancesExporter.convert, segmentation_mode="mask"),
                 test_dir,
                 target_dataset=target_dataset,
             )
@@ -1608,7 +1608,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(CocoInstancesConverter.convert, segmentation_mode="polygons"),
+                partial(CocoInstancesExporter.convert, segmentation_mode="polygons"),
                 test_dir,
                 target_dataset=target_dataset,
             )
@@ -1627,7 +1627,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(expected_dataset, CocoImageInfoConverter.convert, test_dir)
+            self._test_save_and_load(expected_dataset, CocoImageInfoExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_231)
     def test_can_save_dataset_with_cjk_categories(self):
@@ -1665,7 +1665,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(expected_dataset, CocoInstancesConverter.convert, test_dir)
+            self._test_save_and_load(expected_dataset, CocoInstancesExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_cyrillic_and_spaces_in_filename(self):
@@ -1676,7 +1676,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(expected_dataset, CocoImageInfoConverter.convert, test_dir)
+            self._test_save_and_load(expected_dataset, CocoImageInfoExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_labels(self):
@@ -1696,7 +1696,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(expected_dataset, CocoLabelsConverter.convert, test_dir)
+            self._test_save_and_load(expected_dataset, CocoLabelsExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_keypoints(self):
@@ -1807,7 +1807,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                CocoPersonKeypointsConverter.convert,
+                CocoPersonKeypointsExporter.convert,
                 test_dir,
                 target_dataset=target_dataset,
             )
@@ -1901,7 +1901,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                CocoPersonKeypointsConverter.convert,
+                CocoPersonKeypointsExporter.convert,
                 test_dir,
                 target_dataset=target_dataset,
             )
@@ -1916,7 +1916,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(test_dataset, CocoConverter.convert, test_dir)
+            self._test_save_and_load(test_dataset, CocoExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_image_info(self):
@@ -1927,7 +1927,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(expected_dataset, CocoImageInfoConverter.convert, test_dir)
+            self._test_save_and_load(expected_dataset, CocoImageInfoExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_relative_paths(self):
@@ -1946,7 +1946,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 expected_dataset,
-                partial(CocoImageInfoConverter.convert, save_media=True),
+                partial(CocoImageInfoExporter.convert, save_media=True),
                 test_dir,
                 require_media=True,
             )
@@ -1971,7 +1971,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 expected,
-                partial(CocoImageInfoConverter.convert, save_media=True),
+                partial(CocoImageInfoExporter.convert, save_media=True),
                 test_dir,
                 require_media=True,
             )
@@ -1989,7 +1989,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 expected_dataset,
-                partial(CocoImageInfoConverter.convert, save_media=True),
+                partial(CocoImageInfoExporter.convert, save_media=True),
                 test_dir,
                 require_media=True,
             )
@@ -2017,7 +2017,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(expected_dataset, CocoConverter.convert, test_dir)
+            self._test_save_and_load(expected_dataset, CocoExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_auto_annotation_ids(self):
@@ -2056,7 +2056,7 @@ class CocoConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                source_dataset, CocoConverter.convert, test_dir, target_dataset=target_dataset
+                source_dataset, CocoExporter.convert, test_dir, target_dataset=target_dataset
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -2083,7 +2083,7 @@ class CocoConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            self._test_save_and_load(source_dataset, CocoConverter.convert, test_dir)
+            self._test_save_and_load(source_dataset, CocoExporter.convert, test_dir)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_reindex(self):
@@ -2124,7 +2124,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(CocoConverter.convert, reindex=True),
+                partial(CocoExporter.convert, reindex=True),
                 test_dir,
                 target_dataset=target_dataset,
             )
@@ -2142,7 +2142,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 dataset,
-                partial(CocoImageInfoConverter.convert, save_media=True, merge_images=True),
+                partial(CocoImageInfoExporter.convert, save_media=True, merge_images=True),
                 test_dir,
                 require_media=True,
             )
@@ -2161,7 +2161,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 dataset,
-                partial(CocoImageInfoConverter.convert, save_media=True, merge_images=False),
+                partial(CocoImageInfoExporter.convert, save_media=True, merge_images=False),
                 test_dir,
                 require_media=True,
             )
@@ -2266,7 +2266,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 source_dataset,
-                partial(CocoInstancesConverter.convert),
+                partial(CocoInstancesExporter.convert),
                 test_dir,
                 target_dataset=target_dataset,
             )
@@ -2322,7 +2322,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 dataset,
-                partial(CocoPanopticConverter.convert, save_media=True, save_dataset_meta=True),
+                partial(CocoPanopticExporter.convert, save_media=True, save_dataset_meta=True),
                 test_dir,
                 require_media=True,
             )
@@ -2373,7 +2373,7 @@ class CocoConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 dataset,
-                partial(CocoPanopticConverter.convert, save_media=True, save_dataset_meta=True),
+                partial(CocoPanopticExporter.convert, save_media=True, save_dataset_meta=True),
                 test_dir,
                 require_media=True,
             )

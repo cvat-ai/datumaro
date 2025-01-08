@@ -16,6 +16,18 @@ from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tupl
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.config_model import Source
+from datumaro.components.dataset_base import (
+    DEFAULT_SUBSET_NAME,
+    CategoriesInfo,
+    DatasetBase,
+    DatasetItem,
+    IDataset,
+    ImportContext,
+    ImportErrorPolicy,
+    ItemTransform,
+    Transform,
+    _ImportFail,
+)
 from datumaro.components.dataset_filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
@@ -27,19 +39,7 @@ from datumaro.components.errors import (
     RepeatedItemError,
     UnknownFormatError,
 )
-from datumaro.components.exporter import Converter, ExportContext, ExportErrorPolicy, _ExportFail
-from datumaro.components.extractor import (
-    DEFAULT_SUBSET_NAME,
-    CategoriesInfo,
-    DatasetItem,
-    Extractor,
-    IExtractor,
-    ImportContext,
-    ImportErrorPolicy,
-    ItemTransform,
-    Transform,
-    _ImportFail,
-)
+from datumaro.components.exporter import ExportContext, Exporter, ExportErrorPolicy, _ExportFail
 from datumaro.components.launcher import Launcher, ModelTransform
 from datumaro.components.media import Image, MediaElement
 from datumaro.components.progress_reporting import NullProgressReporter, ProgressReporter
@@ -50,8 +50,6 @@ from datumaro.util.os_util import rmtree
 from datumaro.util.scope import on_error_do, scoped
 
 DEFAULT_FORMAT = "datumaro"
-
-IDataset = IExtractor
 
 
 class DatasetItemStorage:
@@ -208,7 +206,7 @@ class ItemStatus(Enum):
 class DatasetPatch:
     class DatasetPatchWrapper(DatasetItemStorageDatasetView):
         # The purpose of this class is to indicate that the input dataset is
-        # a patch and autofill patch info in Converter
+        # a patch and autofill patch info in Exporter
         def __init__(self, patch: DatasetPatch, parent: IDataset):
             super().__init__(patch.data, parent.categories(), parent.media_type())
             self.patch = patch
@@ -589,7 +587,7 @@ class DatasetStorage(IDataset):
 
         item = self._storage.get(id, subset)
         if item is None and not self.is_cache_initialized():
-            if self._source.get.__func__ == Extractor.get or self._transforms:
+            if self._source.get.__func__ == DatasetBase.get or self._transforms:
                 # can be improved if IDataset is ABC
                 self.init_cache()
                 item = self._storage.get(id, subset)
@@ -665,7 +663,7 @@ class DatasetStorage(IDataset):
         if not (self.is_cache_initialized() or self._is_unchanged_wrapper):
             self._flush_changes = True
 
-    def update(self, source: Union[DatasetPatch, IExtractor, Iterable[DatasetItem]]):
+    def update(self, source: Union[DatasetPatch, IDataset, Iterable[DatasetItem]]):
         # TODO: provide a more efficient implementation with patch reuse
 
         if isinstance(source, DatasetPatch):
@@ -677,7 +675,7 @@ class DatasetStorage(IDataset):
                     self.remove(*item_id)
                 else:
                     self.put(source.data.get(*item_id))
-        elif isinstance(source, IExtractor):
+        elif isinstance(source, IDataset):
             for item in ProjectLabels(
                 source, self.categories().get(AnnotationType.label, LabelCategories())
             ):
@@ -741,7 +739,7 @@ class Dataset(IDataset):
         if not categories:
             categories = {}
 
-        class _extractor(Extractor):
+        class _extractor(DatasetBase):
             def __init__(self):
                 super().__init__(
                     length=len(iterable) if hasattr(iterable, "__len__") else None,
@@ -884,7 +882,7 @@ class Dataset(IDataset):
         else:
             return self.transform(XPathDatasetFilter, xpath=expr)
 
-    def update(self, source: Union[DatasetPatch, IExtractor, Iterable[DatasetItem]]) -> Dataset:
+    def update(self, source: Union[DatasetPatch, IDataset, Iterable[DatasetItem]]) -> Dataset:
         """
         Updates items of the current dataset from another dataset or an
         iterable (the source). Items from the source overwrite matching
@@ -1022,7 +1020,7 @@ class Dataset(IDataset):
     def export(
         self,
         save_dir: str,
-        format: Union[str, Type[Converter]],
+        format: Union[str, Type[Exporter]],
         *,
         progress_reporter: Optional[ProgressReporter] = None,
         error_policy: Optional[ExportErrorPolicy] = None,
@@ -1051,7 +1049,7 @@ class Dataset(IDataset):
         else:
             converter = format
 
-        if not (inspect.isclass(converter) and issubclass(converter, Converter)):
+        if not (inspect.isclass(converter) and issubclass(converter, Exporter)):
             raise TypeError("Unexpected 'format' argument type: %s" % type(converter))
 
         save_dir = osp.abspath(save_dir)

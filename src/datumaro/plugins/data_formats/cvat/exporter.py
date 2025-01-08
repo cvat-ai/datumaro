@@ -14,9 +14,9 @@ from xml.sax.saxutils import XMLGenerator  # nosec
 
 from datumaro.components.annotation import AnnotationType, LabelCategories, PointsCategories
 from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.errors import MediaTypeError
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem
+from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image
 from datumaro.util import cast, pairs
 
@@ -451,7 +451,7 @@ class _SubsetWriter:
         self._writer.close_tag()
 
 
-class CvatConverter(Converter):
+class CvatExporter(Exporter):
     DEFAULT_IMAGE_EXT = CvatPath.IMAGE_EXT
 
     @classmethod

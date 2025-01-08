@@ -18,6 +18,7 @@ from datumaro.components.annotation import (
     MaskCategories,
 )
 from datumaro.components.dataset import Dataset
+from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     AnnotationImportError,
@@ -27,15 +28,14 @@ from datumaro.components.errors import (
     MissingFieldError,
     UndeclaredLabelError,
 )
-from datumaro.components.extractor import DatasetItem, Extractor
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.voc.exporter import (
-    VocActionConverter,
-    VocClassificationConverter,
-    VocConverter,
-    VocDetectionConverter,
-    VocLayoutConverter,
-    VocSegmentationConverter,
+    VocActionExporter,
+    VocClassificationExporter,
+    VocDetectionExporter,
+    VocExporter,
+    VocLayoutExporter,
+    VocSegmentationExporter,
 )
 from datumaro.plugins.data_formats.voc.importer import VocImporter
 from datumaro.util.image import save_image
@@ -141,7 +141,7 @@ class VocFormatTest(TestCase):
                 VOC.VocLabelMap.parse_from_file(path)
 
 
-class TestExtractorBase(Extractor):
+class TestExtractorBase(DatasetBase):
     def _label(self, voc_label):
         return self.categories()[AnnotationType.label].find(voc_label)[0]
 
@@ -812,7 +812,7 @@ class VocExtractorTest(TestCase):
             self.assertEqual(capture.exception.__cause__.id, "30")
 
 
-class VocConverterTest(TestCase):
+class VocExporterTest(TestCase):
     def _test_save_and_load(
         self, source_dataset, converter, test_dir, target_dataset=None, importer_args=None, **kwargs
     ):
@@ -855,7 +855,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 TestExtractor(),
-                partial(VocClassificationConverter.convert, label_map="voc"),
+                partial(VocClassificationExporter.convert, label_map="voc"),
                 test_dir,
             )
 
@@ -961,7 +961,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 TestExtractor(),
-                partial(VocDetectionConverter.convert, label_map="voc"),
+                partial(VocDetectionExporter.convert, label_map="voc"),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1005,7 +1005,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 TestExtractor(),
-                partial(VocSegmentationConverter.convert, label_map="voc"),
+                partial(VocSegmentationExporter.convert, label_map="voc"),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1049,7 +1049,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 TestExtractor(),
-                partial(VocSegmentationConverter.convert, label_map="voc", apply_colormap=False),
+                partial(VocSegmentationExporter.convert, label_map="voc", apply_colormap=False),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1104,7 +1104,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 TestExtractor(),
-                partial(VocSegmentationConverter.convert, label_map="voc"),
+                partial(VocSegmentationExporter.convert, label_map="voc"),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1147,7 +1147,7 @@ class VocConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                TestExtractor(), partial(VocLayoutConverter.convert, label_map="voc"), test_dir
+                TestExtractor(), partial(VocLayoutExporter.convert, label_map="voc"), test_dir
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -1241,7 +1241,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 TestExtractor(),
-                partial(VocActionConverter.convert, label_map="voc", allow_attributes=False),
+                partial(VocActionExporter.convert, label_map="voc", allow_attributes=False),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1261,7 +1261,7 @@ class VocConverterTest(TestCase):
             with self.subTest(subformat=task), TestDir() as test_dir:
                 self._test_save_and_load(
                     TestExtractor(),
-                    partial(VocConverter.convert, label_map="voc", tasks=task),
+                    partial(VocExporter.convert, label_map="voc", tasks=task),
                     test_dir,
                 )
 
@@ -1282,7 +1282,7 @@ class VocConverterTest(TestCase):
             with self.subTest(subformat=task), TestDir() as test_dir:
                 self._test_save_and_load(
                     TestExtractor(),
-                    partial(VocConverter.convert, label_map="voc", tasks=task, save_media=True),
+                    partial(VocExporter.convert, label_map="voc", tasks=task, save_media=True),
                     test_dir,
                     require_media=True,
                 )
@@ -1303,7 +1303,7 @@ class VocConverterTest(TestCase):
             with self.subTest(subformat=task), TestDir() as test_dir:
                 self._test_save_and_load(
                     TestExtractor(),
-                    partial(VocConverter.convert, label_map="voc", save_media=True, tasks=task),
+                    partial(VocExporter.convert, label_map="voc", save_media=True, tasks=task),
                     test_dir,
                     require_media=True,
                 )
@@ -1357,7 +1357,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 SrcExtractor(),
-                partial(VocConverter.convert, label_map="voc"),
+                partial(VocExporter.convert, label_map="voc"),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1428,7 +1428,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 SrcExtractor(),
-                partial(VocConverter.convert, label_map="source"),
+                partial(VocExporter.convert, label_map="source"),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1498,7 +1498,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 SrcExtractor(),
-                partial(VocConverter.convert, label_map="source"),
+                partial(VocExporter.convert, label_map="source"),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1555,7 +1555,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 SrcExtractor(),
-                partial(VocConverter.convert, label_map=label_map, save_dataset_meta=True),
+                partial(VocExporter.convert, label_map=label_map, save_dataset_meta=True),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1637,7 +1637,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 SrcExtractor(),
-                partial(VocConverter.convert, label_map=label_map),
+                partial(VocExporter.convert, label_map=label_map),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -1660,7 +1660,7 @@ class VocConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            VocConverter.convert(dataset, test_dir, apply_colormap=False)
+            VocExporter.convert(dataset, test_dir, apply_colormap=False)
 
             cls_mask = load_mask(osp.join(test_dir, "SegmentationClass", "1.png"))
             inst_mask = load_mask(osp.join(test_dir, "SegmentationObject", "1.png"))
@@ -1688,7 +1688,7 @@ class VocConverterTest(TestCase):
         )
 
         with TestDir() as test_dir:
-            VocConverter.convert(dataset, test_dir, apply_colormap=False, label_map=label_map)
+            VocExporter.convert(dataset, test_dir, apply_colormap=False, label_map=label_map)
 
             cls_mask = load_mask(osp.join(test_dir, "SegmentationClass", "1.png"))
             inst_mask = load_mask(osp.join(test_dir, "SegmentationObject", "1.png"))
@@ -1709,7 +1709,7 @@ class VocConverterTest(TestCase):
             with self.subTest(subformat=task), TestDir() as test_dir:
                 self._test_save_and_load(
                     TestExtractor(),
-                    partial(VocConverter.convert, label_map="voc", tasks=task),
+                    partial(VocExporter.convert, label_map="voc", tasks=task),
                     test_dir,
                 )
 
@@ -1732,7 +1732,7 @@ class VocConverterTest(TestCase):
             with self.subTest(subformat=task), TestDir() as test_dir:
                 self._test_save_and_load(
                     TestExtractor(),
-                    partial(VocConverter.convert, label_map="voc", tasks=task, save_media=True),
+                    partial(VocExporter.convert, label_map="voc", tasks=task, save_media=True),
                     test_dir,
                     require_media=True,
                 )
@@ -1753,7 +1753,7 @@ class VocConverterTest(TestCase):
             with self.subTest(subformat=task), TestDir() as test_dir:
                 self._test_save_and_load(
                     TestExtractor(),
-                    partial(VocConverter.convert, label_map="voc", save_media=True, tasks=task),
+                    partial(VocExporter.convert, label_map="voc", save_media=True, tasks=task),
                     test_dir,
                     require_media=True,
                 )
@@ -1811,7 +1811,7 @@ class VocConverterTest(TestCase):
         with TestDir() as test_dir:
             self._test_save_and_load(
                 TestExtractor(),
-                partial(VocConverter.convert, label_map="voc"),
+                partial(VocExporter.convert, label_map="voc"),
                 test_dir,
                 target_dataset=DstExtractor(),
             )
@@ -2047,5 +2047,5 @@ class VocConverterTest(TestCase):
 
         with TestDir() as test_dir:
             self._test_save_and_load(
-                TestExtractor(), partial(VocConverter.convert, label_map="voc"), test_dir
+                TestExtractor(), partial(VocExporter.convert, label_map="voc"), test_dir
             )

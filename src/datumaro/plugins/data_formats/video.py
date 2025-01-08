@@ -5,7 +5,7 @@
 import os.path as osp
 from typing import Optional
 
-from datumaro.components.extractor import DEFAULT_SUBSET_NAME, DatasetItem, Extractor, Importer
+from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetBase, DatasetItem, Importer
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
 from datumaro.components.media import Video, VideoFrame
 from datumaro.util.os_util import find_files
@@ -91,10 +91,10 @@ class VideoFramesImporter(Importer):
     def find_sources(cls, path):
         if not osp.isfile(path):
             return []
-        return [{"url": path, "format": VideoFramesExtractor.NAME}]
+        return [{"url": path, "format": VideoFramesBase.NAME}]
 
 
-class VideoFramesExtractor(Extractor):
+class VideoFramesBase(DatasetBase):
     def __init__(
         self,
         url: str,

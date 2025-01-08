@@ -10,7 +10,7 @@ import os.path as osp
 import numpy as np
 
 from datumaro.components.annotation import Bbox, Caption, Mask, MaskCategories, Polygon
-from datumaro.components.extractor import DatasetItem, Importer, SourceExtractor
+from datumaro.components.dataset_base import DatasetItem, Importer, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.util.image import IMAGE_EXTENSIONS, find_images
@@ -19,7 +19,7 @@ from datumaro.util.mask_tools import lazy_mask
 from .format import IcdarPath, IcdarTask
 
 
-class _IcdarExtractor(SourceExtractor):
+class _IcdarBase(SubsetBase):
     def __init__(self, path, task, subset=None):
         self._path = path
         self._task = task
@@ -252,19 +252,19 @@ class _IcdarExtractor(SourceExtractor):
         return lambda: mask == c
 
 
-class IcdarWordRecognitionExtractor(_IcdarExtractor):
+class IcdarWordRecognitionBase(_IcdarBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = IcdarTask.word_recognition
         super().__init__(path, **kwargs)
 
 
-class IcdarTextLocalizationExtractor(_IcdarExtractor):
+class IcdarTextLocalizationBase(_IcdarBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = IcdarTask.text_localization
         super().__init__(path, **kwargs)
 
 
-class IcdarTextSegmentationExtractor(_IcdarExtractor):
+class IcdarTextSegmentationBase(_IcdarBase):
     def __init__(self, path, **kwargs):
         kwargs["task"] = IcdarTask.text_segmentation
         super().__init__(path, **kwargs)

@@ -21,14 +21,14 @@ from attr import attrs
 
 from datumaro.components.annotation import AnnotationType, Bbox, Label, LabelCategories, Mask
 from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, Importer
 from datumaro.components.errors import (
     DatasetError,
     MediaTypeError,
     RepeatedItemError,
     UndefinedLabel,
 )
-from datumaro.components.exporter import Converter
-from datumaro.components.extractor import DatasetItem, Extractor, Importer
+from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.components.validator import Severity
@@ -166,7 +166,7 @@ class OpenImagesPath:
     )
 
 
-class OpenImagesExtractor(Extractor):
+class OpenImagesBase(DatasetBase):
     def __init__(self, path, image_meta=None):
         if not osp.isdir(path):
             raise FileNotFoundError("Can't read dataset directory '%s'" % path)
@@ -602,9 +602,9 @@ class OpenImagesImporter(Importer):
     def find_sources(cls, path):
         for pattern in cls.POSSIBLE_ANNOTATION_PATTERNS:
             if glob.glob(osp.join(glob.escape(path), OpenImagesPath.ANNOTATIONS_DIR, pattern)):
-                return [{"url": path, "format": OpenImagesExtractor.NAME}]
+                return [{"url": path, "format": OpenImagesBase.NAME}]
             elif glob.glob(osp.join(glob.escape(path), pattern)):
-                return [{"url": path, "format": OpenImagesExtractor.NAME}]
+                return [{"url": path, "format": OpenImagesBase.NAME}]
         return []
 
 
@@ -697,7 +697,7 @@ class _AnnotationWriter:
                 os.unlink(osp.join(self._annotations_dir, file_name))
 
 
-class OpenImagesConverter(Converter):
+class OpenImagesExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".jpg"
 
     def apply(self):

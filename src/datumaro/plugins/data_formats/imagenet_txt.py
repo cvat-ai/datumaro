@@ -10,10 +10,10 @@ from typing import Iterable, Optional, Sequence, Tuple, Union
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.dataset_base import DatasetItem, SubsetBase
-from datumaro.components.importer import Importer
 from datumaro.components.errors import DatasetImportError, MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
+from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
 

@@ -10,8 +10,8 @@ from packaging.version import Version
 
 from datumaro.components.annotation import Bbox, LabelCategories, Points, PointsCategories
 from datumaro.components.dataset_base import AnnotationType, DatasetItem, SubsetBase
-from datumaro.components.importer import Importer
 from datumaro.components.format_detection import FormatDetectionContext
+from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 
 from .format import MPII_POINTS_JOINTS, MPII_POINTS_LABELS

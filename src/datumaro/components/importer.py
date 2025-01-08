@@ -3,11 +3,11 @@ from __future__ import annotations
 import os
 from glob import iglob
 from os import path as osp
-from typing import Optional, List, Dict, Callable
+from typing import Callable, Dict, List, Optional
 
 from datumaro import CliPlugin
 from datumaro.components.errors import DatasetNotFoundError
-from datumaro.components.format_detection import FormatDetectionContext, FormatDetectionConfidence
+from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
 
 
 class Importer(CliPlugin):

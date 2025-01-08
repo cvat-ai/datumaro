@@ -18,8 +18,8 @@ from datumaro.components.annotation import (
     Polygon,
 )
 from datumaro.components.dataset_base import DatasetBase, DatasetItem
-from datumaro.components.importer import Importer
 from datumaro.components.format_detection import FormatDetectionContext
+from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util import parse_json
 from datumaro.util.image import IMAGE_EXTENSIONS, find_images, lazy_image, load_image

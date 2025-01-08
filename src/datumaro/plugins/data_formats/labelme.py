@@ -13,10 +13,10 @@ from defusedxml import ElementTree
 
 from datumaro.components.annotation import AnnotationType, Bbox, LabelCategories, Mask, Polygon
 from datumaro.components.dataset_base import DatasetBase, DatasetItem
-from datumaro.components.importer import Importer
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
+from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util import cast, escape, unescape
 from datumaro.util.image import save_image

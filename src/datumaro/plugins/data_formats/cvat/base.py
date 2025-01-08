@@ -21,8 +21,8 @@ from datumaro.components.annotation import (
     Skeleton,
 )
 from datumaro.components.dataset_base import DatasetItem, SubsetBase
-from datumaro.components.importer import Importer
 from datumaro.components.format_detection import FormatDetectionContext
+from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 
 from .format import CvatPath

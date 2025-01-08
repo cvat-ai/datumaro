@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.dataset_base import IDataset, DatasetItem
-from datumaro.components.dataset_base import DatasetBase
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, IDataset
 from datumaro.util import is_method_redefined
 
 

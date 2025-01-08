@@ -27,7 +27,6 @@ from datumaro.components.dataset_base import (
     ProgressReporter,
     SubsetBase,
 )
-from datumaro.components.transformer import Transform, ItemTransform
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
@@ -51,6 +50,7 @@ from datumaro.components.filter import (
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement, Video
 from datumaro.components.progress_reporting import NullProgressReporter
+from datumaro.components.transformer import ItemTransform, Transform
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 from tests.requirements import Requirements, mark_requirement

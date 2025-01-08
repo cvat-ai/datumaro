@@ -10,7 +10,6 @@ from datumaro.components.dataset_base import (
     IDataset,
     _ImportFail,
 )
-from datumaro.components.transformer import Transform, ItemTransform
 from datumaro.components.dataset_item_storage import (
     DatasetItemStorage,
     DatasetItemStorageDatasetView,
@@ -23,6 +22,7 @@ from datumaro.components.errors import (
     RepeatedItemError,
 )
 from datumaro.components.media import MediaElement
+from datumaro.components.transformer import ItemTransform, Transform
 from datumaro.plugins.transforms import ProjectLabels
 from datumaro.util import is_method_redefined
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME

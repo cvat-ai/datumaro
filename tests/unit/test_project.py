@@ -10,7 +10,6 @@ from datumaro.components.annotation import Bbox, Label
 from datumaro.components.config_model import Model, Source
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset
 from datumaro.components.dataset_base import DatasetBase, DatasetItem
-from datumaro.components.transformer import ItemTransform
 from datumaro.components.errors import (
     DatasetMergeError,
     EmptyCommitError,
@@ -30,6 +29,7 @@ from datumaro.components.errors import (
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image
 from datumaro.components.project import DiffStatus, Project
+from datumaro.components.transformer import ItemTransform
 from datumaro.util.scope import scope_add, scoped
 
 from tests.requirements import Requirements, mark_requirement

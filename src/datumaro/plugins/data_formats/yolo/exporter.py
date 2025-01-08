@@ -24,7 +24,7 @@ from datumaro.components.annotation import (
     Polygon,
     Skeleton,
 )
-from datumaro.components.dataset import DatasetPatch
+from datumaro.components.dataset_storage import DatasetPatch
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, DatasetItem, IDataset
 from datumaro.components.errors import DatasetExportError, MediaTypeError

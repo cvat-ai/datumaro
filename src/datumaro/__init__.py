@@ -34,11 +34,11 @@ from .components.annotation import (
 from .components.cli_plugin import CliPlugin
 from .components.dataset import (
     Dataset,
-    DatasetPatch,
     DatasetSubset,
     IDataset,
     eager_mode,
 )
+from .components.dataset_storage import DatasetPatch
 from .components.dataset_item_storage import ItemStatus
 from .components.dataset_base import (
     DEFAULT_SUBSET_NAME,

@@ -204,7 +204,7 @@ class Exporter(CliPlugin):
 
         # TODO: refactor this variable.
         # Can be used by a subclass to store the current patch info
-        from datumaro.components.dataset import DatasetPatch
+        from datumaro.components.dataset_storage import DatasetPatch
 
         if isinstance(extractor, DatasetPatch.DatasetPatchWrapper):
             self._patch = extractor.patch

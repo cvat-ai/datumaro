@@ -24,7 +24,7 @@ from datumaro.components.annotation import (
     LabelCategories,
     Mask,
 )
-from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter

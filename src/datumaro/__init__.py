@@ -37,9 +37,9 @@ from .components.dataset import (
     DatasetPatch,
     DatasetSubset,
     IDataset,
-    ItemStatus,
     eager_mode,
 )
+from .components.dataset_item_storage import ItemStatus
 from .components.dataset_base import (
     DEFAULT_SUBSET_NAME,
     CategoriesInfo,

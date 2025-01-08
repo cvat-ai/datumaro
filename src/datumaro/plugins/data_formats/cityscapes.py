@@ -21,7 +21,7 @@ from datumaro.components.annotation import (
     MaskCategories,
     RgbColor,
 )
-from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, Importer, SubsetBase
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter

@@ -32,7 +32,7 @@ from datumaro.components.annotation import (
     Skeleton,
     _Shape,
 )
-from datumaro.components.dataset import ItemStatus
+from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME, CategoriesInfo, DatasetItem
 from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image, MediaElement, PointCloud

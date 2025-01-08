@@ -8,7 +8,8 @@ import os.path as osp
 import shutil
 from typing import Dict, Optional, Type, Union
 
-from datumaro.components.dataset import Dataset, DatasetItemStorageDatasetView, IDataset
+from datumaro.components.dataset import Dataset, IDataset
+from datumaro.components.dataset_item_storage import DatasetItemStorageDatasetView
 from datumaro.components.dataset_base import Transform
 from datumaro.components.dataset_filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.environment import Environment

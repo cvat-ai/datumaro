@@ -28,7 +28,7 @@ from datumaro.components.dataset_base import (
     _ImportFail,
 )
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
-from datumaro.components.dataset_filter import XPathAnnotationsFilter, XPathDatasetFilter
+from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.dataset_storage import DatasetStorage
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (

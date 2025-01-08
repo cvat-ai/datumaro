@@ -31,7 +31,7 @@ from datumaro.components.dataset_base import (
     Transform,
 )
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
-from datumaro.components.dataset_filter import (
+from datumaro.components.filter import (
     DatasetItemEncoder,
     XPathAnnotationsFilter,
     XPathDatasetFilter,

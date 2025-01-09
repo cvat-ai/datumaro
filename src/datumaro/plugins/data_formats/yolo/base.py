@@ -329,7 +329,7 @@ class YoloBase(_YoloBase):
     def _load_categories(self) -> CategoriesInfo:
         names_path = self._config.get("names")
         if not names_path:
-            raise InvalidAnnotationError(f"Failed to parse names file path from config")
+            raise InvalidAnnotationError("Failed to parse names file path from config")
 
         names_path = osp.join(self._path, self.localize_path(names_path))
 
@@ -652,7 +652,7 @@ class YoloUltralyticsPoseBase(YoloUltralyticsDetectionBase):
 
     def _load_categories(self) -> CategoriesInfo:
         if "names" not in self._config:
-            raise InvalidAnnotationError(f"Failed to parse names from config")
+            raise InvalidAnnotationError("Failed to parse names from config")
 
         if has_meta_file(self._path):
             return self._load_categories_from_meta_file()

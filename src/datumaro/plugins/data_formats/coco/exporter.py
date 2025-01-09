@@ -566,8 +566,9 @@ class CocoExporter(Exporter):
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
-        kwargs["description"] = (
-            """
+        kwargs[
+            "description"
+        ] = """
             Segmentation mask modes ('--segmentation-mode'):|n
             - '{sm.guess.name}': guess the mode for each instance,|n
             |s|suse 'is_crowd' attribute as hint|n
@@ -591,8 +592,7 @@ class CocoExporter(Exporter):
             directory, otherwise they are saved in separate directories
             by subsets.
             """.format(
-                sm=SegmentationMode
-            )
+            sm=SegmentationMode
         )
         parser = super().build_cmdline_parser(**kwargs)
         parser.add_argument(

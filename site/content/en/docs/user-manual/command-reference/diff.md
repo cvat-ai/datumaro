@@ -60,7 +60,6 @@ Parameters:
   - `--all` - Include matches in the output. By default, only differences are
     printed.
 
-
 Examples:
 - Compare two projects by distance, match boxes if IoU > 0.7,
   save results to TensorBoard:

@@ -13,7 +13,6 @@ Supported types of annotations:
 
 Format doesn't support any attributes for annotations objects.
 
-
 ## Import Ultralytics YOLO classification dataset
 
 A Datumaro project with a ImageNet dataset can be created

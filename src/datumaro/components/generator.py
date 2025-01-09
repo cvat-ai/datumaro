@@ -18,4 +18,5 @@ class DatasetGenerator(ABC, CliPlugin):
         return generator.generate_dataset()
 
     @abstractmethod
-    def generate_dataset(self): ...
+    def generate_dataset(self):
+        ...

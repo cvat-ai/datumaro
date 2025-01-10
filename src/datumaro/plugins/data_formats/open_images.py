@@ -807,19 +807,24 @@ class OpenImagesExporter(Exporter):
 
             image_description_name = f"{subset_name}-images-with-rotation.csv"
 
-            with annotation_writer.open_csv(
-                image_description_name,
-                OpenImagesPath.IMAGE_DESCRIPTION_FIELDS,
-            ) as image_description_writer, annotation_writer.open_csv_lazy(
-                subset_name + OpenImagesPath.LABEL_DESCRIPTION_FILE_SUFFIX,
-                OpenImagesPath.LABEL_DESCRIPTION_FIELDS,
-            ) as label_description_writer, annotation_writer.open_csv_lazy(
-                subset_name + OpenImagesPath.BBOX_DESCRIPTION_FILE_SUFFIX,
-                OpenImagesPath.BBOX_DESCRIPTION_FIELDS,
-            ) as bbox_description_writer, annotation_writer.open_csv_lazy(
-                subset_name + OpenImagesPath.MASK_DESCRIPTION_FILE_SUFFIX,
-                OpenImagesPath.MASK_DESCRIPTION_FIELDS,
-            ) as mask_description_writer:
+            with (
+                annotation_writer.open_csv(
+                    image_description_name,
+                    OpenImagesPath.IMAGE_DESCRIPTION_FIELDS,
+                ) as image_description_writer,
+                annotation_writer.open_csv_lazy(
+                    subset_name + OpenImagesPath.LABEL_DESCRIPTION_FILE_SUFFIX,
+                    OpenImagesPath.LABEL_DESCRIPTION_FIELDS,
+                ) as label_description_writer,
+                annotation_writer.open_csv_lazy(
+                    subset_name + OpenImagesPath.BBOX_DESCRIPTION_FILE_SUFFIX,
+                    OpenImagesPath.BBOX_DESCRIPTION_FIELDS,
+                ) as bbox_description_writer,
+                annotation_writer.open_csv_lazy(
+                    subset_name + OpenImagesPath.MASK_DESCRIPTION_FILE_SUFFIX,
+                    OpenImagesPath.MASK_DESCRIPTION_FIELDS,
+                ) as mask_description_writer,
+            ):
                 for item in subset:
                     image_description_writer.writerow(
                         {

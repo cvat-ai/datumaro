@@ -383,7 +383,10 @@ class YoloUltralyticsSegmentationExporter(YoloUltralyticsDetectionExporter):
             return
         values = [value / size for value, size in zip(anno.points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return f"{self._map_labels_for_save[anno.label]} {string_values}{self._make_track_id_suffix(anno)}\n"
+        return (
+            f"{self._map_labels_for_save[anno.label]} "
+            f"{string_values}{self._make_track_id_suffix(anno)}\n"
+        )
 
 
 class YoloUltralyticsOrientedBoxesExporter(YoloUltralyticsDetectionExporter):
@@ -393,7 +396,10 @@ class YoloUltralyticsOrientedBoxesExporter(YoloUltralyticsDetectionExporter):
         points = bbox_annotation_as_polygon(anno)
         values = [value / size for value, size in zip(points, cycle((width, height)))]
         string_values = " ".join("%.6f" % p for p in values)
-        return f"{self._map_labels_for_save[anno.label]} {string_values}{self._make_track_id_suffix(anno)}\n"
+        return (
+            f"{self._map_labels_for_save[anno.label]} "
+            f"{string_values}{self._make_track_id_suffix(anno)}\n"
+        )
 
 
 class YoloUltralyticsPoseExporter(YoloUltralyticsDetectionExporter):

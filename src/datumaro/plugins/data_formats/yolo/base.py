@@ -329,7 +329,7 @@ class YoloBase(_YoloBase):
     def _load_categories(self) -> CategoriesInfo:
         names_path = self._config.get("names")
         if not names_path:
-            raise InvalidAnnotationError(f"Failed to parse names file path from config")
+            raise InvalidAnnotationError("Failed to parse names file path from config")
 
         names_path = osp.join(self._path, self.localize_path(names_path))
 
@@ -517,7 +517,8 @@ class YoloUltralyticsSegmentationBase(YoloUltralyticsDetectionBase):
             return self._load_segmentation_annotation(parts, image_height, image_width)
         raise InvalidAnnotationError(
             f"Unexpected field count {len(parts)} in the polygon description. "
-            "Expected fields for segment annotation: (label, x1, y1, x2, y2, x3, y3, ..., <optional track id>)"
+            "Expected fields for segment annotation: "
+            "(label, x1, y1, x2, y2, x3, y3, ..., <optional track id>)"
         )
 
 
@@ -652,7 +653,7 @@ class YoloUltralyticsPoseBase(YoloUltralyticsDetectionBase):
 
     def _load_categories(self) -> CategoriesInfo:
         if "names" not in self._config:
-            raise InvalidAnnotationError(f"Failed to parse names from config")
+            raise InvalidAnnotationError("Failed to parse names from config")
 
         if has_meta_file(self._path):
             return self._load_categories_from_meta_file()
@@ -672,7 +673,8 @@ class YoloUltralyticsPoseBase(YoloUltralyticsDetectionBase):
                 if len(self._skeleton_sub_labels[skeleton]) > max_number_of_points
             ]:
                 raise InvalidAnnotationError(
-                    f"Number of points in skeletons according to config file is {max_number_of_points}. "
+                    f"Number of points in skeletons according to config file "
+                    f"is {max_number_of_points}. "
                     f"Following skeletons have more sub labels: {skeletons_with_wrong_sub_labels}"
                 )
 

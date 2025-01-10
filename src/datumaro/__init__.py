@@ -61,4 +61,4 @@ from .components.progress_reporting import NullProgressReporter, ProgressReporte
 from .components.transformer import ItemTransform, Transform
 from .components.validator import Validator
 from .util.definitions import DEFAULT_SUBSET_NAME
-from .version import VERSION
+from .version import __version__

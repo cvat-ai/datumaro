@@ -281,8 +281,9 @@ class DatumaroBase(SubsetBase):
         points_attributes = ann.get("points_attributes")
         if len(points) != len(points_attributes) * 3:
             raise InvalidAnnotationError(
-                f"Points and Points_attributes lengths ({len(points)}, {len(points_attributes)}) do not match, "
-                "for each triplet (x, y, visibility) in points there should be one dict in points_attributes."
+                f"Points and Points_attributes lengths ({len(points)}, {len(points_attributes)}) "
+                f"do not match, for each triplet (x, y, visibility) in points "
+                f"there should be one dict in points_attributes."
             )
 
         label_category = self._categories[AnnotationType.label]

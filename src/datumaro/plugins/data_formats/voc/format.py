@@ -278,7 +278,8 @@ class VocLabelMap(_voc_label_map_base):
                     color = label_desc[1].split(",")
                     if len(color) != 3:
                         raise InvalidAnnotationError(
-                            f"Label '{name}' has wrong color '{color}'. Expected an 'r,g,b' triplet."
+                            f"Label '{name}' has wrong color '{color}'. "
+                            f"Expected an 'r,g,b' triplet."
                         )
                     color = tuple(int(c) for c in color)
                 else:

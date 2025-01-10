@@ -1,0 +1,10 @@
+-r requirements.txt
+-r tests/requirements.txt
+
+pre-commit
+
+# linters
+bandit>=1.7.0
+isort~=5.9
+pylint>=2.7.0
+black>=22.1.0

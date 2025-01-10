@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools", "wheel", "pybind11", "setuptools-rust"]
 build-backend = "setuptools.build_meta"
 
 [tool.isort]
@@ -12,7 +12,7 @@ branch = true
 # relative_files = true # does not work?
 
 source = [
-    "src/datumaro/",
+    "src/",
 ]
 
 omit = [
@@ -20,6 +20,19 @@ omit = [
     "src/datumaro/version.py",
     "tests/*",
 ]
+
+[tool.cibuildwheel]
+# reference docs - https://cibuildwheel.readthedocs.io/en/stable/options/#build-skip
+build = "cp39-*_x86_64 cp310-*_x86_64 cp311-*_x86_64 cp39-*_amd64 cp310-*_amd64 cp311-*_amd64"
+skip = "*macos*"
+
+[tool.cibuildwheel.linux]
+before-all = [
+    "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o rustup-init.sh",
+    "sh ./rustup-init.sh -y --default-toolchain stable --profile minimal"
+]
+
+environment = { PATH="$HOME/.cargo/bin:$PATH" }
 
 [tool.coverage.report]
 # Regexes for lines to exclude from consideration
@@ -38,6 +51,9 @@ exclude_lines = [
     # Don't complain if non-runnable code isn't run:
     'if 0:',
     'if __name__ == .__main__.:',
+
+    # Don't complain for the type checking code:
+    'if TYPE_CHECKING:'
 ]
 
 # don't fail on the code that can be found
@@ -47,4 +63,76 @@ skip_empty = true
 
 [tool.black]
 line-length = 100
-target-version = ['py38']
+target-version = ['py39']
+
+[tool.ruff]
+# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+select = ["E", "F"]
+
+# Need to review all ignore items below
+ignore = [
+    # pycodestyle
+    "E402",     # module-import-not-at-top-of-file
+    "E731",     # lambda-assignment
+    "E741",     # ambiguous-variable-name
+    #Pyflakes
+    "F403",     # undefined-local-with-import-star
+]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["A", "B", "C", "D", "E", "F"]
+unfixable = []
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+extend-exclude = [
+    "src/datumaro/plugins/openvino_plugin/samples"
+]
+
+# Same as Black.
+line-length = 100
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# minimum target version
+target-version = "py39"
+
+# ignore-init-module-imports = true
+
+[tool.ruff.mccabe]
+# Unlike Flake8, default to a complexity level of 10.
+max-complexity = 10
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = [
+    "F401"      # unused-import
+]
+"src/datumaro/plugins/data_formats/ava/ava_label_pb2.py" = [
+    "E501"      # line-too-long
+]
+
+[tool.nbqa.addopts]
+ruff = ["--ignore=E402"]

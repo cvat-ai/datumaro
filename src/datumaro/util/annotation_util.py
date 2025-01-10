@@ -325,7 +325,7 @@ def make_label_id_mapping(
 
 
 def __getattr__(name: str):
-    if name is "_get_bbox":
+    if name == "_get_bbox":
         warnings.warn(
             "_get_bbox() is deprecated, please use get_bbox() instead", category=DeprecationWarning
         )

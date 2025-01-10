@@ -275,13 +275,17 @@ class _SubsetWriter:
                 label["type"] = "skeleton"
                 label["svg"] = ""
                 for label_from, label_to in points_cat.items[l_id].joints:
-                    label[
-                        "svg"
-                    ] += f'<line x1="0" y1="0" x2="0" y2="0"data-type="edge" data-node-from="{label_from + 1}" stroke-width="0.5" data-node-to="{label_to + 1}"></line>'
+                    label["svg"] += (
+                        f'<line x1="0" y1="0" x2="0" y2="0"data-type="edge" '
+                        f'data-node-from="{label_from + 1}" '
+                        f'stroke-width="0.5" data-node-to="{label_to + 1}"></line>'
+                    )
                 for i, sublabel in enumerate(points_cat.items[l_id].labels):
-                    label[
-                        "svg"
-                    ] += f'<circle r="1.5" stroke="black" fill="#b3b3b3" cx="0" cy="0" stroke-width="0.1" data-type="element node" data-element-id="{i + 1}" data-node-id="{i + 1}" data-label-name="{sublabel}"></circle>'
+                    label["svg"] += (
+                        f'<circle r="1.5" stroke="black" fill="#b3b3b3" cx="0" cy="0" '
+                        f'stroke-width="0.1" data-type="element node" data-element-id="{i + 1}" '
+                        f'data-node-id="{i + 1}" data-label-name="{sublabel}"></circle>'
+                    )
             labels.append(("label", label))
 
         meta["task"]["labels"] = labels

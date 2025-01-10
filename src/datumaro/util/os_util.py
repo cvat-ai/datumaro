@@ -20,10 +20,10 @@ try:
     # Use rmtree from GitPython to avoid the problem with removal of
     # readonly files on Windows, which Git uses extensively
     # It double checks if a file cannot be removed because of readonly flag
-    from git.util import rmfile, rmtree  # pylint: disable=unused-import
+    from git.util import rmfile, rmtree  # noqa: F401
 except ModuleNotFoundError:
-    from os import remove as rmfile  # pylint: disable=unused-import
-    from shutil import rmtree as rmtree  # pylint: disable=unused-import
+    from os import remove as rmfile  # noqa: F401
+    from shutil import rmtree as rmtree  # noqa: F401
 
 from . import cast
 

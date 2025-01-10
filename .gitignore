@@ -55,16 +55,32 @@ cover/
 
 # Sphinx documentation
 docs/_build/
+docs/build/
 
-#Pycharm config files
+#Pycharm & vscode config files
 .idea/
 user_config.py
+.vscode/
 
 # Temporary website files
 site/public/
 site/resources/
 site/node_modules/
 site/tech-doc-hugo
+site/**/nb_htmls/*.html
 
 # Temporary sphinx files
 site/static/api
+
+# C extension
+src/**/*.so
+
+# Secrets
+.secrets
+
+# Autosummary generated rst files
+docs/**/_autosummary/
+
+# Rust API
+rust/Cargo.lock
+rust/target/

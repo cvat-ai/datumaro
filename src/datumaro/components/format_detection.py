@@ -445,7 +445,8 @@ class RejectionCallback(Protocol):
         format_name: str,
         reason: RejectionReason,
         human_message: str,
-    ) -> Any: ...
+    ) -> Any:
+        ...
 
 
 def detect_dataset_format(

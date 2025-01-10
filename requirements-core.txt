@@ -33,10 +33,6 @@ requests
 # Sampler
 pandas>=1.4.0
 
-# OpenVINO
-openvino>=2023.2.0
-tokenizers
-
 # Encryption
 cryptography>= 38.03
 
@@ -51,9 +47,6 @@ protobuf
 
 # Comparator
 tabulate
-
-# Model inference launcher from the dedicated inference server
-ovmsclient
 
 # prune
 scikit-learn

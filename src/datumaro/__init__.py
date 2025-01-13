@@ -32,15 +32,9 @@ from .components.annotation import (
     Skeleton,
 )
 from .components.cli_plugin import CliPlugin
+from .components.contexts.importer import FailingImportErrorPolicy, ImportErrorPolicy
 from .components.dataset import Dataset, DatasetSubset, IDataset, eager_mode
-from .components.dataset_base import (
-    CategoriesInfo,
-    DatasetBase,
-    DatasetItem,
-    FailingImportErrorPolicy,
-    ImportErrorPolicy,
-    SubsetBase,
-)
+from .components.dataset_base import CategoriesInfo, DatasetBase, DatasetItem, SubsetBase
 from .components.dataset_item_storage import ItemStatus
 from .components.dataset_storage import DatasetPatch
 from .components.environment import Environment, PluginRegistry

@@ -15,14 +15,13 @@ from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tupl
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.config_model import Source
+from datumaro.components.contexts.importer import ImportErrorPolicy, _ImportFail
 from datumaro.components.dataset_base import (
     CategoriesInfo,
     DatasetBase,
     DatasetItem,
     IDataset,
     ImportContext,
-    ImportErrorPolicy,
-    _ImportFail,
 )
 from datumaro.components.dataset_storage import DatasetPatch, DatasetStorage
 from datumaro.components.environment import Environment

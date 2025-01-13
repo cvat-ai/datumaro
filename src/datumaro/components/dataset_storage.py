@@ -3,13 +3,8 @@ from __future__ import annotations
 from typing import Dict, Iterable, Iterator, List, Optional, Tuple, Type, Union
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
-from datumaro.components.dataset_base import (
-    CategoriesInfo,
-    DatasetBase,
-    DatasetItem,
-    IDataset,
-    _ImportFail,
-)
+from datumaro.components.contexts.importer import _ImportFail
+from datumaro.components.dataset_base import CategoriesInfo, DatasetBase, DatasetItem, IDataset
 from datumaro.components.dataset_item_storage import (
     DatasetItemStorage,
     DatasetItemStorageDatasetView,

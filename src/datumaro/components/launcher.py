@@ -33,7 +33,8 @@ class Launcher(CliPlugin):
 
         There are two output types:
 
-        1. The output is `np.ndarray`. For example, it can be image data as `np.ndarray` with BGR format (H, W, C).
+        1. The output is `np.ndarray`. For example,
+        it can be image data as `np.ndarray` with BGR format (H, W, C).
         In this step, you usually implement resizing, normalizing, or color channel conversion
         for your launcher (or model).
 
@@ -181,8 +182,8 @@ class LauncherWithModelInterpreter(Launcher):
 
         if len(interps) > 1:
             raise DatumaroError(
-                f"{file_path} has more than two classes derived from IModelInterpreter ({interps}). "
-                "There should be only one ModelInterpreter in the file."
+                f"{file_path} has more than two classes derived from IModelInterpreter "
+                f"({interps}). There should be only one ModelInterpreter in the file."
             )
 
         return interps.pop()()

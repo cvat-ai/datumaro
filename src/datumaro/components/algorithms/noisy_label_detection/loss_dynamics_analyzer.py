@@ -38,7 +38,8 @@ class LossDynamicsAnalyzer:
     It then calculates the exponential moving average (EMA) of the training loss dynamics.
     A higher EMA value of training loss dynamics can indicate a noisy labeled sample [1]_.
     The class provides an interface to extract the top-k candidates for noisy labels
-    based on the statistics. Additionally, it can plot the EMA curves of loss dynamics for the candidates,
+    based on the statistics.
+    Additionally, it can plot the EMA curves of loss dynamics for the candidates,
     allowing comparison of the dataset's overall average or averages grouped by labels.
 
     .. [1] Zhou, Tianyi, Shengjie Wang, and Jeff Bilmes.
@@ -202,7 +203,8 @@ class LossDynamicsAnalyzer:
                 row = self._df.loc[(cand.id, cand.subset, cand.ann_id, cand.label_id)]
                 plt.plot(
                     row.dropna().iloc[1:],
-                    label=f"id={cand.id}, subset={cand.subset}, ann_id={cand.ann_id}, label_id={cand.label_id}",
+                    label=f"id={cand.id}, subset={cand.subset}, "
+                    f"ann_id={cand.ann_id}, label_id={cand.label_id}",
                     **kwargs,
                 )
 

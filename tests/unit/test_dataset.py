@@ -1564,12 +1564,14 @@ class DatasetTest(TestCase):
         calls = 0
 
         class TestLauncher(Launcher):
-            def launch(self, inputs):
+            def launch(self, batch, stack: bool = True):
                 nonlocal calls
                 calls += 1
 
-                for i, inp in enumerate(inputs):
-                    yield [Label(0, attributes={"idx": i, "data": inp.item()})]
+                return [
+                    [Label(0, attributes={"idx": i, "data": item.media.data[0]})]
+                    for i, item in enumerate(batch)
+                ]
 
         model = TestLauncher()
 

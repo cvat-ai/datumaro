@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-import warnings
 from itertools import groupby
 from typing import Callable, Dict, Iterable, NewType, Optional, Sequence, Tuple, Union
 
@@ -16,16 +15,16 @@ from datumaro.components.annotation import (
     LabelCategories,
     Mask,
     RleMask,
-    _Shape,
 )
+from datumaro.components.annotation import _Shape as Shape
 from datumaro.util.mask_tools import mask_to_rle
 
 BboxCoords = Tuple[float, float, float, float]
 "A tuple of bounding box coordinates, (x, y, w, h)"
 
-Shape = NewType("Shape", _Shape)
+_Shape = NewType("_Shape", Shape)
 
-SpatialAnnotation = Union[Shape, Mask]
+SpatialAnnotation = Union[_Shape, Mask]
 
 
 def find_instances(instance_anns: Sequence[Annotation]) -> Sequence[Sequence[Annotation]]:
@@ -51,11 +50,10 @@ def get_bbox(ann: Union[Sequence, BboxCoords, SpatialAnnotation]) -> BboxCoords:
         return ann.get_bbox()
     elif hasattr(ann, "__len__") and len(ann) == 4:
         return ann
+    elif hasattr(ann, "__len__") and len(ann) == 0:
+        return [0, 0, 0, 0]
     else:
         raise ValueError("The value of type '%s' can't be treated as a bounding box" % type(ann))
-
-
-_deprecated_get_bbox = get_bbox  # backward compatibility
 
 
 def max_bbox(annotations: Iterable[Union[BboxCoords, SpatialAnnotation]]) -> BboxCoords:
@@ -306,7 +304,7 @@ def make_label_id_mapping(
     Returns:
 
     |   map_id (callable): src id -> dst id
-    |   id_mapping (dict): src id -> dst id
+    |   id_mapping (dict): src id -> dst i
     |   src_labels (dict): src id -> src label
     |   dst_labels (dict): dst id -> dst label
     """
@@ -322,13 +320,3 @@ def make_label_id_mapping(
         return id_mapping.get(src_id, fallback)
 
     return map_id, id_mapping, source_labels, target_labels
-
-
-def __getattr__(name: str):
-    if name == "_get_bbox":
-        warnings.warn(
-            "_get_bbox() is deprecated, please use get_bbox() instead", category=DeprecationWarning
-        )
-        return _deprecated_get_bbox
-
-    return globals().get(name)

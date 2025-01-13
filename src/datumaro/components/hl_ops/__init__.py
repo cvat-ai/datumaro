@@ -13,9 +13,9 @@ from datumaro.components.dataset_item_storage import DatasetItemStorageDatasetVi
 from datumaro.components.environment import Environment
 from datumaro.components.exporter import Exporter
 from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
-from datumaro.components.launcher import Launcher, ModelTransform
+from datumaro.components.launcher import Launcher
 from datumaro.components.operations import ExactMerge
-from datumaro.components.transformer import Transform
+from datumaro.components.transformer import Transform, ModelTransform
 from datumaro.components.validator import TaskType, Validator
 from datumaro.util import parse_str_enum_value
 from datumaro.util.scope import on_error_do, scoped

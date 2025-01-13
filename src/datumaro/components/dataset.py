@@ -32,10 +32,10 @@ from datumaro.components.errors import (
 )
 from datumaro.components.exporter import ExportContext, Exporter, ExportErrorPolicy, _ExportFail
 from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
-from datumaro.components.launcher import Launcher, ModelTransform
+from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement
 from datumaro.components.progress_reporting import NullProgressReporter, ProgressReporter
-from datumaro.components.transformer import ItemTransform, Transform
+from datumaro.components.transformer import ItemTransform, Transform, ModelTransform
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.util.log_utils import logging_disabled
 from datumaro.util.os_util import rmtree

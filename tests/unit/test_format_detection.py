@@ -265,7 +265,9 @@ class DetectDatasetFormat(FormatDetectionTest):
             formats, self._dataset_root, rejection_callback=rejection_callback
         )
 
-        self.assertEqual(set(detected_datasets), {"bbb", "eee"})
+        detected_datasets_names = [format.name for format in detected_datasets]
+
+        self.assertEqual(set(detected_datasets_names), {"bbb", "eee"})
 
         self.assertEqual(rejected_formats.keys(), {"aaa", "ccc", "ddd", "fff"})
 
@@ -285,4 +287,7 @@ class DetectDatasetFormat(FormatDetectionTest):
         ]
 
         detected_datasets = detect_dataset_format(formats, self._dataset_root)
-        self.assertEqual(detected_datasets, ["bbb"])
+
+        detected_datasets_names = [format.name for format in detected_datasets]
+
+        self.assertEqual(detected_datasets_names, ["bbb"])

@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2022 Intel Corporation
+# Copyright (C) 2023 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -7,7 +7,9 @@ import fnmatch
 import glob
 import logging as log
 import os.path as osp
+from dataclasses import dataclass, field
 from enum import Enum, IntEnum, auto
+from io import BufferedReader
 from typing import (
     Any,
     Callable,
@@ -32,20 +34,40 @@ class FormatDetectionConfidence(IntEnum):
     belonging to the detector's format.
     """
 
+    NONE = 1
+    """
+    """
+    EXTREME_LOW = 5
+    """
+    EXTREME_LOW: This is currently only assigned to ImageDir format. This is because
+    ImageDir format can be detected in every image dataset format.
+    """
     LOW = 10
     """
-    The dataset seems to belong to the format, but the format is too loosely
+    LOW: The dataset seems to belong to the format, but the format is too loosely
     defined to be able to distinguish it from other formats.
     """
     MEDIUM = 20
     """
-    The dataset seems to belong to the format, and is likely not to belong
+    MEDIUM: The dataset seems to belong to the format, and is likely not to belong
     to any other format.
     """
     # There's no HIGH confidence yet, because none of the detectors
     # deserve it. It's reserved for when the detector is sure that
     # the dataset belongs to the format; for example, because the format
     # has explicit identification via magic numbers/files.
+
+
+@dataclass(order=True, frozen=True)
+class DetectedFormat:
+    confidence: FormatDetectionConfidence = field(compare=True)
+    name: str = field(compare=False)
+
+    def __eq__(self, __o: "DetectedFormat") -> bool:
+        return self.name == __o.name
+
+    def __str__(self) -> str:
+        return self.name
 
 
 # All confidence levels should be positive for a couple of reasons:
@@ -243,6 +265,20 @@ class FormatDetectionContext:
 
         return sorted(self._require_files_iter(pattern, exclude_fnames=exclude_fnames))
 
+    def require_files_iter(
+        self,
+        pattern: str,
+        *,
+        exclude_fnames: Union[str, Collection[str]] = (),
+    ) -> Iterator[str]:
+        """
+        Same as `require_files`, but returns a generator.
+        """
+
+        self._start_requirement("require_files_iter")
+
+        return self._require_files_iter(pattern, exclude_fnames=exclude_fnames)
+
     def _require_files_iter(
         self,
         pattern: str,
@@ -282,10 +318,8 @@ class FormatDetectionContext:
 
     @contextlib.contextmanager
     def probe_text_file(
-        self,
-        path: str,
-        requirement_desc: str,
-    ) -> Iterator[TextIO]:
+        self, path: str, requirement_desc: str, is_binary_file: bool = False
+    ) -> Iterator[Union[BufferedReader, TextIO]]:
         """
         Returns a context manager that can be used to place a requirement on
         the contents of the file referred to by `path`. To do so, you must
@@ -318,8 +352,12 @@ class FormatDetectionContext:
             self.fail(requirement_desc_full)
 
         try:
-            with open(osp.join(self._root_path, path), encoding="utf-8") as f:
-                yield f
+            if is_binary_file:
+                with open(osp.join(self._root_path, path), "rb") as f:
+                    yield f
+            else:
+                with open(osp.join(self._root_path, path), encoding="utf-8") as f:
+                    yield f
         except _FormatRejected:
             raise
         except Exception:
@@ -454,7 +492,7 @@ def detect_dataset_format(
     path: str,
     *,
     rejection_callback: Optional[RejectionCallback] = None,
-) -> Sequence[str]:
+) -> Sequence[DetectedFormat]:
     """
     Determines which format(s) the dataset at the specified path belongs to.
 
@@ -492,7 +530,7 @@ def detect_dataset_format(
             )
 
     max_confidence = 0
-    matches = []
+    matches: List[DetectedFormat] = []
 
     for format_name, detector in formats:
         log.debug("Checking '%s' format...", format_name)
@@ -509,13 +547,30 @@ def detect_dataset_format(
             # keep only matches with the highest confidence
             if new_confidence > max_confidence:
                 for match in matches:
-                    report_insufficient_confidence(match, format_name)
+                    report_insufficient_confidence(match.name, format_name)
 
-                matches = [format_name]
+                matches = [DetectedFormat(new_confidence, format_name)]
                 max_confidence = new_confidence
             elif new_confidence == max_confidence:
-                matches.append(format_name)
+                matches.append(DetectedFormat(new_confidence, format_name))
             else:  # new confidence is less than max
-                report_insufficient_confidence(format_name, matches[0])
+                report_insufficient_confidence(format_name, matches[0].name)
+
+    # TODO: This should be controlled by our priority logic.
+    # However, some datasets' detect() are currently broken,
+    # so that it is inevitable to introduce this.
+    # We must revisit this after fixing detect().
+    def _give_more_priority_to_with_subset_dirs(matches: List[DetectedFormat]):
+        for idx, match in enumerate(matches):
+            with_subset_dir_match = DetectedFormat(
+                match.confidence, match.name + "_with_subset_dirs"
+            )
+            if with_subset_dir_match in matches:
+                matches = matches.pop(idx)
+                return True
+        return False
+
+    while _give_more_priority_to_with_subset_dirs(matches):
+        continue
 
     return matches

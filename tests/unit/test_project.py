@@ -88,10 +88,7 @@ class ProjectTest(TestCase):
     def test_can_run_inference(self):
         class TestLauncher(Launcher):
             def launch(self, batch, stack: bool = True):
-                return [
-                    [Label(label=item.media.data[0, 0, 0])]
-                    for item in batch
-                ]
+                return [[Label(label=item.media.data[0, 0, 0])] for item in batch]
 
         expected = Dataset.from_iterable(
             [

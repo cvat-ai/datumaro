@@ -1,10 +1,20 @@
-from __future__ import annotations
+# Copyright (C) 2020-2023 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
 
-from typing import Dict, Iterable, Iterator, List, Optional, Tuple, Type, Union
+import logging as log
+from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type, Union
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.contexts.importer import _ImportFail
-from datumaro.components.dataset_base import CategoriesInfo, DatasetBase, DatasetItem, IDataset
+from datumaro.components.dataset_base import (
+    DEFAULT_SUBSET_NAME,
+    CategoriesInfo,
+    DatasetBase,
+    DatasetInfo,
+    DatasetItem,
+    IDataset,
+)
 from datumaro.components.dataset_item_storage import (
     DatasetItemStorage,
     DatasetItemStorageDatasetView,
@@ -13,14 +23,14 @@ from datumaro.components.dataset_item_storage import (
 from datumaro.components.errors import (
     CategoriesRedefinedError,
     ConflictingCategoriesError,
+    DatasetInfosRedefinedError,
     MediaTypeError,
+    NotAvailableError,
     RepeatedItemError,
 )
 from datumaro.components.media import MediaElement
 from datumaro.components.transformer import ItemTransform, Transform
-from datumaro.plugins.transforms import ProjectLabels
 from datumaro.util import is_method_redefined
-from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 __all__ = ["DatasetPatch", "DatasetStorage"]
 
@@ -29,13 +39,13 @@ class DatasetPatch:
     class DatasetPatchWrapper(DatasetItemStorageDatasetView):
         # The purpose of this class is to indicate that the input dataset is
         # a patch and autofill patch info in Exporter
-        def __init__(self, patch: DatasetPatch, parent: IDataset):
+        def __init__(self, patch: "DatasetPatch", parent: IDataset):
             super().__init__(
-                parent=patch.data,
-                infos={},
+                patch.data,
+                infos=parent.infos(),
                 categories=parent.categories(),
                 media_type=parent.media_type(),
-                ann_types=None,
+                ann_types=parent.ann_types(),
             )
             self.patch = patch
 
@@ -45,11 +55,13 @@ class DatasetPatch:
     def __init__(
         self,
         data: DatasetItemStorage,
+        infos: DatasetInfo,
         categories: CategoriesInfo,
         updated_items: Dict[Tuple[str, str], ItemStatus],
         updated_subsets: Dict[str, ItemStatus] = None,
     ):
         self.data = data
+        self.infos = infos
         self.categories = categories
         self.updated_items = updated_items
         self._updated_subsets = updated_subsets
@@ -67,18 +79,67 @@ class DatasetPatch:
         return __class__.DatasetPatchWrapper(self, parent)
 
 
+class _StackedTransform(Transform):
+    def __init__(self, source: IDataset, transforms: List[Transform]):
+        super().__init__(source)
+
+        self.is_local = True
+        self.transforms: List[Transform] = []
+        self.malformed_transform_indices: Dict[int, Exception] = {}
+        for idx, transform in enumerate(transforms):
+            try:
+                source = transform[0](source, *transform[1], **transform[2])
+            except Exception as e:
+                self.malformed_transform_indices[idx] = e
+
+            self.transforms.append(source)
+
+            if self.is_local and not isinstance(source, ItemTransform):
+                self.is_local = False
+
+    def transform_item(self, item: DatasetItem) -> DatasetItem:
+        for t in self.transforms:
+            if item is None:
+                break
+            item = t.transform_item(item)
+        return item
+
+    def __iter__(self) -> Iterator[DatasetItem]:
+        yield from self.transforms[-1]
+
+    def infos(self) -> DatasetInfo:
+        return self.transforms[-1].infos()
+
+    def categories(self) -> CategoriesInfo:
+        return self.transforms[-1].categories()
+
+    def media_type(self) -> Type[MediaElement]:
+        return self.transforms[-1].media_type()
+
+    def ann_types(self) -> Set[AnnotationType]:
+        return self.transforms[-1].ann_types()
+
+
 class DatasetStorage(IDataset):
     def __init__(
         self,
-        source: Union[IDataset, DatasetItemStorage] = None,
+        source: Union[IDataset, DatasetItemStorage],
+        infos: Optional[DatasetInfo] = None,
         categories: Optional[CategoriesInfo] = None,
         media_type: Optional[Type[MediaElement]] = None,
+        ann_types: Optional[Set[AnnotationType]] = None,
     ):
         if source is None and categories is None:
             categories = {}
         elif isinstance(source, IDataset) and categories is not None:
             raise ValueError("Can't use both source and categories")
         self._categories = categories
+
+        if source is None and infos is None:
+            infos = {}
+        elif isinstance(source, IDataset) and infos is not None:
+            raise ValueError("Can't use both source and infos")
+        self._infos = infos
 
         if media_type:
             pass
@@ -87,7 +148,17 @@ class DatasetStorage(IDataset):
         else:
             raise ValueError("Media type must be provided for a dataset")
         assert issubclass(media_type, MediaElement)
+
         self._media_type = media_type
+
+        if ann_types:
+            pass
+        elif isinstance(source, IDataset) and source.ann_types():
+            ann_types = source.ann_types()
+        else:
+            ann_types = set()
+
+        self._ann_types = ann_types
 
         # Possible combinations:
         # 1. source + storage
@@ -117,7 +188,7 @@ class DatasetStorage(IDataset):
     def _is_unchanged_wrapper(self) -> bool:
         return self._source is not None and self._storage.is_empty() and not self._transforms
 
-    def init_cache(self):
+    def init_cache(self) -> None:
         if not self.is_cache_initialized():
             for _ in self._iter_init_cache():
                 pass
@@ -149,35 +220,6 @@ class DatasetStorage(IDataset):
         #
         # The patch is always applied on top of the source / transforms stack.
 
-        class _StackedTransform(Transform):
-            def __init__(self, source, transforms):
-                super().__init__(source)
-
-                self.is_local = True
-                self.transforms: List[Transform] = []
-                for transform in transforms:
-                    source = transform[0](source, *transform[1], **transform[2])
-                    self.transforms.append(source)
-
-                    if self.is_local and not isinstance(source, ItemTransform):
-                        self.is_local = False
-
-            def transform_item(self, item):
-                for t in self.transforms:
-                    if item is None:
-                        break
-                    item = t.transform_item(item)
-                return item
-
-            def __iter__(self):
-                yield from self.transforms[-1]
-
-            def categories(self):
-                return self.transforms[-1].categories()
-
-            def media_type(self):
-                return self.transforms[-1].media_type()
-
         def _update_status(item_id, new_status: ItemStatus):
             current_status = self._updated_items.get(item_id)
 
@@ -197,17 +239,22 @@ class DatasetStorage(IDataset):
             else:
                 assert False, "Unknown status %s" % new_status
 
+        def _add_ann_types(item: DatasetItem):
+            for ann in item.annotations:
+                if ann.type == AnnotationType.hash_key:
+                    continue
+                self._ann_types.add(ann.type)
+
         media_type = self._media_type
         patch = self._storage  # must be empty after transforming
         cache = DatasetItemStorage()
         source = self._source or DatasetItemStorageDatasetView(
-            parent=self._storage,
-            infos={},
+            self._storage,
+            infos=self._infos,
             categories=self._categories,
             media_type=media_type,
-            ann_types=None,
+            ann_types=self._ann_types,
         )
-
         transform = None
         old_ids = None
         if self._transforms:
@@ -220,7 +267,7 @@ class DatasetStorage(IDataset):
                 # A generic way to find modified items:
                 # Collect all the dataset original ids and compare
                 # with transform outputs.
-                # TODO: introduce Extractor.items() / .ids() to avoid extra
+                # TODO: introduce DatasetBase.items() / .ids() to avoid extra
                 # dataset traversals?
                 old_ids = set((item.id, item.subset) for item in source)
                 source = transform
@@ -230,6 +277,8 @@ class DatasetStorage(IDataset):
                 raise MediaTypeError(
                     "Transforms are not allowed to change media " "type of dataset items"
                 )
+
+            self._drop_malformed_transforms(transform.malformed_transform_indices)
 
         i = -1
         for i, item in enumerate(source):
@@ -275,6 +324,7 @@ class DatasetStorage(IDataset):
 
             cache.put(item)
             yield item
+            _add_ann_types(item)
 
         if i == -1:
             cache = patch
@@ -282,6 +332,7 @@ class DatasetStorage(IDataset):
                 if not self._flush_changes:
                     _update_status((item.id, item.subset), ItemStatus.added)
                 yield item
+                _add_ann_types(item)
         else:
             for item in patch:
                 if item in cache:  # already processed
@@ -290,6 +341,7 @@ class DatasetStorage(IDataset):
                     _update_status((item.id, item.subset), ItemStatus.added)
                 cache.put(item)
                 yield item
+                _add_ann_types(item)
 
         if not self._flush_changes and transform and not transform.is_local:
             # Mark removed items that were not produced by transforms
@@ -307,6 +359,13 @@ class DatasetStorage(IDataset):
         if source_cat is not None:
             # Don't need to override categories if already defined
             self._categories = source_cat
+
+        if transform:
+            source_infos = transform.infos()
+        else:
+            source_infos = source.infos()
+        if source_infos is not None:
+            self._infos = source_infos
 
         self._source = None
         self._transforms = []
@@ -327,17 +386,33 @@ class DatasetStorage(IDataset):
         elif self._source is not None:
             self.init_cache()
         return DatasetItemStorageDatasetView(
-            parent=self._storage,
-            infos={},
+            self._storage,
+            infos=self._infos,
             categories=self._categories,
             media_type=self._media_type,
-            ann_types=None,
+            ann_types=self._ann_types,
         )
 
     def __len__(self) -> int:
         if self._length is None:
             self.init_cache()
         return self._length
+
+    def infos(self) -> DatasetInfo:
+        if self.is_cache_initialized():
+            return self._infos
+        elif self._infos is not None:
+            return self._infos
+        elif any(is_method_redefined("infos", Transform, t[0]) for t in self._transforms):
+            self.init_cache()
+            return self._infos
+        else:
+            return self._source.infos()
+
+    def define_infos(self, infos: DatasetInfo):
+        if self._infos or self._source is not None:
+            raise DatasetInfosRedefinedError()
+        self._infos = infos
 
     def categories(self) -> CategoriesInfo:
         if self.is_cache_initialized():
@@ -358,12 +433,19 @@ class DatasetStorage(IDataset):
     def media_type(self) -> Type[MediaElement]:
         return self._media_type
 
-    def put(self, item: DatasetItem):
+    def ann_types(self) -> Set[AnnotationType]:
+        return self._ann_types
+
+    def put(self, item: DatasetItem) -> None:
         if item.media and not isinstance(item.media, self._media_type):
             raise MediaTypeError(
                 "Mismatching item media type '%s', "
                 "the dataset contains '%s' items." % (type(item.media), self._media_type)
             )
+
+        ann_types = set([ann.type for ann in item.annotations])
+        # hash_key can be included any task
+        ann_types.discard(AnnotationType.hash_key)
 
         is_new = self._storage.put(item)
 
@@ -374,16 +456,17 @@ class DatasetStorage(IDataset):
 
         if is_new and not self.is_cache_initialized():
             self._length = None
+            self._ann_types = set()
         if self._length is not None:
             self._length += is_new
 
-    def get(self, id, subset=None) -> Optional[DatasetItem]:
+    def get(self, id: str, subset: Optional[str] = None) -> Optional[DatasetItem]:
         id = str(id)
         subset = subset or DEFAULT_SUBSET_NAME
 
         item = self._storage.get(id, subset)
         if item is None and not self.is_cache_initialized():
-            if self._source.get.__func__ == DatasetBase.get or self._transforms:
+            if self._source.get.__func__ == DatasetBase.get:
                 # can be improved if IDataset is ABC
                 self.init_cache()
                 item = self._storage.get(id, subset)
@@ -393,7 +476,7 @@ class DatasetStorage(IDataset):
                     self._storage.put(item)
         return item
 
-    def remove(self, id, subset=None):
+    def remove(self, id: str, subset: Optional[str] = None) -> None:
         id = str(id)
         subset = subset or DEFAULT_SUBSET_NAME
 
@@ -403,18 +486,28 @@ class DatasetStorage(IDataset):
             self._updated_items[(id, subset)] = ItemStatus.removed
         if is_removed and not self.is_cache_initialized():
             self._length = None
+            self._ann_types = set()
         if self._length is not None:
             self._length -= is_removed
 
-    def get_subset(self, name):
+    def get_subset(self, name: str) -> IDataset:
         return self._merged().get_subset(name)
 
-    def subsets(self):
+    def subsets(self) -> Dict[str, IDataset]:
         # TODO: check if this can be optimized in case of transforms
         # and other cases
         return self._merged().subsets()
 
-    def transform(self, method: Type[Transform], *args, **kwargs):
+    def get_annotated_items(self) -> int:
+        return self._storage.get_annotated_items()
+
+    def get_annotations(self) -> int:
+        return self._storage.get_annotations()
+
+    def get_datasetitem_by_path(self, path: str) -> Optional[DatasetItem]:
+        return self._storage.get_datasetitem_by_path(path)
+
+    def transform(self, method: Type[Transform], *args, **kwargs) -> None:
         # Flush accumulated changes
         if not self._storage.is_empty():
             source = self._merged()
@@ -427,14 +520,18 @@ class DatasetStorage(IDataset):
             self._source = source
         self._transforms.append((method, args, kwargs))
 
+        if is_method_redefined("infos", Transform, method):
+            self._infos = None
+
         if is_method_redefined("categories", Transform, method):
             self._categories = None
         self._length = None
+        self._ann_types = set()
 
     def has_updated_items(self):
         return bool(self._transforms) or bool(self._updated_items)
 
-    def get_patch(self):
+    def get_patch(self) -> DatasetPatch:
         # Patch includes only added or modified items.
         # To find removed items, one needs to consult updated_items list.
         if self._transforms:
@@ -452,7 +549,9 @@ class DatasetStorage(IDataset):
             else:
                 patch.put(self._storage.get(item_id, subset))
 
-        return DatasetPatch(patch, self._categories, self._updated_items)
+        return DatasetPatch(
+            patch, infos=self._infos, categories=self._categories, updated_items=self._updated_items
+        )
 
     def flush_changes(self):
         self._updated_items = {}
@@ -472,6 +571,8 @@ class DatasetStorage(IDataset):
                 else:
                     self.put(source.data.get(*item_id))
         elif isinstance(source, IDataset):
+            from datumaro.plugins.transforms import ProjectLabels
+
             for item in ProjectLabels(
                 source, self.categories().get(AnnotationType.label, LabelCategories())
             ):
@@ -479,3 +580,179 @@ class DatasetStorage(IDataset):
         else:
             for item in source:
                 self.put(item)
+
+    def _drop_malformed_transforms(self, malformed_transform_indices: Dict[int, Exception]) -> None:
+        safe_transforms = []
+        for idx, transform in enumerate(self._transforms):
+            if idx in malformed_transform_indices:
+                log.error(
+                    f"Automatically drop {transform} from the transform stack "
+                    "because an error is raised. Therefore, the dataset will not be "
+                    "transformed by this transformation since it is dropped.",
+                    exc_info=malformed_transform_indices[idx],
+                )
+                continue
+
+            safe_transforms += [transform]
+
+        self._transforms = safe_transforms
+
+    def __getitem__(self, idx: int) -> DatasetItem:
+        try:
+            return self._storage[idx]
+        except IndexError:  # Data storage should be initialized
+            self.init_cache()
+            return self._storage[idx]
+
+
+class StreamSubset(IDataset):
+    def __init__(self, source: IDataset, subset: str) -> None:
+        if not source.is_stream:
+            raise ValueError("source should be a stream.")
+        self._source = source
+        self._subset = subset
+        self._length = None
+
+    def __iter__(self) -> Iterator[DatasetItem]:
+        for item in self._source:
+            if item.subset == self._subset:
+                yield item
+
+    def __len__(self) -> int:
+        if self._length is None:
+            self._length = sum(1 for _ in self)
+        return self._length
+
+    def subsets(self) -> Dict[str, IDataset]:
+        raise NotAvailableError("Cannot get subsets of the subset.")
+
+    def get_subset(self, name) -> IDataset:
+        raise NotAvailableError("Cannot get a subset of the subset.")
+
+    def infos(self) -> DatasetInfo:
+        return self._source.infos()
+
+    def categories(self) -> CategoriesInfo:
+        return self._source.categories()
+
+    def get(self, id: str, subset: Optional[str] = None) -> Optional[DatasetItem]:
+        raise NotAvailableError(
+            "Random access to the dataset item is not allowed in streaming. "
+            "You can access to the dataset item only by using its iterator."
+        )
+
+    def media_type(self) -> Type[MediaElement]:
+        return self._source.media_type()
+
+    def ann_types(self) -> Set[AnnotationType]:
+        return self._source.ann_types()
+
+    @property
+    def is_stream(self) -> bool:
+        return True
+
+
+class StreamDatasetStorage(DatasetStorage):
+    def __init__(
+        self,
+        source: IDataset,
+        infos: Optional[DatasetInfo] = None,
+        categories: Optional[CategoriesInfo] = None,
+        media_type: Optional[Type[MediaElement]] = None,
+        ann_types: Optional[Set[AnnotationType]] = None,
+    ):
+        if not source.is_stream:
+            raise ValueError("source should be a stream.")
+        self._subset_names = list(source.subsets().keys())
+        self._transform_ids_for_latest_subset_names = []
+        super().__init__(source, infos, categories, media_type, ann_types)
+
+    def is_cache_initialized(self) -> bool:
+        log.debug("This function has no effect on streaming.")
+        return True
+
+    def init_cache(self) -> None:
+        log.debug("This function has no effect on streaming.")
+        pass
+
+    @property
+    def stacked_transform(self) -> IDataset:
+        if self._transforms:
+            transform = _StackedTransform(self._source, self._transforms)
+            self._drop_malformed_transforms(transform.malformed_transform_indices)
+        else:
+            transform = self._source
+
+        self._flush_changes = True
+        return transform
+
+    def __iter__(self) -> Iterator[DatasetItem]:
+        for item in self.stacked_transform:
+            yield item
+
+            for ann in item.annotations:
+                if ann.type == AnnotationType.hash_key:
+                    continue
+                self._ann_types.add(ann.type)
+
+    def __len__(self) -> int:
+        if self._length is None:
+            self._length = len(self._source)
+        return self._length
+
+    def put(self, item: DatasetItem) -> None:
+        raise NotAvailableError("Drop-in replacement is not allowed in streaming.")
+
+    def get(self, id: str, subset: Optional[str] = None) -> Optional[DatasetItem]:
+        raise NotAvailableError(
+            "Random access to the dataset item is not allowed in streaming. "
+            "You can access to the dataset item only by using its iterator."
+        )
+
+    def remove(self, id: str, subset: Optional[str] = None) -> None:
+        raise NotAvailableError("Drop-in removal is not allowed in streaming.")
+
+    def get_subset(self, name: str) -> IDataset:
+        return self.subsets()[name]
+
+    @property
+    def subset_names(self):
+        if self._transform_ids_for_latest_subset_names != [id(t) for t in self._transforms]:
+            self._subset_names = {item.subset for item in self}
+            self._transform_ids_for_latest_subset_names = [id(t) for t in self._transforms]
+
+        return self._subset_names
+
+    def subsets(self) -> Dict[str, IDataset]:
+        return {subset: StreamSubset(self, subset) for subset in self.subset_names}
+
+    def transform(self, method: Type[Transform], *args, **kwargs) -> None:
+        super().transform(method, *args, **kwargs)
+
+    def get_annotated_items(self) -> int:
+        return super().get_annotated_items()
+
+    def get_annotations(self) -> int:
+        return super().get_annotations()
+
+    def get_datasetitem_by_path(self, path: str) -> Optional[DatasetItem]:
+        raise NotAvailableError("Get dataset item by path is not allowed in streaming.")
+
+    def get_patch(self):
+        raise NotAvailableError("Get patch is not allowed in streaming.")
+
+    def flush_changes(self):
+        raise NotAvailableError("Flush changes is not allowed in streaming.")
+
+    def update(self, source: Union[DatasetPatch, IDataset, Iterable[DatasetItem]]):
+        raise NotAvailableError("Update is not allowed in streaming.")
+
+    def infos(self) -> DatasetInfo:
+        return self.stacked_transform.infos()
+
+    def categories(self) -> CategoriesInfo:
+        return self.stacked_transform.categories()
+
+    @property
+    def is_stream(self) -> bool:
+        return True

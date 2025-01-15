@@ -15,8 +15,8 @@ from datumaro.components.annotation import (
     LabelCategories,
     Mask,
     RleMask,
+    Shape,
 )
-from datumaro.components.annotation import _Shape as Shape
 from datumaro.util.mask_tools import mask_to_rle
 
 BboxCoords = Tuple[float, float, float, float]

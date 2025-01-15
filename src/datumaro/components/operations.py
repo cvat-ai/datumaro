@@ -724,6 +724,17 @@ class IntersectMerge(MergingStrategy):
             elif t is AnnotationType.skeleton:
                 # to do: add skeletons merge
                 return _make(ImageAnnotationMerger, **kwargs)
+            # TODO: remove later
+            elif (
+                t is AnnotationType.unknown
+                or t is AnnotationType.ellipse
+                or t is AnnotationType.hash_key
+                or t is AnnotationType.feature_vector
+                or t is AnnotationType.tabular
+                or t is AnnotationType.rotated_bbox
+                or t is AnnotationType.cuboid_2d
+            ):
+                return None
             else:
                 raise NotImplementedError("Type %s is not supported" % t)
 

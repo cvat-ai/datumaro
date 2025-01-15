@@ -246,6 +246,13 @@ class TestOperations(TestCase):
                 "super_resolution_annotation": {"count": 0},
                 "depth_annotation": {"count": 0},
                 "skeleton": {"count": 0},
+                "cuboid_2d": {"count": 0},
+                "ellipse": {"count": 0},
+                "feature_vector": {"count": 0},
+                "hash_key": {"count": 0},
+                "rotated_bbox": {"count": 0},
+                "tabular": {"count": 0},
+                "unknown": {"count": 0},
             },
             "annotations": {
                 "labels": {
@@ -302,6 +309,7 @@ class TestOperations(TestCase):
         }
 
         actual = compute_ann_statistics(dataset)
+        self.maxDiff = None
 
         self.assertEqual(expected, actual)
 
@@ -346,6 +354,13 @@ class TestOperations(TestCase):
                 "super_resolution_annotation": {"count": 0},
                 "depth_annotation": {"count": 0},
                 "skeleton": {"count": 0},
+                "cuboid_2d": {"count": 0},
+                "ellipse": {"count": 0},
+                "feature_vector": {"count": 0},
+                "hash_key": {"count": 0},
+                "rotated_bbox": {"count": 0},
+                "tabular": {"count": 0},
+                "unknown": {"count": 0},
             },
             "annotations": {
                 "labels": {
@@ -372,6 +387,7 @@ class TestOperations(TestCase):
         }
 
         actual = compute_ann_statistics(dataset)
+        self.maxDiff = None
 
         self.assertEqual(expected, actual)
 

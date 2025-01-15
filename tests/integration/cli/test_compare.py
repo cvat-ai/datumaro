@@ -18,9 +18,9 @@ from datumaro.components.annotation import (
     Polygon,
     PolyLine,
 )
+from datumaro.components.comparator import DistanceComparator
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image
-from datumaro.components.operations import DistanceComparator
 from datumaro.components.project import Dataset
 
 from tests.requirements import Requirements, mark_requirement

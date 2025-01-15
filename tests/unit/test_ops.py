@@ -16,6 +16,7 @@ from datumaro.components.annotation import (
     Polygon,
     PolyLine,
 )
+from datumaro.components.annotations import match_segments_pair
 from datumaro.components.dataset import Dataset
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.media import Image, MultiframeImage, PointCloud
@@ -28,7 +29,6 @@ from datumaro.components.operations import (
     compute_ann_statistics,
     compute_image_statistics,
     find_unique_images,
-    match_segments,
     mean_std,
 )
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
@@ -438,7 +438,7 @@ class TestAnnotationMatching(TestCase):
             Bbox(0, 0, 4, 4, label=1, id=1),
         ]
 
-        matches, mismatches, a_extra, b_extra = match_segments(anns1, anns2, dist_thresh=0.5)
+        matches, mismatches, a_extra, b_extra = match_segments_pair(anns1, anns2, dist_thresh=0.5)
         assert sorted(mismatches, key=lambda e: e[0].id) == [
             (anns1[0], anns2[1]),
             (anns1[1], anns2[0]),
@@ -469,7 +469,7 @@ class TestAnnotationMatching(TestCase):
             Bbox(0, 6, 4, 4, label=1, id=5),
         ]
 
-        matches, mismatches, a_extra, b_extra = match_segments(anns1, anns2, dist_thresh=0.5)
+        matches, mismatches, a_extra, b_extra = match_segments_pair(anns1, anns2, dist_thresh=0.5)
         assert sorted(mismatches, key=lambda e: e[0].id) == [
             (anns1[0], anns2[1]),
             (anns1[1], anns2[0]),

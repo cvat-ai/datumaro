@@ -4,41 +4,36 @@
 # SPDX-License-Identifier: MIT
 
 import hashlib
-import itertools
 import logging as log
 from collections import OrderedDict
 from copy import deepcopy
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 from unittest import TestCase
 
 import attr
 import cv2
 import numpy as np
 from attr import attrib, attrs
-from scipy.optimize import linear_sum_assignment
 
 from datumaro.components.annotation import (
     Annotation,
     AnnotationType,
-    Bbox,
-    Label,
     LabelCategories,
     MaskCategories,
     Points,
     PointsCategories,
+)
+from datumaro.components.annotations import LineMatcher, PointsMatcher, match_segments_pair
+from datumaro.components.annotations.merger import (
+    BboxMerger,
+    CaptionsMerger,
+    Cuboid3dMerger,
+    ImageAnnotationMerger,
+    LabelMerger,
+    LineMerger,
+    MaskMerger,
+    PointsMerger,
+    PolygonMerger,
 )
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.dataset import Dataset, IDataset
@@ -49,7 +44,6 @@ from datumaro.components.errors import (
     ConflictingCategoriesError,
     DatasetMergeError,
     FailedAttrVotingError,
-    FailedLabelVotingError,
     MediaTypeError,
     MismatchingAttributesError,
     MismatchingImageInfoError,
@@ -62,15 +56,7 @@ from datumaro.components.errors import (
 )
 from datumaro.components.media import Image, MediaElement, MultiframeImage, PointCloud, Video
 from datumaro.util import filter_dict, find
-from datumaro.util.annotation_util import (
-    OKS,
-    approximate_line,
-    bbox_iou,
-    find_instances,
-    max_bbox,
-    mean_bbox,
-    segment_iou,
-)
+from datumaro.util.annotation_util import find_instances, max_bbox
 from datumaro.util.attrs_util import default_if_none, ensure_cls
 
 
@@ -909,7 +895,7 @@ class IntersectMerge(MergingStrategy):
             self._dataset_map[dataset_id][0].categories()[AnnotationType.label].items[label_id].name
         )
 
-    def _get_any_label_name(self, ann, label_id):
+    def get_any_label_name(self, ann, label_id):
         if label_id is None:
             return None
         try:
@@ -927,425 +913,6 @@ class IntersectMerge(MergingStrategy):
                         "label '%s', available labels %s"
                         % (label, [i.name for i in self._categories[AnnotationType.label].items])
                     )
-
-
-@attrs(kw_only=True)
-class AnnotationMatcher:
-    _context: Optional[IntersectMerge] = attrib(default=None)
-
-    def match_annotations(self, sources):
-        raise NotImplementedError()
-
-
-@attrs
-class LabelMatcher(AnnotationMatcher):
-    def distance(self, a, b):
-        a_label = self._context._get_any_label_name(a, a.label)
-        b_label = self._context._get_any_label_name(b, b.label)
-        return a_label == b_label
-
-    def match_annotations(self, sources):
-        return [sum(sources, [])]
-
-
-@attrs(kw_only=True)
-class _ShapeMatcher(AnnotationMatcher):
-    pairwise_dist = attrib(converter=float, default=0.9)
-    cluster_dist = attrib(converter=float, default=-1.0)
-
-    def match_annotations(self, sources):
-        distance = self.distance
-        label_matcher = self.label_matcher
-        pairwise_dist = self.pairwise_dist
-        cluster_dist = self.cluster_dist
-
-        if cluster_dist < 0:
-            cluster_dist = pairwise_dist
-
-        id_segm = {id(a): (a, id(s)) for s in sources for a in s}
-
-        def _is_close_enough(cluster, extra_id):
-            # check if whole cluster IoU will not be broken
-            # when this segment is added
-            b = id_segm[extra_id][0]
-            for a_id in cluster:
-                a = id_segm[a_id][0]
-                if distance(a, b) < cluster_dist:
-                    return False
-            return True
-
-        def _has_same_source(cluster, extra_id):
-            b = id_segm[extra_id][1]
-            for a_id in cluster:
-                a = id_segm[a_id][1]
-                if a == b:
-                    return True
-            return False
-
-        # match segments in sources, pairwise
-        adjacent = {i: [] for i in id_segm}  # id(sgm) -> [id(adj_sgm1), ...]
-        for a_idx, src_a in enumerate(sources):
-            for src_b in sources[a_idx + 1 :]:
-                matches, _, _, _ = match_segments(
-                    src_a,
-                    src_b,
-                    dist_thresh=pairwise_dist,
-                    distance=distance,
-                    label_matcher=label_matcher,
-                )
-                for a, b in matches:
-                    adjacent[id(a)].append(id(b))
-
-        # join all segments into matching clusters
-        clusters = []
-        visited = set()
-        for cluster_idx in adjacent:
-            if cluster_idx in visited:
-                continue
-
-            cluster = set()
-            to_visit = {cluster_idx}
-            while to_visit:
-                c = to_visit.pop()
-                cluster.add(c)
-                visited.add(c)
-
-                for i in adjacent[c]:
-                    if i in visited:
-                        continue
-                    if 0 < cluster_dist and not _is_close_enough(cluster, i):
-                        continue
-                    if _has_same_source(cluster, i):
-                        continue
-
-                    to_visit.add(i)
-
-            clusters.append([id_segm[i][0] for i in cluster])
-
-        return clusters
-
-    def distance(self, a, b):
-        return segment_iou(a, b)
-
-    def label_matcher(self, a, b):
-        a_label = self._context._get_any_label_name(a, a.label)
-        b_label = self._context._get_any_label_name(b, b.label)
-        return a_label == b_label
-
-
-@attrs
-class BboxMatcher(_ShapeMatcher):
-    pass
-
-
-@attrs
-class PolygonMatcher(_ShapeMatcher):
-    pass
-
-
-@attrs
-class MaskMatcher(_ShapeMatcher):
-    pass
-
-
-@attrs(kw_only=True)
-class PointsMatcher(_ShapeMatcher):
-    sigma: Optional[list] = attrib(default=None)
-    instance_map = attrib(converter=dict)
-
-    def distance(self, a, b):
-        a_bbox = self.instance_map[id(a)][1]
-        b_bbox = self.instance_map[id(b)][1]
-        if bbox_iou(a_bbox, b_bbox) <= 0:
-            return 0
-        bbox = mean_bbox([a_bbox, b_bbox])
-        return OKS(a, b, sigma=self.sigma, bbox=bbox)
-
-
-@attrs
-class LineMatcher(_ShapeMatcher):
-    def distance(self, a, b):
-        # Compute inter-line area by using the Trapezoid formulae
-        # https://en.wikipedia.org/wiki/Trapezoidal_rule
-        # Normalize by common bbox and get the bbox fill ratio
-        # Call this ratio the "distance"
-
-        # The box area is an early-exit filter for non-intersected figures
-        bbox = max_bbox([a, b])
-        box_area = bbox[2] * bbox[3]
-        if not box_area:
-            return 1
-
-        def _approx(line, segments):
-            if len(line) // 2 != segments + 1:
-                line = approximate_line(line, segments=segments)
-            return np.reshape(line, (-1, 2))
-
-        segments = max(len(a.points) // 2, len(b.points) // 2, 5) - 1
-
-        a = _approx(a.points, segments)
-        b = _approx(b.points, segments)
-        dists = np.linalg.norm(a - b, axis=1)
-        dists = dists[:-1] + dists[1:]
-        a_steps = np.linalg.norm(a[1:] - a[:-1], axis=1)
-        b_steps = np.linalg.norm(b[1:] - b[:-1], axis=1)
-
-        # For the common bbox we can't use
-        # - the AABB (axis-alinged bbox) of a point set
-        # - the exterior of a point set
-        # - the convex hull of a point set
-        # because these soultions won't be correctly normalized.
-        # The lines can have multiple self-intersections, which can give
-        # the inter-line area more than internal area of the options above,
-        # producing the value of the distance outside of the [0; 1] range.
-        #
-        # Instead, we can compute the upper boundary for the inter-line
-        # area based on the maximum point distance and line length.
-        max_area = np.max(dists) * max(np.sum(a_steps), np.sum(b_steps))
-
-        area = np.dot(dists, a_steps + b_steps) * 0.5 * 0.5 / max(max_area, 1.0)
-
-        return abs(1 - area)
-
-
-@attrs
-class CaptionsMatcher(AnnotationMatcher):
-    def match_annotations(self, sources):
-        raise NotImplementedError()
-
-
-@attrs
-class Cuboid3dMatcher(_ShapeMatcher):
-    def distance(self, a, b):
-        raise NotImplementedError()
-
-
-@attrs
-class ImageAnnotationMatcher(AnnotationMatcher):
-    def match_annotations(self, sources):
-        raise NotImplementedError()
-
-
-@attrs(kw_only=True)
-class AnnotationMerger:
-    def merge_clusters(self, clusters):
-        raise NotImplementedError()
-
-
-@attrs(kw_only=True)
-class LabelMerger(AnnotationMerger, LabelMatcher):
-    quorum = attrib(converter=int, default=0)
-
-    def merge_clusters(self, clusters):
-        assert len(clusters) <= 1
-        if len(clusters) == 0:
-            return []
-
-        votes = {}  # label -> score
-        for ann in clusters[0]:
-            label = self._context._get_src_label_name(ann, ann.label)
-            votes[label] = 1 + votes.get(label, 0)
-
-        merged = []
-        for label, count in votes.items():
-            if count < self.quorum:
-                sources = set(
-                    self.get_ann_source(id(a))
-                    for a in clusters[0]
-                    if label not in [self._context._get_src_label_name(l, l.label) for l in a]
-                )
-                sources = [self._context._dataset_map[s][1] for s in sources]
-                self._context.add_item_error(FailedLabelVotingError, votes, sources=sources)
-                continue
-
-            merged.append(
-                Label(
-                    self._context._get_label_id(label),
-                    attributes={"score": count / len(self._context._dataset_map)},
-                )
-            )
-
-        return merged
-
-
-@attrs(kw_only=True)
-class _ShapeMerger(AnnotationMerger, _ShapeMatcher):
-    quorum = attrib(converter=int, default=0)
-
-    def merge_clusters(self, clusters):
-        return list(map(self.merge_cluster, clusters))
-
-    def find_cluster_label(self, cluster):
-        votes = {}
-        for s in cluster:
-            label = self._context._get_src_label_name(s, s.label)
-            state = votes.setdefault(label, [0, 0])
-            state[0] += s.attributes.get("score", 1.0)
-            state[1] += 1
-
-        label, (score, count) = max(votes.items(), key=lambda e: e[1][0])
-        if count < self.quorum:
-            self._context.add_item_error(FailedLabelVotingError, votes)
-            label = None
-        score = score / len(self._context._dataset_map)
-        label = self._context._get_label_id(label)
-        return label, score
-
-    @staticmethod
-    def _merge_cluster_shape_mean_box_nearest(cluster):
-        mbbox = Bbox(*mean_bbox(cluster))
-        dist = (segment_iou(mbbox, s) for s in cluster)
-        nearest_pos, _ = max(enumerate(dist), key=lambda e: e[1])
-        return cluster[nearest_pos]
-
-    def merge_cluster_shape(self, cluster):
-        shape = self._merge_cluster_shape_mean_box_nearest(cluster)
-        shape_score = sum(max(0, self.distance(shape, s)) for s in cluster) / len(cluster)
-        return shape, shape_score
-
-    def merge_cluster(self, cluster):
-        label, label_score = self.find_cluster_label(cluster)
-        shape, shape_score = self.merge_cluster_shape(cluster)
-
-        shape.z_order = max(cluster, key=lambda a: a.z_order).z_order
-        shape.label = label
-        shape.attributes["score"] = label_score * shape_score if label is not None else shape_score
-
-        return shape
-
-
-@attrs
-class BboxMerger(_ShapeMerger, BboxMatcher):
-    pass
-
-
-@attrs
-class PolygonMerger(_ShapeMerger, PolygonMatcher):
-    pass
-
-
-@attrs
-class MaskMerger(_ShapeMerger, MaskMatcher):
-    pass
-
-
-@attrs
-class PointsMerger(_ShapeMerger, PointsMatcher):
-    pass
-
-
-@attrs
-class LineMerger(_ShapeMerger, LineMatcher):
-    pass
-
-
-@attrs
-class CaptionsMerger(AnnotationMerger, CaptionsMatcher):
-    pass
-
-
-@attrs
-class Cuboid3dMerger(_ShapeMerger, Cuboid3dMatcher):
-    @staticmethod
-    def _merge_cluster_shape_mean_box_nearest(cluster):
-        raise NotImplementedError()
-        # mbbox = Bbox(*mean_cuboid(cluster))
-        # dist = (segment_iou(mbbox, s) for s in cluster)
-        # nearest_pos, _ = max(enumerate(dist), key=lambda e: e[1])
-        # return cluster[nearest_pos]
-
-    def merge_cluster(self, cluster):
-        label, label_score = self.find_cluster_label(cluster)
-        shape, shape_score = self.merge_cluster_shape(cluster)
-
-        shape.label = label
-        shape.attributes["score"] = label_score * shape_score if label is not None else shape_score
-
-        return shape
-
-
-@attrs
-class ImageAnnotationMerger(AnnotationMerger, ImageAnnotationMatcher):
-    pass
-
-
-_AT1 = TypeVar("_AT1")
-_AT2 = TypeVar("_AT2")
-
-
-def match_segments(
-    a_segms: Sequence[_AT1],
-    b_segms: Sequence[_AT2],
-    distance: Callable[[_AT1, _AT2], float] = segment_iou,
-    dist_thresh: float = 1.0,
-    label_matcher: Callable[[_AT1, _AT2], bool] = lambda a, b: a.label == b.label,
-) -> Tuple[List[Tuple[_AT1, _AT2]], List[Tuple[_AT1, _AT2]], List[_AT1], List[_AT2]]:
-    """
-    Finds the best matching annotations using the provided distance function.
-    If the annotations match by distance, but have different labels,
-    they are considered mismatching.
-
-    Parameters:
-    - distance: func(a_ann, b_ann) -> float [0; 1] - a function that estimates annotation
-        similarity, with 0 meaning 'not similar' and 1 - 'exactly the same'.
-    - dist_thresh: a value in the range [0; 1], minimal distance between a pair of annotations
-        to be considered for matching
-
-
-    Returns (matching, mismatching, a_unmatched, b_unmatched), where:
-    - 'matching' and 'mismatching' - lists of (a_ann, b_ann) tuples
-    - 'a_unmatched' and 'b_unmatched' - lists of corresponding unmatched annotations
-    """
-
-    assert callable(distance), distance
-    assert callable(label_matcher), label_matcher
-
-    max_anns = max(len(a_segms), len(b_segms))
-    distances = np.array(
-        [
-            [
-                1 - distance(a, b) if a is not None and b is not None else 1
-                for b, _ in itertools.zip_longest(b_segms, range(max_anns), fillvalue=None)
-            ]
-            for a, _ in itertools.zip_longest(a_segms, range(max_anns), fillvalue=None)
-        ]
-    )
-    distances[distances > 1 - dist_thresh] = 1
-
-    if a_segms and b_segms:
-        a_matches, b_matches = linear_sum_assignment(distances)
-    else:
-        a_matches = []
-        b_matches = []
-
-    # matches: boxes we succeeded to match completely
-    # mispred: boxes we succeeded to match, having label mismatch
-    matches = []
-    mismatches = []
-    # *_umatched: boxes of (*) we failed to match
-    a_unmatched = []
-    b_unmatched = []
-
-    for a_idx, b_idx in zip(a_matches, b_matches):
-        dist = distances[a_idx, b_idx]
-        if dist > 1 - dist_thresh or dist == 1:
-            if a_idx < len(a_segms):
-                a_unmatched.append(a_segms[a_idx])
-            if b_idx < len(b_segms):
-                b_unmatched.append(b_segms[b_idx])
-        else:
-            a_ann = a_segms[a_idx]
-            b_ann = b_segms[b_idx]
-            if label_matcher(a_ann, b_ann):
-                matches.append((a_ann, b_ann))
-            else:
-                mismatches.append((a_ann, b_ann))
-
-    if not len(a_matches) and not len(b_matches):
-        a_unmatched = list(a_segms)
-        b_unmatched = list(b_segms)
-
-    return matches, mismatches, a_unmatched, b_unmatched
 
 
 def mean_std(dataset: IDataset):
@@ -1695,7 +1262,7 @@ class DistanceComparator:
     def _match_segments(self, t, item_a, item_b):
         a_boxes = self._get_ann_type(t, item_a)
         b_boxes = self._get_ann_type(t, item_b)
-        return match_segments(a_boxes, b_boxes, dist_thresh=self.iou_threshold)
+        return match_segments_pair(a_boxes, b_boxes, dist_thresh=self.iou_threshold)
 
     def match_polygons(self, item_a, item_b):
         return self._match_segments(AnnotationType.polygon, item_a, item_b)
@@ -1719,7 +1286,7 @@ class DistanceComparator:
                     instance_map[id(ann)] = [inst, inst_bbox]
         matcher = PointsMatcher(instance_map=instance_map)
 
-        return match_segments(
+        return match_segments_pair(
             a_points, b_points, dist_thresh=self.iou_threshold, distance=matcher.distance
         )
 
@@ -1729,7 +1296,7 @@ class DistanceComparator:
 
         matcher = LineMatcher()
 
-        return match_segments(
+        return match_segments_pair(
             a_lines, b_lines, dist_thresh=self.iou_threshold, distance=matcher.distance
         )
 

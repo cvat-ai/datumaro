@@ -1,21 +1,19 @@
-# Copyright (C) 2019-2022 Intel Corporation
+# Copyright (C) 2019-2023 Intel Corporation
 # Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import warnings
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Type, TypeVar, Union, cast
 
 import attr
-import numpy as np
 from attr import attrs, field
 
-from datumaro.components.annotation import Annotation, AnnotationType, Categories
+from datumaro.components.annotation import Annotation, Annotations, AnnotationType, Categories
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.contexts.importer import ImportContext, NullImportContext
-from datumaro.components.media import Image, MediaElement, PointCloud
+from datumaro.components.media import Image, MediaElement
 from datumaro.util.attrs_util import default_if_none, not_empty
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
@@ -32,7 +30,7 @@ class DatasetItem:
         default=None, validator=attr.validators.optional(attr.validators.instance_of(MediaElement))
     )
 
-    annotations: List[Annotation] = field(factory=list, validator=default_if_none(list))
+    annotations: Annotations = field(factory=Annotations, validator=default_if_none(Annotations))
 
     attributes: Dict[str, Any] = field(factory=dict, validator=default_if_none(dict))
 
@@ -51,107 +49,13 @@ class DatasetItem:
         media: Union[str, MediaElement, None] = None,
         annotations: Optional[List[Annotation]] = None,
         attributes: Dict[str, Any] = None,
-        image=None,
-        point_cloud=None,
-        related_images=None,
     ):
-        if image is not None:
-            warnings.warn(
-                "'image' is deprecated and will be " "removed in future. Use 'media' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if isinstance(image, str):
-                image = Image(path=image)
-            elif isinstance(image, np.ndarray) or callable(image):
-                image = Image(data=image)
-            assert isinstance(image, Image)
-            media = image
-        elif point_cloud is not None:
-            warnings.warn(
-                "'point_cloud' is deprecated and will be "
-                "removed in future. Use 'media' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if related_images is not None:
-                warnings.warn(
-                    "'related_images' is deprecated and will be "
-                    "removed in future. Use 'media' instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-            if isinstance(point_cloud, str):
-                point_cloud = PointCloud(path=point_cloud, extra_images=related_images)
-            assert isinstance(point_cloud, PointCloud)
-            media = point_cloud
-
         self.__attrs_init__(
             id=id, subset=subset, media=media, annotations=annotations, attributes=attributes
         )
 
-    # Deprecated. Provided for backward compatibility.
-    @property
-    def image(self) -> Optional[Image]:
-        warnings.warn(
-            "'DatasetItem.image' is deprecated and will be "
-            "removed in future. Use '.media' and '.media_as()' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if not isinstance(self.media, Image):
-            return None
-        return self.media_as(Image)
 
-    # Deprecated. Provided for backward compatibility.
-    @property
-    def point_cloud(self) -> Optional[str]:
-        warnings.warn(
-            "'DatasetItem.point_cloud' is deprecated and will be "
-            "removed in future. Use '.media' and '.media_as()' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if not isinstance(self.media, PointCloud):
-            return None
-        return self.media_as(PointCloud).path
-
-    # Deprecated. Provided for backward compatibility.
-    @property
-    def related_images(self) -> List[Image]:
-        warnings.warn(
-            "'DatasetItem.related_images' is deprecated and will be "
-            "removed in future. Use '.media' and '.media_as()' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if not isinstance(self.media, PointCloud):
-            return []
-        return self.media_as(PointCloud).extra_images
-
-    # Deprecated. Provided for backward compatibility.
-    @property
-    def has_image(self):
-        warnings.warn(
-            "'DatasetItem.has_image' is deprecated and will be "
-            "removed in future. Use '.media' and '.media_as()' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return isinstance(self.media, Image)
-
-    # Deprecated. Provided for backward compatibility.
-    @property
-    def has_point_cloud(self):
-        warnings.warn(
-            "'DatasetItem.has_point_cloud' is deprecated and will be "
-            "removed in future. Use '.media' and '.media_as()' instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return isinstance(self.media, PointCloud)
-
-
+DatasetInfo = Dict[str, Any]
 CategoriesInfo = Dict[AnnotationType, Categories]
 
 
@@ -177,6 +81,12 @@ class IDataset:
     def get_subset(self, name) -> IDataset:
         raise NotImplementedError()
 
+    def infos(self) -> DatasetInfo:
+        """
+        Returns meta-info of dataset.
+        """
+        raise NotImplementedError()
+
     def categories(self) -> CategoriesInfo:
         """
         Returns metainfo about dataset labels.
@@ -199,11 +109,26 @@ class IDataset:
         """
         raise NotImplementedError()
 
+    def ann_types(self) -> List[AnnotationType]:
+        """
+        Returns available task type from dataset annotation types.
+        """
+        raise NotImplementedError()
+
+    @property
+    def is_stream(self) -> bool:
+        """Boolean indicating whether the dataset is a stream
+
+        If the dataset is a stream, the dataset item is generated on demand from its iterator.
+        """
+        return False
+
 
 class _DatasetBase(IDataset):
     def __init__(self, *, length: Optional[int] = None, subsets: Optional[Sequence[str]] = None):
         self._length = length
         self._subsets = subsets
+        self._ann_types = set()
 
     def _init_cache(self):
         subsets = set()
@@ -227,7 +152,7 @@ class _DatasetBase(IDataset):
             self._init_cache()
         return {name or DEFAULT_SUBSET_NAME: self.get_subset(name) for name in self._subsets}
 
-    def get_subset(self, name):
+    def get_subset(self, name: str) -> IDataset:
         if self._subsets is None:
             self._init_cache()
         if name in self._subsets:
@@ -250,18 +175,27 @@ class _DatasetBase(IDataset):
             def __iter__(_):
                 return filter(pred, iter(self))
 
+            def infos(_):
+                return self.infos()
+
             def categories(_):
                 return self.categories()
 
             def media_type(_):
                 return self.media_type()
 
+            def ann_types(_):
+                return self.ann_types()
+
         return _DatasetFilter()
 
-    def categories(self):
+    def infos(self) -> DatasetInfo:
         return {}
 
-    def get(self, id, subset=None):
+    def categories(self) -> CategoriesInfo:
+        return {}
+
+    def get(self, id, subset=None) -> Optional[DatasetItem]:
         subset = subset or DEFAULT_SUBSET_NAME
         for item in self:
             if item.id == id and item.subset == subset:
@@ -272,7 +206,7 @@ class _DatasetBase(IDataset):
 class DatasetBase(_DatasetBase, CliPlugin):
     """
     A base class for user-defined and built-in extractors.
-    Should be used in cases, where SourceExtractor is not enough,
+    Should be used in cases, where SubsetBase is not enough,
     or its use makes problems with performance, implementation etc.
     """
 
@@ -282,15 +216,20 @@ class DatasetBase(_DatasetBase, CliPlugin):
         length: Optional[int] = None,
         subsets: Optional[Sequence[str]] = None,
         media_type: Type[MediaElement] = Image,
+        ann_types: Optional[List[AnnotationType]] = None,
         ctx: Optional[ImportContext] = None,
     ):
         super().__init__(length=length, subsets=subsets)
 
         self._ctx: ImportContext = ctx or NullImportContext()
         self._media_type = media_type
+        self._ann_types = ann_types if ann_types else set()
 
     def media_type(self):
         return self._media_type
+
+    def ann_types(self):
+        return self._ann_types
 
 
 class SubsetBase(DatasetBase):
@@ -305,13 +244,24 @@ class SubsetBase(DatasetBase):
         length: Optional[int] = None,
         subset: Optional[str] = None,
         media_type: Type[MediaElement] = Image,
+        ann_types: List[AnnotationType] = None,
         ctx: Optional[ImportContext] = None,
     ):
         self._subset = subset or DEFAULT_SUBSET_NAME
-        super().__init__(length=length, subsets=[self._subset], media_type=media_type, ctx=ctx)
+        super().__init__(
+            length=length,
+            subsets=[self._subset],
+            media_type=media_type,
+            ann_types=ann_types,
+            ctx=ctx,
+        )
 
+        self._infos = {}
         self._categories = {}
         self._items = []
+
+    def infos(self):
+        return self._infos
 
     def categories(self):
         return self._categories
@@ -325,3 +275,8 @@ class SubsetBase(DatasetBase):
     def get(self, id, subset=None):
         assert subset == self._subset, "%s != %s" % (subset, self._subset)
         return super().get(id, subset or self._subset)
+
+    @property
+    def subset(self) -> str:
+        """Subset name of this instance."""
+        return self._subset

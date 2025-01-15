@@ -30,7 +30,13 @@ class DatasetPatch:
         # The purpose of this class is to indicate that the input dataset is
         # a patch and autofill patch info in Exporter
         def __init__(self, patch: DatasetPatch, parent: IDataset):
-            super().__init__(patch.data, parent.categories(), parent.media_type())
+            super().__init__(
+                parent=patch.data,
+                infos={},
+                categories=parent.categories(),
+                media_type=parent.media_type(),
+                ann_types=None,
+            )
             self.patch = patch
 
         def subsets(self):
@@ -195,7 +201,11 @@ class DatasetStorage(IDataset):
         patch = self._storage  # must be empty after transforming
         cache = DatasetItemStorage()
         source = self._source or DatasetItemStorageDatasetView(
-            self._storage, categories=self._categories, media_type=media_type
+            parent=self._storage,
+            infos={},
+            categories=self._categories,
+            media_type=media_type,
+            ann_types=None,
         )
 
         transform = None
@@ -316,7 +326,13 @@ class DatasetStorage(IDataset):
             return self._source
         elif self._source is not None:
             self.init_cache()
-        return DatasetItemStorageDatasetView(self._storage, self._categories, self._media_type)
+        return DatasetItemStorageDatasetView(
+            parent=self._storage,
+            infos={},
+            categories=self._categories,
+            media_type=self._media_type,
+            ann_types=None,
+        )
 
     def __len__(self) -> int:
         if self._length is None:

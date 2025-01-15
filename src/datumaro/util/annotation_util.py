@@ -304,7 +304,7 @@ def make_label_id_mapping(
     Returns:
 
     |   map_id (callable): src id -> dst id
-    |   id_mapping (dict): src id -> dst i
+    |   id_mapping (dict): src id -> dst id
     |   src_labels (dict): src id -> src label
     |   dst_labels (dict): dst id -> dst label
     """

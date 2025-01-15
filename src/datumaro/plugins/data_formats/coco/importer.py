@@ -67,7 +67,7 @@ class CocoImporter(Importer):
         subsets = self.find_sources(path)
 
         if len(subsets) == 0:
-            raise DatasetNotFoundError("Failed to find 'coco' dataset at '%s'" % path)
+            raise DatasetNotFoundError("Failed to find 'coco' dataset at '%s'" % path, self.NAME)
 
         # TODO: should be removed when proper label merging is implemented
         conflicting_types = {

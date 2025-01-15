@@ -15,14 +15,13 @@ from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tupl
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.config_model import Source
+from datumaro.components.contexts.importer import ImportErrorPolicy, _ImportFail
 from datumaro.components.dataset_base import (
     CategoriesInfo,
     DatasetBase,
     DatasetItem,
     IDataset,
     ImportContext,
-    ImportErrorPolicy,
-    _ImportFail,
 )
 from datumaro.components.dataset_storage import DatasetPatch, DatasetStorage
 from datumaro.components.environment import Environment
@@ -33,10 +32,10 @@ from datumaro.components.errors import (
 )
 from datumaro.components.exporter import ExportContext, Exporter, ExportErrorPolicy, _ExportFail
 from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
-from datumaro.components.launcher import Launcher, ModelTransform
+from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement
 from datumaro.components.progress_reporting import NullProgressReporter, ProgressReporter
-from datumaro.components.transformer import ItemTransform, Transform
+from datumaro.components.transformer import ItemTransform, ModelTransform, Transform
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.util.log_utils import logging_disabled
 from datumaro.util.os_util import rmtree

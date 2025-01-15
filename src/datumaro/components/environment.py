@@ -262,7 +262,7 @@ class Environment:
             )
 
             if detected_formats and len(detected_formats) == 1:
-                return detected_formats
+                return [format.name for format in detected_formats]
             elif detected_formats:
                 matched_formats |= set(detected_formats)
 
@@ -271,4 +271,4 @@ class Environment:
             if not osp.isdir(path) or osp.basename(path) in ignore_dirs:
                 break
 
-        return list(matched_formats)
+        return [format.name for format in matched_formats]

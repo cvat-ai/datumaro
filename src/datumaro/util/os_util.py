@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import glob
 import importlib
 import os
 import os.path as osp
@@ -12,7 +13,7 @@ import sys
 import unicodedata
 from contextlib import ExitStack, contextmanager, redirect_stderr, redirect_stdout
 from io import StringIO
-from typing import Iterable, Iterator, Optional, Union
+from typing import Iterable, Iterator, List, Optional, Set, Union
 
 try:
     # Declare functions to remove files and directories.
@@ -21,13 +22,15 @@ try:
     # readonly files on Windows, which Git uses extensively
     # It double checks if a file cannot be removed because of readonly flag
     from git.util import rmfile, rmtree  # noqa: F401
-except ModuleNotFoundError:
+except (ModuleNotFoundError, ImportError):
     from os import remove as rmfile  # noqa: F401
     from shutil import rmtree as rmtree  # noqa: F401
 
 from . import cast
+from .definitions import DEFAULT_SUBSET_NAME
 
 DEFAULT_MAX_DEPTH = 10
+DEFAULT_MIN_DEPTH = 0
 
 
 def check_instruction_set(instruction):
@@ -35,9 +38,11 @@ def check_instruction_set(instruction):
         # Let's ignore a warning from bandit about using shell=True.
         # In this case it isn't a security issue and we use some
         # shell features like pipes.
-        subprocess.check_output(  # nosec B602
+        subprocess.check_output(
             'lscpu | grep -o "%s" | head -1' % instruction, shell=True
-        ).decode("utf-8")
+        ).decode(  # nosec B602
+            "utf-8"
+        )
     )
 
 
@@ -56,13 +61,18 @@ def import_foreign_module(name, path):
     return module
 
 
-def walk(path, max_depth=None):
+def walk(path, max_depth: Optional[int] = None, min_depth: Optional[int] = None):
     if max_depth is None:
         max_depth = DEFAULT_MAX_DEPTH
+    if min_depth is None:
+        min_depth = DEFAULT_MIN_DEPTH
 
     baselevel = path.count(osp.sep)
-    for dirpath, dirnames, filenames in os.walk(path, topdown=True):
+    for dirpath, dirnames, filenames in os.walk(path, topdown=True, followlinks=True):
         curlevel = dirpath.count(osp.sep)
+        if baselevel + min_depth > curlevel:
+            continue
+
         if baselevel + max_depth <= curlevel:
             dirnames.clear()  # topdown=True allows to modify the list
 
@@ -70,7 +80,11 @@ def walk(path, max_depth=None):
 
 
 def find_files(
-    dirpath: str, exts: Union[str, Iterable[str]], recursive: bool = False, max_depth: int = None
+    dirpath: str,
+    exts: Union[str, Iterable[str]],
+    recursive: bool = False,
+    max_depth: Optional[int] = None,
+    min_depth: Optional[int] = None,
 ) -> Iterator[str]:
     if isinstance(exts, str):
         exts = {"." + exts.lower().lstrip(".")}
@@ -85,7 +99,9 @@ def find_files(
                 return True
         return False
 
-    for d, _, filenames in walk(dirpath, max_depth=max_depth if recursive else 0):
+    for d, _, filenames in walk(
+        dirpath, max_depth=max_depth if recursive else 0, min_depth=min_depth if recursive else 0
+    ):
         for filename in filenames:
             if not _check_ext(filename):
                 continue
@@ -259,3 +275,40 @@ def generate_next_name(
     else:
         idx = sep + str(max_idx + 1)
     return basename + idx + suffix
+
+
+def extract_subset_name_from_parent(url: str, start: str) -> str:
+    """Extract subset name from the given url.
+
+    For example, if url = "/a/b/images/train/img.jpg" and start = "/a/b",
+    it will return "train". On the other hand, if url = "/a/b/images/img.jpg"
+    and start = "/a/b", it will return DEFAULT_SUBSET_NAME.
+
+    Parameters
+    ----------
+    url: str
+        Given url to extract subset
+    start:
+        The head path of url to obtain the relative path from the url
+
+    Returns
+    -------
+    str
+        Subset name
+    """
+    relpath = osp.relpath(url, start)
+    relpath, _ = osp.split(relpath)
+    relpath, subdir_name = osp.split(relpath)
+
+    if relpath == "":
+        return DEFAULT_SUBSET_NAME
+
+    return subdir_name
+
+
+def get_all_file_extensions(path: str, ignore_dirs: Set[str]) -> List[str]:
+    extensions = set()
+    for p in glob.iglob(osp.join(path, "**", "*.*"), recursive=True):
+        if ignore_dirs.isdisjoint(p.split(os.sep)):
+            extensions.add(osp.splitext(p)[1])
+    return list(extensions)

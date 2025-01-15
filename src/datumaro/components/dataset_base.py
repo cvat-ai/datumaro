@@ -6,30 +6,16 @@
 from __future__ import annotations
 
 import warnings
-from typing import (
-    Any,
-    Dict,
-    Iterator,
-    List,
-    NoReturn,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Type, TypeVar, Union, cast
 
 import attr
 import numpy as np
-from attr import attrs, define, field
+from attr import attrs, field
 
 from datumaro.components.annotation import Annotation, AnnotationType, Categories
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.errors import AnnotationImportError, DatumaroError, ItemImportError
+from datumaro.components.contexts.importer import ImportContext, NullImportContext
 from datumaro.components.media import Image, MediaElement, PointCloud
-from datumaro.components.progress_reporting import NullProgressReporter, ProgressReporter
 from datumaro.util.attrs_util import default_if_none, not_empty
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
@@ -281,67 +267,6 @@ class _DatasetBase(IDataset):
             if item.id == id and item.subset == subset:
                 return item
         return None
-
-
-class _ImportFail(DatumaroError):
-    pass
-
-
-class ImportErrorPolicy:
-    def report_item_error(self, error: Exception, *, item_id: Tuple[str, str]) -> None:
-        """
-        Allows to report a problem with a dataset item.
-        If this function returns, the extractor must skip the item.
-        """
-
-        if not isinstance(error, _ImportFail):
-            ie = ItemImportError(item_id)
-            ie.__cause__ = error
-            return self._handle_item_error(ie)
-        else:
-            raise error
-
-    def report_annotation_error(self, error: Exception, *, item_id: Tuple[str, str]) -> None:
-        """
-        Allows to report a problem with a dataset item annotation.
-        If this function returns, the extractor must skip the annotation.
-        """
-
-        if not isinstance(error, _ImportFail):
-            ie = AnnotationImportError(item_id)
-            ie.__cause__ = error
-            return self._handle_annotation_error(ie)
-        else:
-            raise error
-
-    def _handle_item_error(self, error: ItemImportError) -> None:
-        """This function must either call fail() or return."""
-        self.fail(error)
-
-    def _handle_annotation_error(self, error: AnnotationImportError) -> None:
-        """This function must either call fail() or return."""
-        self.fail(error)
-
-    def fail(self, error: Exception) -> NoReturn:
-        raise _ImportFail from error
-
-
-class FailingImportErrorPolicy(ImportErrorPolicy):
-    pass
-
-
-@define(eq=False)
-class ImportContext:
-    progress_reporter: ProgressReporter = field(
-        default=None, converter=attr.converters.default_if_none(factory=NullProgressReporter)
-    )
-    error_policy: ImportErrorPolicy = field(
-        default=None, converter=attr.converters.default_if_none(factory=FailingImportErrorPolicy)
-    )
-
-
-class NullImportContext(ImportContext):
-    pass
 
 
 class DatasetBase(_DatasetBase, CliPlugin):

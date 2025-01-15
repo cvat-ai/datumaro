@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2020-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -122,6 +122,10 @@ class OldProjectError(DatumaroError):
             """
 
 
+class NotAvailableError(DatumaroError):
+    pass
+
+
 @define(auto_exc=False)
 class ProjectNotFoundError(DatumaroError):
     path = field()
@@ -136,6 +140,14 @@ class ProjectAlreadyExists(DatumaroError):
 
     def __str__(self):
         return f"Can't create project: a project already exists " f"at '{self.path}'"
+
+
+@define(auto_exc=False)
+class VcsAlreadyExists(DatumaroError):
+    path = field()
+
+    def __str__(self):
+        return f"Can't create project: a version control system already exists " f"at '{self.path}'"
 
 
 @define(auto_exc=False)
@@ -272,10 +284,12 @@ class AnnotationImportError(ItemImportError):
 
 @define(auto_exc=False)
 class DatasetNotFoundError(DatasetImportError):
-    path = field()
+    path: str = field()
+    format: str = field()
+    template: str = field(default="Failed to find dataset '{format}' at '{path}'")
 
     def __str__(self):
-        return f"Failed to find dataset at '{self.path}'"
+        return self.template.format(path=self.path, format=self.format)
 
 
 @define(auto_exc=False)
@@ -298,8 +312,21 @@ class DatasetError(DatumaroError):
     pass
 
 
+class AnnotationTypeError(DatumaroError):
+    pass
+
+
 class MediaTypeError(DatumaroError):
     pass
+
+
+class MediaShapeError(DatumaroError):
+    pass
+
+
+class DatasetInfosRedefinedError(DatasetError):
+    def __str__(self):
+        return "Infos can only be set once for a dataset"
 
 
 class CategoriesRedefinedError(DatasetError):
@@ -313,6 +340,16 @@ class RepeatedItemError(DatasetError):
 
     def __str__(self):
         return f"Item {self.item_id} is repeated in the source sequence."
+
+
+@define(auto_exc=False)
+class PathSeparatorInSubsetNameError(DatasetError):
+    subset: str = field()
+
+    def __str__(self):
+        return (
+            f"Failed to export the subset '{self.subset}': subset name contains path separator(s)."
+        )
 
 
 class DatasetQualityError(DatasetError):
@@ -514,6 +551,32 @@ class MissingAnnotation(DatasetItemValidationError):
 
 
 @define(auto_exc=False)
+class BrokenAnnotation(DatasetItemValidationError):
+    ann_type = field()
+
+    def __str__(self):
+        return f"Item needs whole '{self.ann_type}' annotation(s), " "but missed some."
+
+
+@define(auto_exc=False)
+class EmptyLabel(DatasetItemValidationError):
+    label_name = field()
+
+    def __str__(self):
+        return f"Item should have the label '{self.label_name}' annotation(s), " "but not found."
+
+
+@define(auto_exc=False)
+class EmptyCaption(DatasetItemValidationError):
+    caption_name = field()
+
+    def __str__(self):
+        return (
+            f"Item should have the caption '{self.caption_name}' annotation(s), " "but not found."
+        )
+
+
+@define(auto_exc=False)
 class MultiLabelAnnotations(DatasetItemValidationError):
     def __str__(self):
         return "Item needs a single label but multiple labels are found."
@@ -607,6 +670,31 @@ class FewSamplesInLabel(DatasetValidationError):
 
 
 @define(auto_exc=False)
+class FewSamplesInCaption(DatasetValidationError):
+    caption_name = field()
+    count = field()
+
+    def __str__(self):
+        return (
+            f"The number of samples in the caption '{self.caption_name}'"
+            f" might be too low. Found '{self.count}' samples."
+        )
+
+
+@define(auto_exc=False)
+class RedundanciesInCaption(DatasetValidationError):
+    caption_name = field()
+    redundancy_type = field()
+    count = field()
+
+    def __str__(self):
+        return (
+            f"The number of '{self.redundancy_type}' redundancy in the caption "
+            f"'{self.caption_name}' have found '{self.count}'."
+        )
+
+
+@define(auto_exc=False)
 class FewSamplesInAttribute(DatasetValidationError):
     label_name = field()
     attr_name = field()
@@ -626,6 +714,12 @@ class FewSamplesInAttribute(DatasetValidationError):
 class ImbalancedLabels(DatasetValidationError):
     def __str__(self):
         return "There is an imbalance in the label distribution."
+
+
+@define(auto_exc=False)
+class ImbalancedCaptions(DatasetValidationError):
+    def __str__(self):
+        return "There is an imbalance in the caption distribution."
 
 
 @define(auto_exc=False)
@@ -649,6 +743,14 @@ class ImbalancedDistInLabel(DatasetValidationError):
         return (
             f"Values of '{self.prop}' are not evenly " f"distributed for '{self.label_name}' label."
         )
+
+
+@define(auto_exc=False)
+class ImbalancedDistInCaption(DatasetValidationError):
+    caption_name = field()
+
+    def __str__(self):
+        return f"Values are not evenly " f"distributed for '{self.caption_name}' caption."
 
 
 @define(auto_exc=False)
@@ -711,6 +813,38 @@ class FarFromLabelMean(DatasetItemValidationError):
 
 
 @define(auto_exc=False)
+class FarFromCaptionMean(DatasetItemValidationError):
+    caption_name = field()
+    mean = field()
+    upper_bound = field()
+    lower_bound = field()
+    val = field()
+
+    def __str__(self):
+        return (
+            f"Annotation '{self.caption_name}' in "
+            "the item is too far from the caption average. (mean of "
+            f"'{self.caption_name}' caption: '{self.mean}', got '{self.val}')."
+            f"It should be between '{self.lower_bound}' and '{self.upper_bound}'."
+        )
+
+
+@define(auto_exc=False)
+class OutlierInCaption(DatasetItemValidationError):
+    caption_name = field()
+    lower_bound = field()
+    upper_bound = field()
+    val = field()
+
+    def __str__(self):
+        return (
+            f"Annotation '{self.caption_name}' in the item is estimated as outlier based on IQR. "
+            f"(lower and upper bound of '{self.caption_name}' caption: "
+            f"'{self.lower_bound}' and '{self.upper_bound}', got '{self.val}')."
+        )
+
+
+@define(auto_exc=False)
 class FarFromAttrMean(DatasetItemValidationError):
     label_name = field()
     ann_id = field()
@@ -728,3 +862,9 @@ class FarFromAttrMean(DatasetItemValidationError):
             f"'{self.attr_name}' = '{self.attr_value}' for the "
             f"'{self.label_name}' label: {self.mean}, got '{self.val}')."
         )
+
+
+@define(auto_exc=False)
+class StreamedItemError(DatasetError):
+    def __str__(self):
+        return "__getitem__ is disabled for StreamDataset. Use Dataset instead."

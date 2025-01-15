@@ -76,11 +76,17 @@ class DatasetSubset(IDataset):  # non-owning view
             return self.parent.subsets()
         return {self.name: self}
 
+    def infos(self):
+        return {}
+
     def categories(self):
         return self.parent.categories()
 
     def media_type(self):
         return self.parent.media_type()
+
+    def ann_types(self):
+        return []
 
     def as_dataset(self) -> Dataset:
         return Dataset.from_extractors(self, env=self.parent.env)
@@ -177,10 +183,10 @@ class Dataset(IDataset):
             source = sources[0]
             dataset = Dataset(source=source, env=env)
         else:
-            from datumaro.components.operations import ExactMerge
+            from datumaro.components.merge.exact_merge import ExactMerge
 
             media_type = ExactMerge.merge_media_types(sources)
-            source = ExactMerge.merge(*sources)
+            source = ExactMerge.merge(sources)
             categories = ExactMerge.merge_categories(s.categories() for s in sources)
             dataset = Dataset(source=source, categories=categories, media_type=media_type, env=env)
         return dataset
@@ -225,11 +231,17 @@ class Dataset(IDataset):
     def subsets(self) -> Dict[str, DatasetSubset]:
         return {k: self.get_subset(k) for k in self._data.subsets()}
 
+    def infos(self):
+        return {}
+
     def categories(self) -> CategoriesInfo:
         return self._data.categories()
 
     def media_type(self) -> Type[MediaElement]:
         return self._data.media_type()
+
+    def ann_types(self):
+        return []
 
     def get(self, id: str, subset: Optional[str] = None) -> Optional[DatasetItem]:
         return self._data.get(id, subset)

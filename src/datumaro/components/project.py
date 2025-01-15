@@ -138,6 +138,9 @@ class ProjectSourceDataset(IDataset):
     def subsets(self):
         return self._dataset.subsets()
 
+    def infos(self):
+        return {}
+
     def get_subset(self, name):
         return self._dataset.get_subset(name)
 
@@ -149,6 +152,9 @@ class ProjectSourceDataset(IDataset):
 
     def media_type(self):
         return self._dataset.media_type()
+
+    def ann_types(self):
+        return []
 
 
 class IgnoreMode(Enum):

@@ -311,7 +311,6 @@ class TestOperations(TestCase):
         }
 
         actual = compute_ann_statistics(dataset)
-        self.maxDiff = None
 
         self.assertEqual(expected, actual)
 
@@ -389,7 +388,6 @@ class TestOperations(TestCase):
         }
 
         actual = compute_ann_statistics(dataset)
-        self.maxDiff = None
 
         self.assertEqual(expected, actual)
 

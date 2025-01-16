@@ -4,7 +4,7 @@
 
 from attr import attrib, attrs
 
-from datumaro.components.annotation import Bbox, Label
+from datumaro.components.annotation import Annotation, Bbox, Label, Shape
 from datumaro.components.errors import FailedLabelVotingError
 from datumaro.util.annotation_util import mean_bbox, segment_iou
 
@@ -47,7 +47,7 @@ __all__ = [
 
 @attrs(kw_only=True)
 class AnnotationMerger(AnnotationMatcher):
-    def merge_clusters(self, clusters):
+    def merge_clusters(self, clusters: list[list[Annotation]]) -> list[Annotation]:
         raise NotImplementedError()
 
 
@@ -55,7 +55,7 @@ class AnnotationMerger(AnnotationMatcher):
 class LabelMerger(AnnotationMerger, LabelMatcher):
     quorum = attrib(converter=int, default=0)
 
-    def merge_clusters(self, clusters):
+    def merge_clusters(self, clusters: list[list[Label]]) -> list[Label]:
         assert len(clusters) <= 1
         if len(clusters) == 0:
             return []
@@ -91,7 +91,7 @@ class LabelMerger(AnnotationMerger, LabelMatcher):
 class _ShapeMerger(AnnotationMerger, ShapeMatcher):
     quorum = attrib(converter=int, default=0)
 
-    def merge_clusters(self, clusters):
+    def merge_clusters(self, clusters: list[list[Shape]]) -> list[Shape]:
         return list(map(self.merge_cluster, clusters))
 
     def find_cluster_label(self, cluster):

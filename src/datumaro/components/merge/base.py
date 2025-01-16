@@ -24,8 +24,8 @@ from datumaro.util import dump_json_file
 class Merger(IMergerContext, CliPlugin):
     """Merge multiple datasets into one dataset"""
 
-    def __init__(self, **options):
-        super().__init__(**options)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.__dict__["_sources"] = None
         self.errors = []
 

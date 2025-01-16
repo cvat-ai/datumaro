@@ -9,7 +9,7 @@ from attr import attrib, attrs
 
 from datumaro.components.abstracts import IMergerContext
 from datumaro.components.abstracts.merger import IMatcherContext
-from datumaro.components.annotation import Annotation, Points
+from datumaro.components.annotation import Annotation, Label, Points, RotatedBbox, Shape
 from datumaro.util.annotation_util import (
     OKS,
     approximate_line,
@@ -158,18 +158,18 @@ def match_segments_more_than_pair(
 class AnnotationMatcher:
     _context: Optional[Union[IMatcherContext, IMergerContext]] = attrib(default=None)
 
-    def match_annotations(self, sources):
+    def match_annotations(self, sources: List[List[Annotation]]) -> List[List[Annotation]]:
         raise NotImplementedError()
 
 
 @attrs
 class LabelMatcher(AnnotationMatcher):
-    def distance(self, a, b):
+    def distance(self, a: Label, b: Label) -> bool:
         a_label = self._context.get_any_label_name(a, a.label)
         b_label = self._context.get_any_label_name(b, b.label)
         return a_label == b_label
 
-    def match_annotations(self, sources):
+    def match_annotations(self, sources: List[List[Annotation]]) -> List[List[Annotation]]:
         return [sum(sources, [])]
 
 
@@ -250,7 +250,7 @@ class ShapeMatcher(AnnotationMatcher):
 
         return clusters
 
-    def distance(self, a, b):
+    def distance(self, a: Shape, b: Shape) -> float:
         return segment_iou(a, b)
 
     def label_matcher(self, a, b):
@@ -279,7 +279,7 @@ class PointsMatcher(ShapeMatcher):
     sigma: Optional[list] = attrib(default=None)
     instance_map = attrib(converter=dict)
 
-    def distance(self, a, b):
+    def distance(self, a: Points, b: Points) -> int:
         a_bbox = self.instance_map[id(a)][1]
         b_bbox = self.instance_map[id(b)][1]
         if bbox_iou(a_bbox, b_bbox) <= 0:
@@ -336,7 +336,7 @@ class LineMatcher(ShapeMatcher):
 
 @attrs
 class CaptionsMatcher(AnnotationMatcher):
-    def match_annotations(self, sources):
+    def match_annotations(self, sources: List[List[Annotation]]) -> List[List[Annotation]]:
         raise NotImplementedError()
 
 
@@ -348,25 +348,25 @@ class Cuboid3dMatcher(ShapeMatcher):
 
 @attrs
 class ImageAnnotationMatcher(AnnotationMatcher):
-    def match_annotations(self, sources):
+    def match_annotations(self, sources: List[List[Annotation]]) -> List[List[Annotation]]:
         raise NotImplementedError()
 
 
 @attrs
 class HashKeyMatcher(AnnotationMatcher):
-    def match_annotations(self, sources):
+    def match_annotations(self, sources: List[List[Annotation]]) -> List[List[Annotation]]:
         raise NotImplementedError()
 
 
 @attrs
 class FeatureVectorMatcher(AnnotationMatcher):
-    def match_annotations(self, sources):
+    def match_annotations(self, sources: List[List[Annotation]]) -> List[List[Annotation]]:
         raise NotImplementedError()
 
 
 @attrs
 class TabularMatcher(AnnotationMatcher):
-    def match_annotations(self, sources):
+    def match_annotations(self, sources: List[List[Annotation]]) -> List[List[Annotation]]:
         raise NotImplementedError()
 
 
@@ -374,7 +374,7 @@ class TabularMatcher(AnnotationMatcher):
 class RotatedBboxMatcher(ShapeMatcher):
     sigma: Optional[list] = attrib(default=None)
 
-    def distance(self, a, b):
+    def distance(self, a: RotatedBbox, b: RotatedBbox) -> int:
         a = Points([p for pt in a.as_polygon() for p in pt])
         b = Points([p for pt in b.as_polygon() for p in pt])
 

@@ -8,7 +8,19 @@ import itertools
 import logging as log
 import os.path as osp
 from types import SimpleNamespace as namespace
-from typing import Any, Callable, Dict, Iterator, Mapping, Optional, Sequence, Tuple, Type, Set, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 import attrs
 from attrs import field, frozen

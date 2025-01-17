@@ -13,7 +13,6 @@ from dataclasses import dataclass, fields
 from typing import Dict, List, Optional
 
 import numpy as np
-from openvino.runtime import Core
 from tqdm import tqdm
 
 from datumaro.components.abstracts.model_interpreter import LauncherInputType, ModelPred
@@ -22,6 +21,14 @@ from datumaro.components.launcher import LauncherWithModelInterpreter
 from datumaro.errors import DatumaroError
 from datumaro.util.definitions import get_datumaro_cache_dir
 from datumaro.util.samples import get_samples_path
+
+try:
+    from openvino.runtime import Core
+except ImportError:
+    log.debug("Unable to import openvino.")
+    OPENVINO_AVAILABLE = False
+else:
+    OPENVINO_AVAILABLE = True
 
 
 class _OpenvinoImporter(CliPlugin):

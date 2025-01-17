@@ -11,7 +11,7 @@ import os.path as osp
 import warnings
 from contextlib import contextmanager
 from copy import copy
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type, Union
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.config_model import Source
@@ -19,6 +19,7 @@ from datumaro.components.contexts.importer import ImportErrorPolicy, _ImportFail
 from datumaro.components.dataset_base import (
     CategoriesInfo,
     DatasetBase,
+    DatasetInfo,
     DatasetItem,
     IDataset,
     ImportContext,
@@ -76,7 +77,7 @@ class DatasetSubset(IDataset):  # non-owning view
             return self.parent.subsets()
         return {self.name: self}
 
-    def infos(self):
+    def infos(self) -> DatasetInfo:
         return {}
 
     def categories(self):
@@ -85,8 +86,8 @@ class DatasetSubset(IDataset):  # non-owning view
     def media_type(self):
         return self.parent.media_type()
 
-    def ann_types(self):
-        return []
+    def ann_types(self) -> Set[AnnotationType]:
+        return set()
 
     def as_dataset(self) -> Dataset:
         return Dataset.from_extractors(self, env=self.parent.env)
@@ -231,7 +232,7 @@ class Dataset(IDataset):
     def subsets(self) -> Dict[str, DatasetSubset]:
         return {k: self.get_subset(k) for k in self._data.subsets()}
 
-    def infos(self):
+    def infos(self) -> DatasetInfo:
         return {}
 
     def categories(self) -> CategoriesInfo:
@@ -240,8 +241,8 @@ class Dataset(IDataset):
     def media_type(self) -> Type[MediaElement]:
         return self._data.media_type()
 
-    def ann_types(self):
-        return []
+    def ann_types(self) -> Set[AnnotationType]:
+        return set()
 
     def get(self, id: str, subset: Optional[str] = None) -> Optional[DatasetItem]:
         return self._data.get(id, subset)

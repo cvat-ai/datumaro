@@ -19,7 +19,7 @@ from datumaro.components.abstracts.model_interpreter import (
 )
 from datumaro.components.annotation import Annotation
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.dataset_base import DatasetInfo, DatasetItem
 from datumaro.errors import DatumaroError
 
 
@@ -116,8 +116,8 @@ class Launcher(CliPlugin):
 
         return [self.postprocess(pred, info) for pred, info in zip(preds, inputs_info)]
 
-    def infos(self):
-        return None
+    def infos(self) -> DatasetInfo:
+        return {}
 
     def categories(self):
         return None

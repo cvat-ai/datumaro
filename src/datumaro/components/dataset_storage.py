@@ -79,12 +79,15 @@ class DatasetPatch:
         return __class__.DatasetPatchWrapper(self, parent)
 
 
+PostponedTransform = tuple[Type[Transform], tuple, dict]
+
+
 class _StackedTransform(Transform):
-    def __init__(self, source: IDataset, transforms: List[Transform]):
+    def __init__(self, source: IDataset, transforms: List[PostponedTransform]):
         super().__init__(source)
 
         self.is_local = True
-        self.transforms: List[Transform] = []
+        self.transforms: List[IDataset] = []
         self.malformed_transform_indices: Dict[int, Exception] = {}
         for idx, transform in enumerate(transforms):
             try:
@@ -101,6 +104,7 @@ class _StackedTransform(Transform):
         for t in self.transforms:
             if item is None:
                 break
+            t: ItemTransform
             item = t.transform_item(item)
         return item
 
@@ -172,7 +176,7 @@ class DatasetStorage(IDataset):
         else:
             self._source = source
             self._storage = DatasetItemStorage()  # patch or cache
-        self._transforms = []  # A stack of postponed transforms
+        self._transforms: list[PostponedTransform] = []  # A stack of postponed transforms
 
         # Describes changes in the dataset since initialization
         self._updated_items = {}  # (id, subset) -> ItemStatus
@@ -255,7 +259,7 @@ class DatasetStorage(IDataset):
             media_type=media_type,
             ann_types=self._ann_types,
         )
-        transform = None
+        transform: Optional[_StackedTransform] = None
         old_ids = None
         if self._transforms:
             transform = _StackedTransform(source, self._transforms)

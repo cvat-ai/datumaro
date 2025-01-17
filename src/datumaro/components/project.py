@@ -22,6 +22,7 @@ from typing import (
     List,
     NewType,
     Optional,
+    Set,
     Tuple,
     TypeVar,
     Union,
@@ -30,6 +31,7 @@ from typing import (
 import networkx as nx
 import ruamel.yaml as yaml
 
+from datumaro import AnnotationType
 from datumaro.components.config import Config
 from datumaro.components.config_model import (
     BuildStage,
@@ -43,6 +45,7 @@ from datumaro.components.config_model import (
     TreeLayout,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, IDataset
+from datumaro.components.dataset_base import DatasetInfo
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     DatasetMergeError,
@@ -138,7 +141,7 @@ class ProjectSourceDataset(IDataset):
     def subsets(self):
         return self._dataset.subsets()
 
-    def infos(self):
+    def infos(self) -> DatasetInfo:
         return {}
 
     def get_subset(self, name):
@@ -153,8 +156,8 @@ class ProjectSourceDataset(IDataset):
     def media_type(self):
         return self._dataset.media_type()
 
-    def ann_types(self):
-        return []
+    def ann_types(self) -> Set[AnnotationType]:
+        return set()
 
 
 class IgnoreMode(Enum):

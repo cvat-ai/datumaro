@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Type, TypeVar, Union, cast
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Set, Type, TypeVar, Union, cast
 
 import attr
 from attr import attrs, field
@@ -109,7 +109,7 @@ class IDataset:
         """
         raise NotImplementedError()
 
-    def ann_types(self) -> List[AnnotationType]:
+    def ann_types(self) -> Set[AnnotationType]:
         """
         Returns available task type from dataset annotation types.
         """
@@ -225,10 +225,10 @@ class DatasetBase(_DatasetBase, CliPlugin):
         self._media_type = media_type
         self._ann_types = ann_types if ann_types else set()
 
-    def media_type(self):
+    def media_type(self) -> Type[MediaElement]:
         return self._media_type
 
-    def ann_types(self):
+    def ann_types(self) -> Set[AnnotationType]:
         return self._ann_types
 
 
@@ -260,7 +260,7 @@ class SubsetBase(DatasetBase):
         self._categories = {}
         self._items = []
 
-    def infos(self):
+    def infos(self) -> DatasetInfo:
         return self._infos
 
     def categories(self):

@@ -160,7 +160,7 @@ class DatasetItemStorageDatasetView(IDataset):
         def subsets(self):
             return {self.name or DEFAULT_SUBSET_NAME: self}
 
-        def infos(self):
+        def infos(self) -> DatasetInfo:
             return self.parent.infos()
 
         def categories(self):
@@ -169,7 +169,7 @@ class DatasetItemStorageDatasetView(IDataset):
         def media_type(self):
             return self.parent.media_type()
 
-        def ann_types(self):
+        def ann_types(self) -> Set[AnnotationType]:
             return self.parent.ann_types()
 
     def __init__(
@@ -192,7 +192,7 @@ class DatasetItemStorageDatasetView(IDataset):
     def __len__(self):
         return len(self._parent)
 
-    def infos(self):
+    def infos(self) -> DatasetInfo:
         return self._infos
 
     def categories(self):
@@ -213,5 +213,5 @@ class DatasetItemStorageDatasetView(IDataset):
     def media_type(self):
         return self._media_type
 
-    def ann_types(self):
+    def ann_types(self) -> Set[AnnotationType]:
         return self._ann_types

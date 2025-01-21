@@ -6,7 +6,6 @@ from typing import Dict, Iterator, List, Optional, Type
 
 import numpy as np
 
-from datumaro import MediaElement
 from datumaro.components.annotation import Annotation, AnnotationType, LabelCategories
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.dataset_base import (
@@ -17,6 +16,7 @@ from datumaro.components.dataset_base import (
     IDataset,
 )
 from datumaro.components.launcher import Launcher
+from datumaro.components.media import MediaElement
 from datumaro.util import is_method_redefined, take_by
 from datumaro.util.multi_procs_util import consumer_generator
 

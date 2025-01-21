@@ -72,7 +72,7 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
 
         self._allow_removal = allow_removal
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         annotations = []
         segments = []
         for ann in item.annotations:
@@ -175,7 +175,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
 
         self._include_polygons = include_polygons
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         annotations = []
         segments = []
         for ann in item.annotations:
@@ -254,7 +254,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
 
 
 class PolygonsToMasks(ItemTransform, CliPlugin):
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         annotations = []
         for ann in item.annotations:
             if ann.type == AnnotationType.polygon:
@@ -282,7 +282,7 @@ class PolygonsToMasks(ItemTransform, CliPlugin):
 
 
 class BoxesToMasks(ItemTransform, CliPlugin):
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         annotations = []
         for ann in item.annotations:
             if ann.type == AnnotationType.bbox:
@@ -310,7 +310,7 @@ class BoxesToMasks(ItemTransform, CliPlugin):
 
 
 class MasksToPolygons(ItemTransform, CliPlugin):
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         annotations = []
         for ann in item.annotations:
             if ann.type == AnnotationType.mask:
@@ -345,7 +345,7 @@ class MasksToPolygons(ItemTransform, CliPlugin):
 
 
 class ShapesToBoxes(ItemTransform, CliPlugin):
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         annotations = []
         for ann in item.annotations:
             if ann.type in {
@@ -438,7 +438,7 @@ class MapSubsets(ItemTransform, CliPlugin):
                 self._length = "parent"
             self._subsets = set(counts)
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         return self.wrap_item(item, subset=self._mapping.get(item.subset, item.subset))
 
 
@@ -532,7 +532,7 @@ class IdFromImageName(ItemTransform, CliPlugin):
     Renames items in the dataset using image file name (without extension).
     """
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         if isinstance(item.media, Image) and item.media.path:
             name = osp.splitext(osp.basename(item.media.path))[0]
             return self.wrap_item(item, id=name)
@@ -588,7 +588,7 @@ class Rename(ItemTransform, CliPlugin):
         self._re = re.compile(regex)
         self._sub = sub
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         return self.wrap_item(item, id=self._re.sub(self._sub, item.id).format(item=item))
 
 
@@ -884,7 +884,7 @@ class ProjectLabels(ItemTransform):
     def categories(self) -> CategoriesInfo:
         return self._categories
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         annotations = []
         for ann in item.annotations:
             if getattr(ann, "label", None) is not None:
@@ -902,7 +902,7 @@ class AnnsToLabels(ItemTransform, CliPlugin):
     transforms them into a set of annotations of type Label
     """
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         labels = set(p.label for p in item.annotations if getattr(p, "label") is not None)
         annotations = []
         for label in labels:
@@ -916,7 +916,7 @@ class BboxValuesDecrement(ItemTransform, CliPlugin):
     Subtracts one from the coordinates of bounding boxes
     """
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         annotations = [p for p in item.annotations if p.type != AnnotationType.bbox]
         bboxes = [p for p in item.annotations if p.type == AnnotationType.bbox]
         for bbox in bboxes:
@@ -1025,7 +1025,7 @@ class ResizeTransform(ItemTransform):
 
         return _lazy_encode
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         if not isinstance(item.media, Image):
             raise DatumaroError("Item %s: image info is required for this transform" % (item.id,))
 
@@ -1122,7 +1122,7 @@ class RemoveItems(ItemTransform):
         super().__init__(extractor)
         self._ids = set(tuple(v) for v in (ids or []))
 
-    def transform_item(self, item: DatasetItem) -> Optional[DatasetItem]:
+    def transform_item(self, item):
         if (item.id, item.subset) in self._ids:
             return None
         return item
@@ -1169,7 +1169,7 @@ class RemoveAnnotations(ItemTransform):
         super().__init__(extractor)
         self._ids = set(tuple(v) for v in (ids or []))
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         if not self._ids or (item.id, item.subset) in self._ids:
             return item.wrap(annotations=[])
         return item
@@ -1243,7 +1243,7 @@ class RemoveAttributes(ItemTransform):
         else:
             return filter_dict(attrs, exclude_keys=self._attributes)
 
-    def transform_item(self, item: DatasetItem) -> DatasetItem:
+    def transform_item(self, item):
         if not self._ids or (item.id, item.subset) in self._ids:
             filtered_annotations = []
             for ann in item.annotations:

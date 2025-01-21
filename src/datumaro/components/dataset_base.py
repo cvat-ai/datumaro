@@ -225,10 +225,10 @@ class DatasetBase(_DatasetBase, CliPlugin):
         self._media_type = media_type
         self._ann_types = ann_types if ann_types else set()
 
-    def media_type(self) -> Type[MediaElement]:
+    def media_type(self):
         return self._media_type
 
-    def ann_types(self) -> Set[AnnotationType]:
+    def ann_types(self):
         return self._ann_types
 
 

@@ -169,7 +169,7 @@ class DatasetItemStorageDatasetView(IDataset):
         def media_type(self):
             return self.parent.media_type()
 
-        def ann_types(self) -> Set[AnnotationType]:
+        def ann_types(self):
             return self.parent.ann_types()
 
     def __init__(
@@ -213,5 +213,5 @@ class DatasetItemStorageDatasetView(IDataset):
     def media_type(self):
         return self._media_type
 
-    def ann_types(self) -> Set[AnnotationType]:
+    def ann_types(self):
         return self._ann_types

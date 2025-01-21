@@ -8,19 +8,7 @@ import itertools
 import logging as log
 import os.path as osp
 from types import SimpleNamespace as namespace
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterator,
-    Mapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import Any, Callable, Dict, Iterator, Mapping, Optional, Sequence, Tuple, Type, Union
 
 import attrs
 from attrs import field, frozen
@@ -442,10 +430,10 @@ class _TfdsSplitExtractor(IDataset):
 
         return None
 
-    def media_type(self) -> Type[MediaElement]:
+    def media_type(self):
         return self._parent._media_type
 
-    def ann_types(self) -> Set[AnnotationType]:
+    def ann_types(self):
         return self._parent.ann_types()
 
 
@@ -510,10 +498,10 @@ class _TfdsExtractor(IDataset):
             return None
         return self._split_extractors[subset].get(id)
 
-    def media_type(self) -> Type[MediaElement]:
+    def media_type(self):
         return self._media_type
 
-    def ann_types(self) -> Set[AnnotationType]:
+    def ann_types(self):
         ann_types = set()
         for items in self._split_extractors.values():
             for item in items:

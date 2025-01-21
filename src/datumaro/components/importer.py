@@ -5,7 +5,7 @@ from glob import iglob
 from os import path as osp
 from typing import Callable, Dict, List, Optional
 
-from datumaro import CliPlugin
+from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.errors import DatasetNotFoundError
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
 

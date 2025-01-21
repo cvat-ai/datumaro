@@ -22,7 +22,6 @@ from typing import (
     List,
     NewType,
     Optional,
-    Set,
     Tuple,
     TypeVar,
     Union,
@@ -31,7 +30,6 @@ from typing import (
 import networkx as nx
 import ruamel.yaml as yaml
 
-from datumaro import AnnotationType
 from datumaro.components.config import Config
 from datumaro.components.config_model import (
     BuildStage,
@@ -156,7 +154,7 @@ class ProjectSourceDataset(IDataset):
     def media_type(self):
         return self._dataset.media_type()
 
-    def ann_types(self) -> Set[AnnotationType]:
+    def ann_types(self):
         return set()
 
 

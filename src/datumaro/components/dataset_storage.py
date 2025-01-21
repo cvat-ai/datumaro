@@ -104,7 +104,6 @@ class _StackedTransform(Transform):
         for t in self.transforms:
             if item is None:
                 break
-            t: ItemTransform
             item = t.transform_item(item)
         return item
 
@@ -117,10 +116,10 @@ class _StackedTransform(Transform):
     def categories(self) -> CategoriesInfo:
         return self.transforms[-1].categories()
 
-    def media_type(self) -> Type[MediaElement]:
+    def media_type(self):
         return self.transforms[-1].media_type()
 
-    def ann_types(self) -> Set[AnnotationType]:
+    def ann_types(self):
         return self.transforms[-1].ann_types()
 
 
@@ -434,10 +433,10 @@ class DatasetStorage(IDataset):
             raise CategoriesRedefinedError()
         self._categories = categories
 
-    def media_type(self) -> Type[MediaElement]:
+    def media_type(self):
         return self._media_type
 
-    def ann_types(self) -> Set[AnnotationType]:
+    def ann_types(self):
         return self._ann_types
 
     def put(self, item: DatasetItem) -> None:
@@ -645,10 +644,10 @@ class StreamSubset(IDataset):
             "You can access to the dataset item only by using its iterator."
         )
 
-    def media_type(self) -> Type[MediaElement]:
+    def media_type(self):
         return self._source.media_type()
 
-    def ann_types(self) -> Set[AnnotationType]:
+    def ann_types(self):
         return self._source.ann_types()
 
     @property

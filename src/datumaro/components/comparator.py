@@ -116,6 +116,7 @@ class EqualityComparator:
     ignored_attrs = attrib(kw_only=True, factory=set, validator=default_if_none(set))
     ignored_item_attrs = attrib(kw_only=True, factory=set, validator=default_if_none(set))
     all = attrib(kw_only=True, default=False)
+    "Include matches in the output"
 
     _test: TestCase = attrib(init=False)
     errors: list = attrib(init=False)

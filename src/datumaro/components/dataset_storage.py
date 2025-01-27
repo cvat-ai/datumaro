@@ -83,7 +83,12 @@ PostponedTransform = tuple[Type[Transform], tuple, dict]
 
 
 class _StackedTransform(Transform):
-    def __init__(self, source: IDataset, transforms: List[PostponedTransform]):
+    def __init__(
+        self,
+        source: IDataset,
+        transforms: List[PostponedTransform],
+        raise_on_malformed_transform: bool = True,
+    ):
         super().__init__(source)
 
         self.is_local = True
@@ -93,6 +98,8 @@ class _StackedTransform(Transform):
             try:
                 source = transform[0](source, *transform[1], **transform[2])
             except Exception as e:
+                if raise_on_malformed_transform:
+                    raise
                 self.malformed_transform_indices[idx] = e
 
             self.transforms.append(source)
@@ -131,7 +138,10 @@ class DatasetStorage(IDataset):
         categories: Optional[CategoriesInfo] = None,
         media_type: Optional[Type[MediaElement]] = None,
         ann_types: Optional[Set[AnnotationType]] = None,
+        raise_on_malformed_transform: bool = True,
     ):
+        self._raise_on_malformed_transform = raise_on_malformed_transform
+
         if source is None and categories is None:
             categories = {}
         elif isinstance(source, IDataset) and categories is not None:
@@ -261,7 +271,9 @@ class DatasetStorage(IDataset):
         transform: Optional[_StackedTransform] = None
         old_ids = None
         if self._transforms:
-            transform = _StackedTransform(source, self._transforms)
+            transform = _StackedTransform(
+                source, self._transforms, self._raise_on_malformed_transform
+            )
             if transform.is_local:
                 # An optimized way to find modified items:
                 # Transform items inplace and analyze transform outputs
@@ -663,12 +675,20 @@ class StreamDatasetStorage(DatasetStorage):
         categories: Optional[CategoriesInfo] = None,
         media_type: Optional[Type[MediaElement]] = None,
         ann_types: Optional[Set[AnnotationType]] = None,
+        raise_on_malformed_transform: bool = True,
     ):
         if not source.is_stream:
             raise ValueError("source should be a stream.")
         self._subset_names = list(source.subsets().keys())
         self._transform_ids_for_latest_subset_names = []
-        super().__init__(source, infos, categories, media_type, ann_types)
+        super().__init__(
+            source=source,
+            infos=infos,
+            categories=categories,
+            media_type=media_type,
+            ann_types=ann_types,
+            raise_on_malformed_transform=raise_on_malformed_transform,
+        )
 
     def is_cache_initialized(self) -> bool:
         log.debug("This function has no effect on streaming.")
@@ -681,7 +701,9 @@ class StreamDatasetStorage(DatasetStorage):
     @property
     def stacked_transform(self) -> IDataset:
         if self._transforms:
-            transform = _StackedTransform(self._source, self._transforms)
+            transform = _StackedTransform(
+                self._source, self._transforms, self._raise_on_malformed_transform
+            )
             self._drop_malformed_transforms(transform.malformed_transform_indices)
         else:
             transform = self._source

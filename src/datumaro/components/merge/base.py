@@ -78,7 +78,7 @@ class Merger(IMergerContext, CliPlugin):
     def merge_ann_types(sources: Sequence[IDataset]) -> Optional[Set[AnnotationType]]:
         ann_types = set()
         for source in sources:
-            ann_types.union(source.ann_types())
+            ann_types = ann_types.union(source.ann_types())
         return ann_types
 
     def __call__(self, *datasets: IDataset) -> DatasetItemStorageDatasetView:

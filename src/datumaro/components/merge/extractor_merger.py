@@ -45,7 +45,7 @@ class ExtractorMerger(DatasetBase):
 
         ann_types = set()
         for source in sources:
-            ann_types.union(source.ann_types())
+            ann_types = ann_types.union(source.ann_types())
         self._ann_types = ann_types
 
         self._is_stream = check_identicalness([s.is_stream for s in sources])

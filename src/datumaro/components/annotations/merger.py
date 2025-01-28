@@ -168,10 +168,6 @@ class Cuboid3dMerger(_ShapeMerger, Cuboid3dMatcher):
     @staticmethod
     def _merge_cluster_shape_mean_box_nearest(cluster):
         raise NotImplementedError()
-        # mbbox = Bbox(*mean_cuboid(cluster))
-        # dist = (segment_iou(mbbox, s) for s in cluster)
-        # nearest_pos, _ = max(enumerate(dist), key=lambda e: e[1])
-        # return cluster[nearest_pos]
 
     def merge_cluster(self, cluster):
         label, label_score = self.find_cluster_label(cluster)

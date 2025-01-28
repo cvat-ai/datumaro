@@ -108,7 +108,6 @@ class BuiltinOpenvinoModelInfo(OpenvinoModelInfo):
     def create_from_model_name(cls, model_name: str) -> "BuiltinOpenvinoModelInfo":
         openvino_plugin_samples_dir = get_samples_path()
         interpreter = osp.join(openvino_plugin_samples_dir, model_name + "_interp.py")
-        interpreter = interpreter if osp.exists(interpreter) else interpreter
 
         model_dir = get_datumaro_cache_dir()
 

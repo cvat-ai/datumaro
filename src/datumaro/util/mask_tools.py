@@ -183,9 +183,8 @@ def make_index_mask(
         dtype = np.min_scalar_type(index)
         if dtype != np.min_scalar_type(ignore_index):
             msg = (
-                "Given dtype is None, "
-                "but inferred dtypes from the given index and ignore_index are different each other. "
-                "Please mannually set dtype"
+                "Given dtype is None, but inferred dtypes from the given index and "
+                "ignore_index are different from each other. Please manually set dtype"
             )
             raise ValueError(msg, index, ignore_index)
 

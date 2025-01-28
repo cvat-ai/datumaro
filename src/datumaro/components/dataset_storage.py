@@ -707,7 +707,9 @@ class StreamDatasetStorage(DatasetStorage):
     def stacked_transform(self) -> IDataset:
         if self._transforms:
             transform = _StackedTransform(
-                self._source, self._transforms, self._raise_on_malformed_transform
+                self._source, 
+                self._transforms, 
+                raise_on_malformed_transform=self._raise_on_malformed_transform
             )
             self._drop_malformed_transforms(transform.malformed_transform_indices)
         else:

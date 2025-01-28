@@ -87,6 +87,7 @@ class _StackedTransform(Transform):
         self,
         source: IDataset,
         transforms: List[PostponedTransform],
+        *,
         raise_on_malformed_transform: bool = True,
     ):
         super().__init__(source)
@@ -138,6 +139,7 @@ class DatasetStorage(IDataset):
         categories: Optional[CategoriesInfo] = None,
         media_type: Optional[Type[MediaElement]] = None,
         ann_types: Optional[Set[AnnotationType]] = None,
+        *,
         raise_on_malformed_transform: bool = True,
     ):
         self._raise_on_malformed_transform = raise_on_malformed_transform
@@ -272,7 +274,9 @@ class DatasetStorage(IDataset):
         old_ids = None
         if self._transforms:
             transform = _StackedTransform(
-                source, self._transforms, self._raise_on_malformed_transform
+                source, 
+                self._transforms, 
+                raise_on_malformed_transform=self._raise_on_malformed_transform
             )
             if transform.is_local:
                 # An optimized way to find modified items:
@@ -675,6 +679,7 @@ class StreamDatasetStorage(DatasetStorage):
         categories: Optional[CategoriesInfo] = None,
         media_type: Optional[Type[MediaElement]] = None,
         ann_types: Optional[Set[AnnotationType]] = None,
+        *,
         raise_on_malformed_transform: bool = True,
     ):
         if not source.is_stream:

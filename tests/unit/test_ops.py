@@ -16,19 +16,21 @@ from datumaro.components.annotation import (
     Polygon,
     PolyLine,
 )
+from datumaro.components.annotations import match_segments_pair
 from datumaro.components.dataset import Dataset
 from datumaro.components.dataset_base import DatasetItem
-from datumaro.components.media import Image, MultiframeImage, PointCloud
-from datumaro.components.operations import (
+from datumaro.components.errors import (
     FailedAttrVotingError,
-    IntersectMerge,
     NoMatchingAnnError,
     NoMatchingItemError,
     WrongGroupError,
+)
+from datumaro.components.media import Image, MultiframeImage, PointCloud
+from datumaro.components.merge.intersect_merge import IntersectMerge
+from datumaro.components.operations import (
     compute_ann_statistics,
     compute_image_statistics,
     find_unique_images,
-    match_segments,
     mean_std,
 )
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
@@ -246,6 +248,13 @@ class TestOperations(TestCase):
                 "super_resolution_annotation": {"count": 0},
                 "depth_annotation": {"count": 0},
                 "skeleton": {"count": 0},
+                "cuboid_2d": {"count": 0},
+                "ellipse": {"count": 0},
+                "feature_vector": {"count": 0},
+                "hash_key": {"count": 0},
+                "rotated_bbox": {"count": 0},
+                "tabular": {"count": 0},
+                "unknown": {"count": 0},
             },
             "annotations": {
                 "labels": {
@@ -346,6 +355,13 @@ class TestOperations(TestCase):
                 "super_resolution_annotation": {"count": 0},
                 "depth_annotation": {"count": 0},
                 "skeleton": {"count": 0},
+                "cuboid_2d": {"count": 0},
+                "ellipse": {"count": 0},
+                "feature_vector": {"count": 0},
+                "hash_key": {"count": 0},
+                "rotated_bbox": {"count": 0},
+                "tabular": {"count": 0},
+                "unknown": {"count": 0},
             },
             "annotations": {
                 "labels": {
@@ -422,7 +438,7 @@ class TestAnnotationMatching(TestCase):
             Bbox(0, 0, 4, 4, label=1, id=1),
         ]
 
-        matches, mismatches, a_extra, b_extra = match_segments(anns1, anns2, dist_thresh=0.5)
+        matches, mismatches, a_extra, b_extra = match_segments_pair(anns1, anns2, dist_thresh=0.5)
         assert sorted(mismatches, key=lambda e: e[0].id) == [
             (anns1[0], anns2[1]),
             (anns1[1], anns2[0]),
@@ -453,7 +469,7 @@ class TestAnnotationMatching(TestCase):
             Bbox(0, 6, 4, 4, label=1, id=5),
         ]
 
-        matches, mismatches, a_extra, b_extra = match_segments(anns1, anns2, dist_thresh=0.5)
+        matches, mismatches, a_extra, b_extra = match_segments_pair(anns1, anns2, dist_thresh=0.5)
         assert sorted(mismatches, key=lambda e: e[0].id) == [
             (anns1[0], anns2[1]),
             (anns1[1], anns2[0]),
@@ -541,7 +557,7 @@ class TestMultimerge(TestCase):
         )
 
         merger = IntersectMerge()
-        merged = merger([source0, source1, source2])
+        merged = merger(source0, source1, source2)
 
         compare_datasets(self, expected, merged)
         self.assertEqual(
@@ -694,7 +710,7 @@ class TestMultimerge(TestCase):
         )
 
         merger = IntersectMerge(conf={"quorum": 1, "pairwise_dist": 0.1})
-        merged = merger([source0, source1, source2])
+        merged = merger(source0, source1, source2)
 
         compare_datasets(self, expected, merged, ignored_attrs={"score"})
         self.assertEqual(
@@ -753,7 +769,7 @@ class TestMultimerge(TestCase):
         )
 
         merger = IntersectMerge(conf={"quorum": 1, "pairwise_dist": 0.1})
-        merged = merger([source0, source1])
+        merged = merger(source0, source1)
 
         compare_datasets(self, expected, merged, ignored_attrs={"score"})
         self.assertEqual(0, len(merger.errors))
@@ -830,7 +846,7 @@ class TestMultimerge(TestCase):
         )
 
         merger = IntersectMerge(conf={"quorum": 3, "ignored_attributes": {"ignored"}})
-        merged = merger([source0, source1, source2])
+        merged = merger(source0, source1, source2)
 
         compare_datasets(self, expected, merged, ignored_attrs={"score"})
         self.assertEqual(2, len([e for e in merger.errors if isinstance(e, FailedAttrVotingError)]))
@@ -857,7 +873,7 @@ class TestMultimerge(TestCase):
         )
 
         merger = IntersectMerge(conf={"groups": [["a", "a_g1", "a_g2_opt?"], ["c", "c_g1_opt?"]]})
-        merger([dataset, dataset])
+        merger(dataset, dataset)
 
         self.assertEqual(
             3, len([e for e in merger.errors if isinstance(e, WrongGroupError)]), merger.errors
@@ -911,7 +927,7 @@ class TestMultimerge(TestCase):
         )
 
         merger = IntersectMerge()
-        merged = merger([source0, source1])
+        merged = merger(source0, source1)
 
         compare_datasets(self, expected, merged, ignored_attrs={"score"})
 
@@ -999,7 +1015,7 @@ class TestMultimerge(TestCase):
         )
 
         merger = IntersectMerge()
-        merged = merger([source0, source1])
+        merged = merger(source0, source1)
 
         compare_datasets(self, expected, merged, ignored_attrs={"score"})
 
@@ -1053,7 +1069,7 @@ class TestMultimerge(TestCase):
         )
 
         merger = IntersectMerge()
-        merged = merger([source0, source1])
+        merged = merger(source0, source1)
 
         compare_datasets(self, expected, merged)
 
@@ -1096,6 +1112,6 @@ class TestMultimerge(TestCase):
         )
 
         merger = IntersectMerge()
-        merged = merger([source0, source1])
+        merged = merger(source0, source1)
 
         compare_datasets(self, expected, merged)

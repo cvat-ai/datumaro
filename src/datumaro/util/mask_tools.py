@@ -147,8 +147,65 @@ def remap_mask(mask: ColorMask, map_fn) -> ColorMask:
     return np.array([max(0, map_fn(c)) for c in range(256)], dtype=np.uint8)[mask]
 
 
-def make_index_mask(binary_mask: BinaryMask, index: int, dtype=None) -> IndexMask:
-    return binary_mask * np.array([index], dtype=dtype or np.min_scalar_type(index))
+def make_index_mask(
+    binary_mask: BinaryMask,
+    index: int,
+    ignore_index: int = 0,
+    dtype: Optional[np.dtype] = None,
+) -> IndexMask:
+    """Create an index mask from a binary mask by filling a given index value.
+
+    Args:
+        binary_mask: Binary mask to create an index mask.
+        index: Scalar value to fill the ones in the binary mask.
+        ignore_index: Scalar value to fill in the zeros in the binary mask.
+            Defaults to 0.
+        dtype: Data type for the resulting mask. If not specified,
+                it will be inferred from the provided `index` to hold its value.
+                For example, if `index=255`, the inferred dtype will be `np.uint8`.
+                Defaults to None.
+
+    Returns:
+        np.ndarray: Index mask created from the binary mask.
+
+    Raises:
+        ValueError: If dtype is not specified and incompatible scalar types are used for index
+            and ignore_index.
+
+    Examples:
+        >>> binary_mask = np.eye(2, dtype=np.bool_)
+        >>> index_mask = make_index_mask(binary_mask, index=10, ignore_index=255, dtype=np.uint8)
+        >>> print(index_mask)
+        array([[ 10, 255],
+               [255,  10]], dtype=uint8)
+    """
+    if dtype is None:
+        dtype = np.min_scalar_type(index)
+        if dtype != np.min_scalar_type(ignore_index):
+            msg = (
+                "Given dtype is None, but inferred dtypes from the given index and "
+                "ignore_index are different from each other. Please manually set dtype"
+            )
+            raise ValueError(msg, index, ignore_index)
+
+    flipped_zero_np_scalar = ~np.full(tuple(), fill_value=0, dtype=dtype)
+
+    # NOTE: This dispatching rule is required for a performance boost
+    if ignore_index == flipped_zero_np_scalar:
+        flipped_index = ~np.full(tuple(), fill_value=index, dtype=dtype)
+        return ~(binary_mask * flipped_index)
+    elif index < ignore_index:
+        diff = ignore_index - index
+        mask = ~binary_mask * np.full(tuple(), fill_value=diff, dtype=dtype)
+        mask += index
+        return mask
+    elif index > ignore_index:
+        diff = index - ignore_index
+        mask = binary_mask * np.full(tuple(), fill_value=diff, dtype=dtype)
+        mask += ignore_index
+        return mask
+
+    return np.full_like(binary_mask, fill_value=index, dtype=dtype)
 
 
 def make_binary_mask(mask: Union[BinaryMask, IndexMask]) -> BinaryMask:

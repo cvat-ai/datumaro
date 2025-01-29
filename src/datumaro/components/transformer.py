@@ -2,14 +2,21 @@
 #
 # SPDX-License-Identifier: MIT
 from multiprocessing.pool import ThreadPool
-from typing import Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Type
 
 import numpy as np
 
 from datumaro.components.annotation import Annotation, AnnotationType, LabelCategories
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.dataset_base import DatasetBase, DatasetItem, IDataset
+from datumaro.components.dataset_base import (
+    CategoriesInfo,
+    DatasetBase,
+    DatasetInfo,
+    DatasetItem,
+    IDataset,
+)
 from datumaro.components.launcher import Launcher
+from datumaro.components.media import MediaElement
 from datumaro.util import is_method_redefined, take_by
 from datumaro.util.multi_procs_util import consumer_generator
 
@@ -21,7 +28,7 @@ class Transform(DatasetBase, CliPlugin):
     """
 
     @staticmethod
-    def wrap_item(item, **kwargs):
+    def wrap_item(item: DatasetItem, **kwargs) -> DatasetItem:
         return item.wrap(**kwargs)
 
     def __init__(self, extractor: IDataset):
@@ -29,15 +36,15 @@ class Transform(DatasetBase, CliPlugin):
 
         self._extractor = extractor
 
-    def categories(self):
+    def categories(self) -> CategoriesInfo:
         return self._extractor.categories()
 
-    def subsets(self):
+    def subsets(self) -> Dict[str, IDataset]:
         if self._subsets is None:
             self._subsets = set(self._extractor.subsets())
         return super().subsets()
 
-    def __len__(self):
+    def __len__(self) -> int:
         assert self._length in {None, "parent"} or isinstance(self._length, int)
         if (
             self._length is None
@@ -47,10 +54,10 @@ class Transform(DatasetBase, CliPlugin):
             self._length = len(self._extractor)
         return super().__len__()
 
-    def media_type(self):
+    def media_type(self) -> Type[MediaElement]:
         return self._extractor.media_type()
 
-    def infos(self):
+    def infos(self) -> DatasetInfo:
         return self._extractor.infos()
 
 
@@ -65,7 +72,7 @@ class ItemTransform(Transform):
 
         raise NotImplementedError()
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[DatasetItem]:
         for item in self._extractor:
             item = self.transform_item(item)
             if item is not None:
@@ -233,19 +240,19 @@ class ModelTransform(Transform):
         subset = self._extractor.get_subset(name)
         return __class__(subset, self._launcher, self._batch_size)
 
-    def infos(self):
+    def infos(self) -> DatasetInfo:
         launcher_override = self._launcher.infos()
         if launcher_override is not None:
             return launcher_override
         return self._extractor.infos()
 
-    def categories(self):
+    def categories(self) -> CategoriesInfo:
         launcher_override = self._launcher.categories()
         if launcher_override is not None:
             return launcher_override
         return self._extractor.categories()
 
-    def transform_item(self, item):
+    def transform_item(self, item: DatasetItem) -> DatasetItem:
         inputs = np.expand_dims(item.media, axis=0)
         annotations = self._launcher.launch(inputs)[0]
         return self.wrap_item(item, annotations=annotations)

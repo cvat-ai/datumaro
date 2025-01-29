@@ -43,6 +43,7 @@ from datumaro.components.config_model import (
     TreeLayout,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, IDataset
+from datumaro.components.dataset_base import DatasetInfo
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     DatasetMergeError,
@@ -138,6 +139,9 @@ class ProjectSourceDataset(IDataset):
     def subsets(self):
         return self._dataset.subsets()
 
+    def infos(self) -> DatasetInfo:
+        return {}
+
     def get_subset(self, name):
         return self._dataset.get_subset(name)
 
@@ -149,6 +153,9 @@ class ProjectSourceDataset(IDataset):
 
     def media_type(self):
         return self._dataset.media_type()
+
+    def ann_types(self):
+        return set()
 
 
 class IgnoreMode(Enum):

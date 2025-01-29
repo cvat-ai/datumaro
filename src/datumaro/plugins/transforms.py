@@ -14,7 +14,7 @@ from collections import Counter
 from copy import deepcopy
 from enum import Enum, auto
 from itertools import chain
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Union
 
 import cv2
 import numpy as np
@@ -22,6 +22,7 @@ import pycocotools.mask as mask_utils
 
 import datumaro.util.mask_tools as mask_tools
 from datumaro.components.annotation import (
+    Annotation,
     AnnotationType,
     Bbox,
     Caption,
@@ -34,9 +35,10 @@ from datumaro.components.annotation import (
     Polygon,
     PolyLine,
     RleMask,
+    Shape,
 )
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.dataset_base import DatasetItem, IDataset
+from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, IDataset
 from datumaro.components.errors import DatumaroError
 from datumaro.components.media import Image
 from datumaro.components.transformer import ItemTransform, Transform
@@ -65,7 +67,7 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
         )
         return parser
 
-    def __init__(self, extractor, allow_removal=False):
+    def __init__(self, extractor: IDataset, allow_removal: bool = False):
         super().__init__(extractor)
 
         self._allow_removal = allow_removal
@@ -91,7 +93,13 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
 
     @classmethod
     def crop_segments(
-        cls, segment_anns, img_width, img_height, *, item: DatasetItem, allow_removal: bool = False
+        cls,
+        segment_anns: list[Annotation],
+        img_width: int,
+        img_height: int,
+        *,
+        item: DatasetItem,
+        allow_removal: bool = False,
     ):
         segment_anns = sorted(segment_anns, key=lambda x: x.z_order)
 
@@ -141,7 +149,7 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
         return new_anns
 
     @staticmethod
-    def _make_group_id(anns, ann_id):
+    def _make_group_id(anns: list[Annotation], ann_id: int):
         if ann_id:
             return ann_id
         max_gid = max(anns, default=0, key=lambda x: x.group)
@@ -162,7 +170,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
         parser.add_argument("--include-polygons", action="store_true", help="Include polygons")
         return parser
 
-    def __init__(self, extractor, include_polygons=False):
+    def __init__(self, extractor: IDataset, include_polygons: bool = False):
         super().__init__(extractor)
 
         self._include_polygons = include_polygons
@@ -189,7 +197,13 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
         return self.wrap_item(item, annotations=annotations)
 
     @classmethod
-    def merge_segments(cls, instance, img_width, img_height, include_polygons=False):
+    def merge_segments(
+        cls,
+        instance: Sequence[Annotation],
+        img_width: int,
+        img_height: int,
+        include_polygons: bool = False,
+    ):
         polygons = [a for a in instance if a.type == AnnotationType.polygon]
         masks = [a for a in instance if a.type == AnnotationType.mask]
         if not polygons and not masks:
@@ -233,7 +247,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
         return instance
 
     @staticmethod
-    def find_instances(annotations):
+    def find_instances(annotations: Sequence[Annotation]) -> Sequence[Sequence[Annotation]]:
         return find_instances(
             a for a in annotations if a.type in {AnnotationType.polygon, AnnotationType.mask}
         )
@@ -254,7 +268,7 @@ class PolygonsToMasks(ItemTransform, CliPlugin):
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
-    def convert_polygon(polygon, img_h, img_w):
+    def convert_polygon(polygon: Polygon, img_h: int, img_w: int):
         rle = mask_utils.frPyObjects([polygon.points], img_h, img_w)[0]
 
         return RleMask(
@@ -282,7 +296,7 @@ class BoxesToMasks(ItemTransform, CliPlugin):
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
-    def convert_bbox(bbox, img_h, img_w):
+    def convert_bbox(bbox: Bbox, img_h: int, img_w: int):
         rle = mask_utils.frPyObjects([bbox.as_polygon()], img_h, img_w)[0]
 
         return RleMask(
@@ -314,7 +328,7 @@ class MasksToPolygons(ItemTransform, CliPlugin):
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
-    def convert_mask(mask):
+    def convert_mask(mask: Mask) -> list[Polygon]:
         polygons = mask_tools.mask_to_polygons(mask.image)
 
         return [
@@ -347,7 +361,7 @@ class ShapesToBoxes(ItemTransform, CliPlugin):
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
-    def convert_shape(shape):
+    def convert_shape(shape: Shape) -> Bbox:
         bbox = shape.get_bbox()
         return Bbox(
             *bbox,
@@ -370,12 +384,12 @@ class Reindex(Transform, CliPlugin):
         parser.add_argument("-s", "--start", type=int, default=1, help="Start value for item ids")
         return parser
 
-    def __init__(self, extractor, start=1):
+    def __init__(self, extractor: IDataset, start: int = 1):
         super().__init__(extractor)
         self._length = "parent"
         self._start = start
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[DatasetItem]:
         for i, item in enumerate(self._extractor):
             yield self.wrap_item(item, id=i + self._start)
 
@@ -405,7 +419,11 @@ class MapSubsets(ItemTransform, CliPlugin):
         )
         return parser
 
-    def __init__(self, extractor, mapping=None):
+    def __init__(
+        self,
+        extractor: IDataset,
+        mapping: Dict[str, str] | List[Tuple[str, str]] | None = None,
+    ):
         super().__init__(extractor)
 
         if mapping is None:
@@ -461,7 +479,7 @@ class RandomSplit(Transform, CliPlugin):
         parser.add_argument("--seed", type=int, help="Random seed")
         return parser
 
-    def __init__(self, extractor, splits, seed=None):
+    def __init__(self, extractor: IDataset, splits: list[tuple[str, float]], seed=None):
         super().__init__(extractor)
 
         if splits is None:
@@ -504,7 +522,7 @@ class RandomSplit(Transform, CliPlugin):
                 return subset
         return subset  # all the possible remainder goes to the last split
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[DatasetItem]:
         for i, item in enumerate(self._extractor):
             yield self.wrap_item(item, subset=self._find_split(i))
 
@@ -561,7 +579,7 @@ class Rename(ItemTransform, CliPlugin):
         )
         return parser
 
-    def __init__(self, extractor, regex):
+    def __init__(self, extractor: IDataset, regex: str):
         super().__init__(extractor)
 
         assert regex and isinstance(regex, str)
@@ -785,7 +803,7 @@ class ProjectLabels(ItemTransform):
 
         src_categories = self._extractor.categories()
 
-        src_label_cat = src_categories.get(AnnotationType.label)
+        src_label_cat: LabelCategories = src_categories.get(AnnotationType.label)
 
         if isinstance(dst_labels, LabelCategories):
             dst_label_cat = deepcopy(dst_labels)
@@ -856,14 +874,14 @@ class ProjectLabels(ItemTransform):
 
             self._categories[AnnotationType.points] = dst_point_cat
 
-    def _make_label_id_map(self, src_label_cat, dst_label_cat):
+    def _make_label_id_map(self, src_label_cat: LabelCategories, dst_label_cat: LabelCategories):
         id_mapping = {
             src_id: dst_label_cat.find(src_label_cat[src_id].name, src_label_cat[src_id].parent)[0]
             for src_id in range(len(src_label_cat or ()))
         }
         self._map_id = lambda src_id: id_mapping.get(src_id, None)
 
-    def categories(self):
+    def categories(self) -> CategoriesInfo:
         return self._categories
 
     def transform_item(self, item):
@@ -969,7 +987,7 @@ class ResizeTransform(ItemTransform):
         self._scale_y = scale_y
 
     @staticmethod
-    def _lazy_resize_image(image, new_size):
+    def _lazy_resize_image(image: Image, new_size: tuple[int, int]) -> Image:
         def _resize_image(_):
             h, w = image.size
             yscale = new_size[0] / float(h)
@@ -1151,7 +1169,7 @@ class RemoveAnnotations(ItemTransform):
         super().__init__(extractor)
         self._ids = set(tuple(v) for v in (ids or []))
 
-    def transform_item(self, item: DatasetItem):
+    def transform_item(self, item):
         if not self._ids or (item.id, item.subset) in self._ids:
             return item.wrap(annotations=[])
         return item
@@ -1225,7 +1243,7 @@ class RemoveAttributes(ItemTransform):
         else:
             return filter_dict(attrs, exclude_keys=self._attributes)
 
-    def transform_item(self, item: DatasetItem):
+    def transform_item(self, item):
         if not self._ids or (item.id, item.subset) in self._ids:
             filtered_annotations = []
             for ann in item.annotations:

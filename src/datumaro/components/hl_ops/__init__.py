@@ -14,7 +14,7 @@ from datumaro.components.environment import Environment
 from datumaro.components.exporter import Exporter
 from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
 from datumaro.components.launcher import Launcher
-from datumaro.components.operations import ExactMerge
+from datumaro.components.merge.exact_merge import ExactMerge
 from datumaro.components.transformer import ModelTransform, Transform
 from datumaro.components.validator import TaskType, Validator
 from datumaro.util import parse_str_enum_value
@@ -109,7 +109,11 @@ def merge(*datasets: IDataset) -> IDataset:
     categories = ExactMerge.merge_categories(d.categories() for d in datasets)
     media_type = ExactMerge.merge_media_types(datasets)
     return DatasetItemStorageDatasetView(
-        ExactMerge.merge(*datasets), categories=categories, media_type=media_type
+        parent=ExactMerge.merge(datasets),
+        infos={},
+        categories=categories,
+        media_type=media_type,
+        ann_types=None,
     )
 
 

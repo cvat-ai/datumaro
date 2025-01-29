@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Optional, Sequence, Type
 
 from datumaro.components.annotation import Annotation
-from datumaro.components.dataset_base import IDataset
+from datumaro.components.dataset_base import DatasetInfo, IDataset
 from datumaro.components.dataset_item_storage import (
     DatasetItemStorage,
     DatasetItemStorageDatasetView,
@@ -23,16 +23,18 @@ class IMatcherContext(ABC):
 
 
 class IMergerContext(IMatcherContext):
+    @staticmethod
     @abstractmethod
-    def merge_infos(self, sources: Sequence[IDataset]) -> Dict:
+    def merge_infos(sources: Sequence[DatasetInfo]) -> Dict:
         raise NotImplementedError
 
     @abstractmethod
     def merge_categories(self, sources: Sequence[IDataset]) -> Dict:
         raise NotImplementedError
 
+    @staticmethod
     @abstractmethod
-    def merge_media_types(self, sources: Sequence[IDataset]) -> Optional[Type[MediaElement]]:
+    def merge_media_types(sources: Sequence[IDataset]) -> Optional[Type[MediaElement]]:
         raise NotImplementedError
 
     @abstractmethod

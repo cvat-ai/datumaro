@@ -8,10 +8,10 @@ import os
 import os.path as osp
 from collections import OrderedDict
 
-from datumaro.components.dataset import DEFAULT_FORMAT
+from datumaro.components.dataset import DEFAULT_FORMAT, Dataset
 from datumaro.components.environment import Environment
 from datumaro.components.errors import DatasetMergeError, DatasetQualityError, ProjectNotFoundError
-from datumaro.components.operations import IntersectMerge
+from datumaro.components.merge.intersect_merge import IntersectMerge
 from datumaro.components.project import ProjectBuildTargets
 from datumaro.util import dump_json_file
 from datumaro.util.scope import scope_add, scoped
@@ -230,7 +230,7 @@ def merge_command(args):
             quorum=args.quorum,
         )
     )
-    merged_dataset = merger(source_datasets)
+    merged_dataset = Dataset(source=merger(*source_datasets))
 
     merged_dataset.export(save_dir=dst_dir, format=converter, **export_args)
 

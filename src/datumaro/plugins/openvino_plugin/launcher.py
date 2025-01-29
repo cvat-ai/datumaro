@@ -1,19 +1,34 @@
-# Copyright (C) 2019-2021 Intel Corporation
+# Copyright (C) 2019-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
 # pylint: disable=exec-used
 
+
 import logging as log
 import os.path as osp
 import shutil
+import urllib
+from dataclasses import dataclass, fields
+from typing import Dict, List, Optional
 
-import cv2
 import numpy as np
-from openvino.inference_engine import IECore
+from tqdm import tqdm
 
+from datumaro.components.abstracts.model_interpreter import LauncherInputType, ModelPred
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.launcher import Launcher
+from datumaro.components.launcher import LauncherWithModelInterpreter
+from datumaro.errors import DatumaroError
+from datumaro.util.definitions import get_datumaro_cache_dir
+from datumaro.util.samples import get_samples_path
+
+try:
+    from openvino.runtime import Core
+except ImportError:
+    log.debug("Unable to import openvino.")
+    OPENVINO_AVAILABLE = False
+else:
+    OPENVINO_AVAILABLE = True
 
 
 class _OpenvinoImporter(CliPlugin):
@@ -56,69 +71,162 @@ class _OpenvinoImporter(CliPlugin):
         model["interpreter"] = osp.basename(model["interpreter"])
 
 
-class InterpreterScript:
-    def __init__(self, path):
-        with open(path, "r", encoding="utf-8") as f:
-            script = f.read()
+@dataclass
+class OpenvinoModelInfo:
+    interpreter: Optional[str]
+    description: Optional[str]
+    weights: Optional[str]
+    model_dir: Optional[str]
 
-        context = {}
-        exec(script, context, context)
+    def validate(self):
+        """Validate integrity of the member variables"""
 
-        process_outputs = context.get("process_outputs")
-        if not callable(process_outputs):
-            raise Exception("Can't find 'process_outputs' function in " "the interpreter script")
-        self.__dict__["process_outputs"] = process_outputs
+        def _validate(key: str):
+            path = getattr(self, key)
+            if not osp.isfile(path):
+                path = osp.join(self.model_dir, path)
+            if not osp.isfile(path):
+                raise DatumaroError(f'Failed to open model {key} file "{path}"')
+            setattr(self, key, path)
 
-        get_categories = context.get("get_categories")
-        assert get_categories is None or callable(get_categories)
-        if get_categories:
-            self.__dict__["get_categories"] = get_categories
+        for field in fields(self):
+            if field.name != "model_dir":
+                _validate(field.name)
+
+
+@dataclass
+class BuiltinOpenvinoModelInfo(OpenvinoModelInfo):
+    downloadable_models = {
+        "clip_text_ViT-B_32",
+        "clip_visual_ViT-B_32",
+        "clip_visual_vit_l_14_336px_int8",
+        "clip_text_vit_l_14_336px_int8",
+        "googlenet-v4-tf",
+    }
+
+    @classmethod
+    def create_from_model_name(cls, model_name: str) -> "BuiltinOpenvinoModelInfo":
+        openvino_plugin_samples_dir = get_samples_path()
+        interpreter = osp.join(openvino_plugin_samples_dir, model_name + "_interp.py")
+
+        model_dir = get_datumaro_cache_dir()
+
+        # Please visit open-model-zoo repository for OpenVINO public models if you are interested in
+        # https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/public/index.md
+        url_folder = "https://storage.openvinotoolkit.org/repositories/datumaro/models/"
+
+        description = osp.join(model_dir, model_name + ".xml")
+        if not osp.exists(description):
+            description = (
+                cls._download_file(osp.join(url_folder, model_name + ".xml"), description)
+                if model_name in cls.downloadable_models
+                else None
+            )
+
+        weights = osp.join(model_dir, model_name + ".bin")
+        if not osp.exists(weights):
+            weights = (
+                cls._download_file(osp.join(url_folder, model_name + ".bin"), weights)
+                if model_name in cls.downloadable_models
+                else None
+            )
+
+        return cls(
+            interpreter=interpreter,
+            description=description,
+            weights=weights,
+            model_dir=model_dir,
+        )
 
     @staticmethod
-    def get_categories():
-        return None
+    def _download_file(url: str, file_root: str) -> str:
+        log.info('Downloading: "{}" to {}\n'.format(url, file_root))
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as source, open(file_root, "wb") as output:  # nosec B310
+            with tqdm(
+                total=int(source.info().get("Content-Length")),
+                ncols=80,
+                unit="iB",
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as loop:
+                while True:
+                    buffer = source.read(8192)
+                    if not buffer:
+                        break
 
-    @staticmethod
-    def process_outputs(inputs, outputs):
-        raise NotImplementedError("Function should be implemented in the interpreter script")
+                    output.write(buffer)
+                    loop.update(len(buffer))
+        return file_root
+
+    def override(self, other: OpenvinoModelInfo) -> None:
+        """Override builtin model variables to other"""
+
+        def _apply(key: str) -> None:
+            other_item = getattr(other, key)
+            self_item = getattr(self, key)
+            if other_item is None and self_item:
+                log.info(f"Override description with the builtin model {key}: {self.description}.")
+                setattr(other, key, self_item)
+
+        for field in fields(self):
+            _apply(field.name)
 
 
-class OpenvinoLauncher(Launcher):
+class OpenvinoLauncher(LauncherWithModelInterpreter):
     cli_plugin = _OpenvinoImporter
 
     def __init__(
-        self, description, weights, interpreter, device=None, model_dir=None, output_layers=None
+        self,
+        description: Optional[str] = None,
+        weights: Optional[str] = None,
+        interpreter: Optional[str] = None,
+        model_dir: Optional[str] = None,
+        model_name: Optional[str] = None,
+        output_layers: List[str] = [],
+        device: Optional[str] = None,
+        compile_model_config: Optional[Dict] = None,
     ):
-        if not model_dir:
-            model_dir = ""
-        if not osp.isfile(description):
-            description = osp.join(model_dir, description)
-        if not osp.isfile(description):
-            raise Exception('Failed to open model description file "%s"' % (description))
+        model_info = OpenvinoModelInfo(
+            interpreter=interpreter,
+            description=description,
+            weights=weights,
+            model_dir=model_dir,
+        )
+        if model_name:
+            builtin_model_info = BuiltinOpenvinoModelInfo.create_from_model_name(model_name)
+            builtin_model_info.override(model_info)
 
-        if not osp.isfile(weights):
-            weights = osp.join(model_dir, weights)
-        if not osp.isfile(weights):
-            raise Exception('Failed to open model weights file "%s"' % (weights))
+        model_info.validate()
 
-        if not osp.isfile(interpreter):
-            interpreter = osp.join(model_dir, interpreter)
-        if not osp.isfile(interpreter):
-            raise Exception('Failed to open model interpreter script file "%s"' % (interpreter))
+        super().__init__(model_interpreter_path=model_info.interpreter)
 
-        self._interpreter = InterpreterScript(interpreter)
+        self.model_info = model_info
 
         self._device = device or "CPU"
-        self._output_blobs = output_layers
+        self._compile_model_config = compile_model_config
 
-        self._ie = IECore()
-        self._network = self._ie.read_network(description, weights)
+        self._core = Core()
+        self._network = self._core.read_model(model_info.description, model_info.weights)
+
+        if output_layers:
+            log.info(f"Add additional output layers {output_layers} to the model outputs.")
+            self._network.add_outputs(output_layers)
+
         self._check_model_support(self._network, self._device)
         self._load_executable_net()
 
+    @property
+    def inputs(self):
+        return self._network.inputs
+
+    @property
+    def outputs(self):
+        return self._network.outputs
+
     def _check_model_support(self, net, device):
         not_supported_layers = set(
-            name for name, dev in self._ie.query_network(net, device).items() if not dev
+            name for name, dev in self._core.query_model(net, device).items() if not dev
         )
         if len(not_supported_layers) != 0:
             log.error(
@@ -127,69 +235,55 @@ class OpenvinoLauncher(Launcher):
             )
             raise NotImplementedError("Some layers are not supported on the device")
 
-    def _load_executable_net(self, batch_size=1):
+    def _load_executable_net(self, batch_size: int = 1):
         network = self._network
 
-        if self._output_blobs:
-            network.add_outputs(self._output_blobs)
-
-        iter_inputs = iter(network.input_info)
+        iter_inputs = iter(network.inputs)
         self._input_blob = next(iter_inputs)
 
-        # NOTE: handling for the inclusion of `image_info` in OpenVino2019
-        self._require_image_info = "image_info" in network.input_info
-        if self._input_blob == "image_info":
-            self._input_blob = next(iter_inputs)
+        is_dynamic_layout = False
+        try:
+            self._input_layout = self._input_blob.shape
+        except ValueError:
+            # In case of that the input has dynamic shape
+            self._input_layout = self._input_blob.partial_shape
+            is_dynamic_layout = True
 
-        self._input_layout = network.input_info[self._input_blob].input_data.shape
-        self._input_layout[0] = batch_size
-        network.reshape({self._input_blob: self._input_layout})
+        if is_dynamic_layout:
+            self._input_layout[0] = batch_size
+            network.reshape({self._input_blob: self._input_layout})
+        else:
+            model_batch_size = self._input_layout[0]
+            if batch_size != model_batch_size:
+                log.warning(
+                    "Input layout of the model is static, so that we cannot change "
+                    f"the model batch size ({model_batch_size}) to batch size ({batch_size})! "
+                    "Set the batch size to {model_batch_size}."
+                )
+                batch_size = model_batch_size
+
         self._batch_size = batch_size
 
-        self._net = self._ie.load_network(network=network, num_requests=1, device_name=self._device)
-
-    def infer(self, inputs):
-        assert len(inputs.shape) == 4, "Expected an input image in (N, H, W, C) format, got %s" % (
-            inputs.shape,
+        self._net = self._core.compile_model(
+            model=network,
+            device_name=self._device,
+            config=self._compile_model_config,
         )
+        self._request = self._net.create_infer_request()
 
-        if inputs.shape[3] == 1:  # A batch of single-channel images
-            inputs = np.repeat(inputs, 3, axis=3)
-
-        assert inputs.shape[3] == 3, "Expected BGR input, got %s" % (inputs.shape,)
-
-        n, c, h, w = self._input_layout
-        if inputs.shape[1:3] != (h, w):
-            resized_inputs = np.empty((n, h, w, c), dtype=inputs.dtype)
-            for inp, resized_input in zip(inputs, resized_inputs):
-                cv2.resize(inp, (w, h), resized_input)
-            inputs = resized_inputs
-        inputs = inputs.transpose((0, 3, 1, 2))  # NHWC to NCHW
-        inputs = {self._input_blob: inputs}
-        if self._require_image_info:
-            info = np.zeros([1, 3])
-            info[0, 0] = h
-            info[0, 1] = w
-            info[0, 2] = 1.0  # scale
-            inputs["image_info"] = info
-
-        results = self._net.infer(inputs)
-        if len(results) == 1:
-            return next(iter(results.values()))
-        else:
-            return results
-
-    def launch(self, inputs):
+    def infer(self, inputs: LauncherInputType) -> List[ModelPred]:
         batch_size = len(inputs)
         if self._batch_size < batch_size:
             self._load_executable_net(batch_size)
 
-        outputs = self.infer(inputs)
-        results = self.process_outputs(inputs, outputs)
-        return results
+        inputs = (
+            {self._input_blob.get_any_name(): inputs} if isinstance(inputs, np.ndarray) else inputs
+        )
+        results = self._request.infer(inputs=inputs)
 
-    def categories(self):
-        return self._interpreter.get_categories()
+        outputs_group_by_item = [
+            {key.any_name: output for key, output in zip(results.keys(), outputs)}
+            for outputs in zip(*results.values())
+        ]
 
-    def process_outputs(self, inputs, outputs):
-        return self._interpreter.process_outputs(inputs, outputs)
+        return outputs_group_by_item

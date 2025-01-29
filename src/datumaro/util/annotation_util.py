@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MIT
 
 from itertools import groupby
-from typing import Callable, Dict, Iterable, NewType, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, Iterable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from typing_extensions import Literal
@@ -15,16 +15,14 @@ from datumaro.components.annotation import (
     LabelCategories,
     Mask,
     RleMask,
+    Shape,
 )
-from datumaro.components.annotation import _Shape as Shape
 from datumaro.util.mask_tools import mask_to_rle
 
 BboxCoords = Tuple[float, float, float, float]
 "A tuple of bounding box coordinates, (x, y, w, h)"
 
-_Shape = NewType("_Shape", Shape)
-
-SpatialAnnotation = Union[_Shape, Mask]
+SpatialAnnotation = Union[Shape, Mask]
 
 
 def find_instances(instance_anns: Sequence[Annotation]) -> Sequence[Sequence[Annotation]]:

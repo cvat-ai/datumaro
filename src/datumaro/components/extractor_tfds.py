@@ -14,7 +14,7 @@ import attrs
 from attrs import field, frozen
 
 from datumaro.components.annotation import AnnotationType, Bbox, Label, LabelCategories
-from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, IDataset
+from datumaro.components.dataset_base import CategoriesInfo, DatasetInfo, DatasetItem, IDataset
 from datumaro.components.media import ByteImage, Image, MediaElement
 from datumaro.util.tf_util import import_tf
 
@@ -407,6 +407,9 @@ class _TfdsSplitExtractor(IDataset):
 
             yield dm_item
 
+    def infos(self) -> DatasetInfo:
+        return self._parent.infos()
+
     def categories(self) -> CategoriesInfo:
         return self._parent.categories()
 
@@ -427,18 +430,23 @@ class _TfdsSplitExtractor(IDataset):
 
         return None
 
-    def media_type(self) -> Type[MediaElement]:
+    def media_type(self):
         return self._parent._media_type
+
+    def ann_types(self):
+        return self._parent.ann_types()
 
 
 class _TfdsExtractor(IDataset):
     _categories: CategoriesInfo
+    _infos: DatasetInfo
 
     def __init__(self, tfds_ds_name: str) -> None:
         self._adapter = _TFDS_ADAPTERS[tfds_ds_name]
         tfds_builder = tfds.builder(tfds_ds_name)
         tfds_ds_info = tfds_builder.info
 
+        self._infos = {}
         self._categories = {}
         self._state = namespace()
         self._adapter.transform_categories(tfds_builder, self._categories, self._state)
@@ -466,6 +474,9 @@ class _TfdsExtractor(IDataset):
     def __iter__(self) -> Iterator[DatasetItem]:
         return itertools.chain.from_iterable(self._split_extractors.values())
 
+    def infos(self) -> DatasetInfo:
+        return self._infos
+
     def categories(self) -> CategoriesInfo:
         return self._categories
 
@@ -487,8 +498,16 @@ class _TfdsExtractor(IDataset):
             return None
         return self._split_extractors[subset].get(id)
 
-    def media_type(self) -> Type[MediaElement]:
+    def media_type(self):
         return self._media_type
+
+    def ann_types(self):
+        ann_types = set()
+        for items in self._split_extractors.values():
+            for item in items:
+                for ann in item.annotations:
+                    ann_types.add(ann.type)
+        return ann_types
 
 
 # Some dataset metadata elements are either inconvenient to hardcode, or may change

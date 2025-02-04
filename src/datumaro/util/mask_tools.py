@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2021 Intel Corporation
+# Copyright (C) 2019-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -7,7 +7,9 @@ from itertools import chain, repeat
 from typing import Dict, List, NamedTuple, NewType, Optional, Sequence, Tuple, TypedDict, Union
 
 import numpy as np
+from pycocotools import mask as pycocotools_mask
 
+from datumaro._capi import encode
 from datumaro.util.image import lazy_image, load_image
 
 
@@ -79,7 +81,7 @@ _default_colormap = generate_colormap()
 _default_unpaint_colormap = invert_colormap(_default_colormap)
 
 
-def unpaint_mask(painted_mask: ColorMask, inverse_colormap=None) -> IndexMask:
+def unpaint_mask(painted_mask: ColorMask, inverse_colormap=None, default_id=None) -> IndexMask:
     """
     Convert color mask to index mask
 
@@ -104,8 +106,10 @@ def unpaint_mask(painted_mask: ColorMask, inverse_colormap=None) -> IndexMask:
     palette = []
     for v in uvals:
         class_id = map_fn(v)
-        if class_id is None:
+        if class_id is None and default_id is None:
             raise KeyError(f"Undeclared color {((v >> 16) & 255, (v >> 8) & 255, v & 255)}")
+        elif class_id is None and default_id is not None:
+            class_id = default_id
         palette.append(class_id)
     palette = np.array(palette, dtype=np.min_scalar_type(len(uvals)))
     unpainted_mask = palette[unpainted_mask].reshape(painted_mask.shape[:2])
@@ -224,11 +228,11 @@ def index2bgr(id_map):
     return np.dstack((id_map >> 16, id_map >> 8, id_map)).astype(np.uint8)
 
 
-def load_mask(path, inverse_colormap=None):
+def load_mask(path, inverse_colormap=None, default_id=None):
     mask = load_image(path, dtype=np.uint8)
     if inverse_colormap is not None:
         if len(mask.shape) == 3 and mask.shape[2] != 1:
-            mask = unpaint_mask(mask, inverse_colormap)
+            mask = unpaint_mask(mask, inverse_colormap, default_id)
     return mask
 
 
@@ -237,6 +241,10 @@ def lazy_mask(path, inverse_colormap=None):
 
 
 def mask_to_rle(binary_mask: BinaryMask) -> CompressedRle:
+    return encode(binary_mask)
+
+
+def mask_to_rle_py(binary_mask: BinaryMask) -> CompressedRle:
     # walk in row-major order as COCO format specifies
     bounded = binary_mask.ravel(order="F")
 
@@ -308,7 +316,19 @@ def _group_contours_with_children(hierarchy: np.ndarray) -> Dict[int, List[int]]
     return parent_to_children
 
 
-def _extract_contours(mask: np.ndarray) -> List[np.ndarray]:
+def extract_contours(mask: np.ndarray) -> List[np.ndarray]:
+    """
+    Convert an instance mask to polygons
+
+    Args:
+        mask: a 2d binary mask
+        tolerance: maximum distance from original points of
+            a polygon to the approximated ones
+        area_threshold: minimal area of generated polygons
+
+    Returns:
+        A list of polygons like [[x1,y1, x2,y2 ...], [...]]
+    """
     import cv2
 
     contours, hierarchy = cv2.findContours(
@@ -355,13 +375,14 @@ def mask_to_polygons(mask: BinaryMask, area_threshold=1) -> List[Polygon]:
     Returns:
         A list of polygons like [[x1,y1, x2,y2 ...], [...]]
     """
-    from pycocotools import mask as mask_utils
+
+    contours = extract_contours(mask)
 
     polygons = []
-    for contour in _extract_contours(mask):
+    for contour in contours:
         # Check if the polygon is big enough
-        rle = mask_utils.frPyObjects([contour], mask.shape[0], mask.shape[1])
-        area = sum(mask_utils.area(rle))
+        rle = pycocotools_mask.frPyObjects([contour], mask.shape[0], mask.shape[1])
+        area = sum(pycocotools_mask.area(rle))
         if area_threshold <= area:
             polygons.append(contour)
     return polygons
@@ -383,9 +404,30 @@ def to_uncompressed_rle(rle: Rle, *, width: int, height: int) -> UncompressedRle
     if is_uncompressed_rle(rle):
         return rle
 
-    from pycocotools import mask as mask_utils
+    return pycocotools_mask.frPyObjects(rle, height, width)
 
-    return mask_utils.frPyObjects(rle, height, width)
+
+def mask_to_bboxes(mask):
+    """
+    Convert an instance mask to bboxes
+
+    Args:
+        mask: a 2d binary mask
+
+    Returns:
+        A list of bboxes like [[x1,x2,y1,y2], [...]]
+    """
+
+    contours = extract_contours(mask)
+
+    bboxes = []
+    for contour in contours:
+        x1, x2 = min(contour[0::2]), max(contour[0::2])
+        y1, y2 = min(contour[1::2]), max(contour[1::2])
+
+        bboxes.append([x1, x2, y1, y2])
+
+    return bboxes
 
 
 def crop_covered_segments(
@@ -427,18 +469,16 @@ def crop_covered_segments(
                 ...
             ]
     """
-    from pycocotools import mask as mask_utils
-
     # Convert to uncompressed RLEs
     wrapped_segments = [[s] for s in segments]
     input_rles = [
-        mask_utils.frPyObjects(s, height, width) if not is_uncompressed_rle(s[0]) else s
+        pycocotools_mask.frPyObjects(s, height, width) if not is_uncompressed_rle(s[0]) else s
         for s in wrapped_segments
     ]
 
     output_segments = []
     for i, rle_bottom in enumerate(input_rles):
-        area_bottom = sum(mask_utils.area(rle_bottom))
+        area_bottom = sum(pycocotools_mask.area(rle_bottom))
         if area_bottom < area_threshold:
             output_segments.append([] if not return_masks else None)
             continue
@@ -446,12 +486,12 @@ def crop_covered_segments(
         rles_top = []
         for j in range(i + 1, len(input_rles)):
             rle_top = input_rles[j]
-            iou = sum(mask_utils.iou(rle_bottom, rle_top, [0]))[0]
+            iou = sum(pycocotools_mask.iou(rle_bottom, rle_top, [0]))[0]
 
             if iou <= iou_threshold:
                 continue
 
-            area_top = sum(mask_utils.area(rle_top))
+            area_top = sum(pycocotools_mask.area(rle_top))
             area_ratio = area_top / area_bottom
 
             # If the top segment is (almost) fully inside the background one,
@@ -466,11 +506,11 @@ def crop_covered_segments(
             continue
 
         rle_bottom = rle_bottom[0]
-        bottom_mask = mask_utils.decode(rle_bottom).astype(np.uint8)
+        bottom_mask = pycocotools_mask.decode(rle_bottom).astype(np.uint8)
 
         if rles_top:
-            rle_top = mask_utils.merge(rles_top)
-            top_mask = mask_utils.decode(rle_top).astype(np.uint8)
+            rle_top = pycocotools_mask.merge(rles_top)
+            top_mask = pycocotools_mask.decode(rle_top).astype(np.uint8)
 
             bottom_mask -= top_mask
             bottom_mask[bottom_mask != 1] = 0
@@ -486,12 +526,21 @@ def crop_covered_segments(
 
 
 def rles_to_mask(rles: Sequence[Union[CompressedRle, Polygon]], width, height) -> BinaryMask:
-    from pycocotools import mask as mask_utils
-
-    rles = mask_utils.frPyObjects(rles, height, width)
-    rles = mask_utils.merge(rles)
-    mask = mask_utils.decode(rles)
+    rles = pycocotools_mask.frPyObjects(rles, height, width)
+    rles = pycocotools_mask.merge(rles)
+    mask = pycocotools_mask.decode(rles)
     return mask
+
+
+def rle_to_mask(rle_uncompressed: Dict[str, np.ndarray]) -> np.ndarray:
+    """Decode the uncompressed RLE string to the binary mask (2D np.ndarray)
+
+    The uncompressed RLE string can be obtained by
+    the datumaro.util.mask_tools.mask_to_rle() function
+    """
+    resulting_mask = pycocotools_mask.frPyObjects(rle_uncompressed, *rle_uncompressed["size"])
+    resulting_mask = pycocotools_mask.decode(resulting_mask)
+    return resulting_mask
 
 
 def find_mask_bbox(mask: BinaryMask) -> BboxCoords:

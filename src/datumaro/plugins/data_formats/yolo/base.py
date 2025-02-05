@@ -39,7 +39,6 @@ from datumaro.util.image import (
     DEFAULT_IMAGE_META_FILE_NAME,
     ImageMeta,
     find_images,
-    load_image,
     load_image_meta_file,
 )
 from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_meta_file
@@ -108,10 +107,6 @@ class _YoloBase(SubsetBase):
             subset.items = self._get_lazy_subset_items(subset_name)
             self._subsets[subset_name] = subset
 
-    @classmethod
-    def _image_loader(cls, *args, **kwargs):
-        return load_image(*args, **kwargs, keep_exif=True)
-
     def _get(self, item_id: str, subset_name: str) -> Optional[DatasetItem]:
         subset = self._subsets[subset_name]
         item = subset.items[item_id]
@@ -121,10 +116,7 @@ class _YoloBase(SubsetBase):
                 image_size = self._image_info.get(item_id)
                 image_path = osp.join(self._path, item)
 
-                if image_size:
-                    image = Image(path=image_path, size=image_size)
-                else:
-                    image = Image(path=image_path, data=self._image_loader)
+                image = Image(path=image_path, size=image_size)
 
                 annotations = self._parse_annotations(image, item_id=(item_id, subset_name))
 

@@ -63,21 +63,14 @@ class ImageColorChannel(Enum):
     COLOR_BGR = 1
     COLOR_RGB = 2
 
-    def decode_by_cv2(
-        self, image_bytes: bytes, dtype: DTypeLike = np.uint8, keep_exif: bool = False
-    ) -> np.ndarray:
+    def decode_by_cv2(self, image_bytes: bytes, dtype: DTypeLike = np.uint8) -> np.ndarray:
         """Convert image color channel for OpenCV image (np.ndarray)."""
         image_buffer = np.frombuffer(image_bytes, dtype=dtype)
 
         if self == ImageColorChannel.UNCHANGED:
-            return cv2.imdecode(
-                image_buffer,
-                cv2.IMREAD_UNCHANGED ^ (cv2.IMREAD_IGNORE_ORIENTATION if keep_exif else 0),
-            )
+            return cv2.imdecode(image_buffer, cv2.IMREAD_UNCHANGED ^ cv2.IMREAD_IGNORE_ORIENTATION)
 
-        img = cv2.imdecode(
-            image_buffer, cv2.IMREAD_COLOR ^ (0 if keep_exif else cv2.IMREAD_IGNORE_ORIENTATION)
-        )
+        img = cv2.imdecode(image_buffer, cv2.IMREAD_COLOR)
 
         if self == ImageColorChannel.COLOR_BGR:
             return img
@@ -87,14 +80,12 @@ class ImageColorChannel(Enum):
 
         raise ValueError
 
-    def decode_by_pil(self, image_bytes: bytes, keep_exif: bool = False) -> np.ndarray:
+    def decode_by_pil(self, image_bytes: bytes) -> np.ndarray:
         """Convert image color channel for PIL Image."""
         from PIL import Image, ImageOps
 
         img = Image.open(BytesIO(image_bytes))
-
-        if keep_exif:
-            img = ImageOps.exif_transpose(img)
+        img = ImageOps.exif_transpose(img)
 
         if self == ImageColorChannel.UNCHANGED:
             return np.asarray(img)
@@ -144,9 +135,7 @@ def decode_image_context(image_backend: ImageBackend, image_color_channel: Image
     IMAGE_COLOR_CHANNEL.set(curr_ctx[1])
 
 
-def load_image(
-    path: str, dtype: DTypeLike = np.uint8, crypter: Crypter = NULL_CRYPTER, keep_exif: bool = False
-):
+def load_image(path: str, dtype: DTypeLike = np.uint8, crypter: Crypter = NULL_CRYPTER):
     """
     Reads an image in the HWC Grayscale/BGR(A) [0; 255] format (default dtype is uint8).
     """
@@ -159,12 +148,12 @@ def load_image(
         with open(path, "rb") as f:
             image_bytes = crypter.decrypt(f.read())
 
-        return decode_image(image_bytes, dtype=dtype, keep_exif=keep_exif)
+        return decode_image(image_bytes, dtype=dtype)
     elif IMAGE_BACKEND.get() == ImageBackend.PIL:
         with open(path, "rb") as f:
             image_bytes = crypter.decrypt(f.read())
 
-        return decode_image(image_bytes, dtype=dtype, keep_exif=keep_exif)
+        return decode_image(image_bytes, dtype=dtype)
 
     raise NotImplementedError(IMAGE_BACKEND)
 
@@ -301,9 +290,7 @@ def encode_image(image: np.ndarray, ext: str, dtype: DTypeLike = np.uint8, **kwa
         raise NotImplementedError()
 
 
-def decode_image(
-    image_bytes: bytes, dtype: np.dtype = np.uint8, keep_exif: bool = False
-) -> np.ndarray:
+def decode_image(image_bytes: bytes, dtype: np.dtype = np.uint8) -> np.ndarray:
     ctx_color_scale = IMAGE_COLOR_CHANNEL.get()
 
     if np.issubdtype(dtype, np.floating):
@@ -312,15 +299,15 @@ def decode_image(
         with decode_image_context(
             image_backend=ImageBackend.cv2, image_color_channel=ImageColorChannel.UNCHANGED
         ):
-            image = ctx_color_scale.decode_by_cv2(image_bytes, dtype=dtype, keep_exif=keep_exif)
+            image = ctx_color_scale.decode_by_cv2(image_bytes, dtype=dtype)
             image = image[..., ::-1]
         if ctx_color_scale == ImageColorChannel.COLOR_BGR:
             image = image[..., ::-1]
     else:
         if IMAGE_BACKEND.get() == ImageBackend.cv2:
-            image = ctx_color_scale.decode_by_cv2(image_bytes, keep_exif=keep_exif)
+            image = ctx_color_scale.decode_by_cv2(image_bytes)
         elif IMAGE_BACKEND.get() == ImageBackend.PIL:
-            image = ctx_color_scale.decode_by_pil(image_bytes, keep_exif=keep_exif)
+            image = ctx_color_scale.decode_by_pil(image_bytes)
         else:
             raise NotImplementedError()
 

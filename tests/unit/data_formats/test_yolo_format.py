@@ -64,11 +64,17 @@ from datumaro.plugins.data_formats.yolo.importer import (
     YoloUltralyticsSegmentationImporter,
 )
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
-from datumaro.util.image import save_image
+from datumaro.util.image import IMAGE_COLOR_CHANNEL, ImageBackend, decode_image_context, save_image
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path
 from tests.utils.test_utils import compare_annotations, compare_datasets, compare_datasets_strict
+
+
+@pytest.fixture(params=ImageBackend)
+def image_backend(request):
+    with decode_image_context(request.param, IMAGE_COLOR_CHANNEL.get()):
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -1134,7 +1140,7 @@ class YoloImporterTest(CompareDatasetMixin):
             self.compare_datasets(expected_dataset, dataset)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_with_exif_rotated_images(self, test_dir):
+    def test_can_import_with_exif_rotated_images(self, test_dir, image_backend):
         expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(

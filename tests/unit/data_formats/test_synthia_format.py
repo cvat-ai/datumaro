@@ -46,7 +46,7 @@ class SynthiaImporterTest(TestCase):
             [
                 DatasetItem(
                     id="Stereo_Left/Omni_B/000000",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 1, 0, 0, 0]]),
@@ -62,7 +62,7 @@ class SynthiaImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="Stereo_Left/Omni_B/000001",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 0, 0]]),
@@ -83,7 +83,7 @@ class SynthiaImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="Stereo_Left/Omni_F/000000",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 1, 0, 0, 0]]),
@@ -104,7 +104,7 @@ class SynthiaImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="Stereo_Left/Omni_F/000001",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 0, 0]]),
@@ -142,7 +142,7 @@ class SynthiaImporterTest(TestCase):
             [
                 DatasetItem(
                     id="Stereo_Left/Omni_F/000000",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 0, 0, 0]]), label=1),
                         Mask(np.array([[0, 0, 1, 1, 0]]), label=2),
@@ -151,7 +151,7 @@ class SynthiaImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="Stereo_Left/Omni_F/000001",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 0, 0, 0, 0]]), label=1),
                         Mask(np.array([[0, 1, 0, 0, 0]]), label=2),
@@ -173,7 +173,7 @@ class SynthiaImporterTest(TestCase):
             [
                 DatasetItem(
                     id="Stereo_Left/Omni_F/000000",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 1, 0, 0]]), label=1),
                         Mask(np.array([[0, 0, 0, 1, 1]]), label=4),
@@ -181,7 +181,7 @@ class SynthiaImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="Stereo_Left/Omni_F/000001",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 0, 0, 0]]), label=2),
                         Mask(np.array([[0, 0, 1, 1, 0]]), label=3),
@@ -215,7 +215,7 @@ class SynthiaImporterTest(TestCase):
             [
                 DatasetItem(
                     id="Stereo_Left/Omni_F/000000",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 1, 0, 0]]), label=1),
                         Mask(np.array([[0, 0, 0, 1, 1]]), label=4),
@@ -223,7 +223,7 @@ class SynthiaImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="Stereo_Left/Omni_F/000001",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 0, 0, 0]]), label=2),
                         Mask(np.array([[0, 0, 1, 1, 0]]), label=3),

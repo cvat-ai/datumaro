@@ -43,7 +43,7 @@ class DiffTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Caption("hello", id=1),
                         Caption("world", id=2, group=5),
@@ -91,7 +91,7 @@ class DiffTest(TestCase):
                 ),
                 DatasetItem(id=42, subset="test", attributes={"a1": 5, "a2": "42"}),
                 DatasetItem(id=42),
-                DatasetItem(id=43, media=Image(path="1/b/c.qq", size=(2, 4))),
+                DatasetItem(id=43, media=Image.from_file(path="1/b/c.qq", size=(2, 4))),
             ],
             categories={
                 AnnotationType.label: label_categories1,
@@ -112,7 +112,7 @@ class DiffTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Caption("hello", id=1),
                         Caption("world", id=2, group=5),
@@ -160,7 +160,7 @@ class DiffTest(TestCase):
                 ),
                 DatasetItem(id=42, subset="test", attributes={"a1": 5, "a2": "42"}),
                 DatasetItem(id=42),
-                DatasetItem(id=43, media=Image(path="1/b/c.qq", size=(2, 4))),
+                DatasetItem(id=43, media=Image.from_file(path="1/b/c.qq", size=(2, 4))),
             ],
             categories={
                 AnnotationType.label: label_categories2,
@@ -185,7 +185,7 @@ class DiffTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4, label=0),
                     ],
@@ -199,7 +199,7 @@ class DiffTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4, label=1),
                         Bbox(5, 6, 7, 8, label=2),
@@ -237,7 +237,7 @@ class DiffTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4, label=0),
                     ],
@@ -251,7 +251,7 @@ class DiffTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4, label=1),
                         Bbox(5, 6, 7, 8, label=2),

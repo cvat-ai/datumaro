@@ -75,7 +75,7 @@ class _SubsetWriter:
 
         if isinstance(item.media, Image):
             image = item.media_as(Image)
-            path = image.path
+            path = getattr(image, "path", "")
             if self._context._save_media:
                 path = self._context._make_image_filename(item)
                 self._context._save_image(
@@ -97,10 +97,9 @@ class _SubsetWriter:
 
             item_desc["point_cloud"] = {"path": path}
 
-            images = sorted(pcd.extra_images, key=lambda v: v.path)
             if self._context._save_media:
                 related_images = []
-                for i, img in enumerate(images):
+                for i, img in enumerate(pcd.extra_images):
                     ri_desc = {}
 
                     # Images can have completely the same names or don't
@@ -120,7 +119,7 @@ class _SubsetWriter:
                         ri_desc["size"] = img.size
                     related_images.append(ri_desc)
             else:
-                related_images = [{"path": img.path} for img in images]
+                related_images = [{"path": getattr(img, "path", "")} for img in pcd.extra_images]
 
             if related_images:
                 item_desc["related_images"] = related_images

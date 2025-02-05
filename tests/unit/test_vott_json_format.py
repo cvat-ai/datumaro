@@ -27,14 +27,14 @@ class VottJsonImporterTest(TestCase):
                 DatasetItem(
                     id="img0001",
                     subset="train",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     attributes={"id": "0d3de147f"},
                     annotations=[Bbox(5, 10, 10, 2, label=0, attributes={"id": "BsO3zj9bn"})],
                 ),
                 DatasetItem(
                     id="img0002",
                     subset="train",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     attributes={"id": "b482849bc"},
                     annotations=[
                         Bbox(11.5, 12, 10.2, 20.5, label=0, attributes={"id": "mosw0b97K"}),
@@ -44,7 +44,7 @@ class VottJsonImporterTest(TestCase):
                 DatasetItem(
                     id="img0003",
                     subset="train",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     attributes={"id": "50fef05a8"},
                     annotations=[
                         Bbox(6.7, 10.3, 3.3, 4.7, attributes={"id": "35t9mf-Zr"}),
@@ -66,14 +66,14 @@ class VottJsonImporterTest(TestCase):
                 DatasetItem(
                     id="img0001",
                     subset="train",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     attributes={"id": "0d3de147f"},
                     annotations=[Bbox(5, 10, 10, 2, label=0, attributes={"id": "BsO3zj9bn"})],
                 ),
                 DatasetItem(
                     id="img0002",
                     subset="train",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     attributes={"id": "b482849bc"},
                     annotations=[
                         Bbox(11.5, 12, 10.2, 20.5, label=1, attributes={"id": "mosw0b97K"})
@@ -82,7 +82,7 @@ class VottJsonImporterTest(TestCase):
                 DatasetItem(
                     id="img0003",
                     subset="train",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     attributes={"id": "50fef05a8"},
                     annotations=[
                         Bbox(6.7, 10.3, 3.3, 4.7, attributes={"id": "35t9mf-Zr"}),

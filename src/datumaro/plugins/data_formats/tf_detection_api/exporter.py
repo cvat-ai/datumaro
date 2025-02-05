@@ -12,7 +12,7 @@ from collections import OrderedDict
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.exporter import Exporter
-from datumaro.components.media import ByteImage, Image
+from datumaro.components.media import Image, ImageFromBytes
 from datumaro.util.annotation_util import find_group_leader, find_instances, max_bbox
 from datumaro.util.image import encode_image
 from datumaro.util.mask_tools import merge_masks
@@ -220,8 +220,8 @@ class TfDetectionApiExporter(Exporter):
                 "image extension, the corresponding field will be empty." % (item.id, dst_ext)
             )
 
-        if src_ext == dst_ext and isinstance(item.media, ByteImage):
-            buffer = item.media.get_bytes()
+        if src_ext == dst_ext and isinstance(item.media, ImageFromBytes):
+            buffer = item.media.bytes
         else:
             buffer = encode_image(item.media.data, dst_ext)
         return buffer, fmt

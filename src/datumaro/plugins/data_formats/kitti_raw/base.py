@@ -241,9 +241,11 @@ class KittiRawBase(SubsetBase):
             items[frame_id] = DatasetItem(
                 id=name,
                 subset=self._subset,
-                media=PointCloud(
+                media=PointCloud.from_file(
                     osp.join(self._rootdir, KittiRawPath.PCD_DIR, name + ".pcd"),
-                    extra_images=[Image(path=image) for image in sorted(images.get(name, []))],
+                    extra_images=[
+                        Image.from_file(path=image) for image in sorted(images.get(name, []))
+                    ],
                 ),
                 annotations=item_desc.get("annotations"),
                 attributes={"frame": int(frame_id)},
@@ -256,9 +258,11 @@ class KittiRawBase(SubsetBase):
             items[frame_id] = DatasetItem(
                 id=name,
                 subset=self._subset,
-                media=PointCloud(
+                media=PointCloud.from_file(
                     osp.join(self._rootdir, KittiRawPath.PCD_DIR, name + ".pcd"),
-                    extra_images=[Image(path=image) for image in sorted(images.get(name, []))],
+                    extra_images=[
+                        Image.from_file(path=image) for image in sorted(images.get(name, []))
+                    ],
                 ),
                 attributes={"frame": int(frame_id)},
             )

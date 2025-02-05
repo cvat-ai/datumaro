@@ -49,7 +49,7 @@ from .components.hl_ops import (  # pylint: disable=redefined-builtin
 )
 from .components.importer import Importer
 from .components.launcher import Launcher
-from .components.media import ByteImage, Image, MediaElement, PointCloud, Video, VideoFrame
+from .components.media import Image, MediaElement, PointCloud, Video, VideoFrame
 from .components.media_manager import MediaManager
 from .components.progress_reporting import NullProgressReporter, ProgressReporter
 from .components.transformer import ItemTransform, ModelTransform, Transform

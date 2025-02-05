@@ -32,7 +32,7 @@ class MpiiJsonImporterTest(TestCase):
             [
                 DatasetItem(
                     id="000000001",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Points(
                             [
@@ -79,7 +79,7 @@ class MpiiJsonImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="000000002",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Points(
                             [
@@ -126,7 +126,7 @@ class MpiiJsonImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="000000003",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Points(
                             [
@@ -270,7 +270,7 @@ class MpiiJsonImporterTest(TestCase):
             [
                 DatasetItem(
                     id="000000001",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Points(
                             [
@@ -316,7 +316,7 @@ class MpiiJsonImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="000000002",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Points(
                             [
@@ -362,7 +362,7 @@ class MpiiJsonImporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="000000003",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Points(
                             [

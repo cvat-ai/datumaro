@@ -1,70 +1,237 @@
-# Copyright (C) 2021-2022 Intel Corporation
+# Copyright (C) 2021-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import errno
+import io
 import os
 import os.path as osp
 import shutil
-import weakref
-from typing import Callable, Iterable, Iterator, List, Optional, Tuple, Union
+from copy import deepcopy
+from enum import IntEnum
+from functools import partial
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import cv2
 import numpy as np
 
-from datumaro.util.image import _image_loading_errors, decode_image, lazy_image, save_image
+from datumaro.components.crypter import NULL_CRYPTER, Crypter
+from datumaro.components.errors import DatumaroError, MediaShapeError
+from datumaro.util.definitions import BboxIntCoords
+from datumaro.util.image import (
+    _image_loading_errors,
+    copyto_image,
+    decode_image,
+    lazy_image,
+    load_image,
+    save_image,
+)
+
+if TYPE_CHECKING:
+    import pandas as pd
+else:
+    from datumaro.util.import_util import lazy_import
+
+    pd = lazy_import("pandas")
 
 
-class MediaElement:
-    def __init__(self, path: str) -> None:
+AnyData = TypeVar("AnyData", bytes, np.ndarray)
+
+
+class MediaType(IntEnum):
+    NONE = 0
+    MEDIA_ELEMENT = 1
+    IMAGE = 2
+    BYTE_IMAGE = 3
+    VIDEO_FRAME = 4
+    VIDEO = 5
+    POINT_CLOUD = 6
+    MULTIFRAME_IMAGE = 7
+    ROI_IMAGE = 8
+    MOSAIC_IMAGE = 9
+    TABLE_ROW = 10
+
+    @property
+    def media(self) -> Optional[Type[MediaElement]]:
+        if self == self.NONE:
+            return None
+        if self == self.MEDIA_ELEMENT:
+            return MediaElement
+        if self == self.IMAGE:
+            return Image
+        if self == self.VIDEO_FRAME:
+            return VideoFrame
+        if self == self.VIDEO:
+            return Video
+        if self == self.POINT_CLOUD:
+            return PointCloud
+        if self == self.MULTIFRAME_IMAGE:
+            return MultiframeImage
+        if self == self.ROI_IMAGE:
+            return RoIImage
+        if self == self.MOSAIC_IMAGE:
+            return MosaicImage
+        if self == self.TABLE_ROW:
+            return TableRow
+        raise NotImplementedError
+
+
+class MediaElement(Generic[AnyData]):
+    _type = MediaType.MEDIA_ELEMENT
+
+    def __init__(self, crypter: Crypter = NULL_CRYPTER, *args, **kwargs) -> None:
+        self._crypter = crypter
+
+    def as_dict(self) -> Dict[str, Any]:
+        # NOTE:
+        # attributes starting with a single underscore are assumed
+        # to be arguments of __init__ method and
+        # attributes starting with double underscores are assuemd
+        # to be not directly related to __init__ method.
+        return {
+            key[1:]: value
+            for key, value in self.__dict__.items()
+            if key.startswith("_") and not key.startswith(f"_{self.__class__.__name__}")
+        }
+
+    def from_self(self, **kwargs):
+        attrs = deepcopy(self.as_dict())
+        attrs.update(kwargs)
+        return self.__class__(**attrs)
+
+    @property
+    def is_encrypted(self) -> bool:
+        return not self._crypter.is_null_crypter
+
+    def set_crypter(self, crypter: Crypter):
+        self._crypter = crypter
+
+    @property
+    def type(self) -> MediaType:
+        return self._type
+
+    @property
+    def data(self) -> Optional[AnyData]:
+        return None
+
+    @property
+    def has_data(self) -> bool:
+        return False
+
+    @property
+    def bytes(self) -> Optional[bytes]:
+        return None
+
+    def __eq__(self, other: object) -> bool:
+        other_type = getattr(other, "type", None)
+        if self.type != other_type:
+            return False
+        return True
+
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        raise NotImplementedError
+
+
+class FromFileMixin:
+    def __init__(self, path: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         assert path, "Path can't be empty"
         self._path = path
 
     @property
     def path(self) -> str:
         """Path to the media file"""
-        return self._path
+        # TODO: do we need this replace?
+        return self._path.replace("\\", "/")
 
     @property
-    def ext(self) -> str:
-        """Media file extension (with the leading dot)"""
-        return osp.splitext(osp.basename(self.path))[1]
+    def bytes(self) -> Optional[bytes]:
+        if self.has_data:
+            with open(self._path, "rb") as f:
+                _bytes = f.read()
+            return _bytes
+        return None
 
-    def __eq__(self, other: object) -> bool:
-        # We need to compare exactly with this type
-        if type(other) is not __class__:  # pylint: disable=unidiomatic-typecheck
-            return False
-        return self._path == other._path
+    @property
+    def has_data(self) -> bool:
+        return os.path.exists(self.path)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(path={repr(self._path)})"
 
 
-class Image(MediaElement):
+class FromDataMixin(Generic[AnyData]):
+    def __init__(self, data: Union[Callable[[], AnyData], AnyData], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._data = data
+
+    @property
+    def data(self) -> Optional[AnyData]:
+        if callable(self._data):
+            return self._data()
+        return self._data
+
+    @property
+    def bytes(self) -> Optional[bytes]:
+        if self.has_data:
+            _bytes = self._data() if callable(self._data) else self._data
+            if isinstance(_bytes, bytes):
+                return _bytes
+        return None
+
+    @property
+    def has_data(self) -> bool:
+        return self._data is not None
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(data=" + repr(self._data)[:20].replace("\n", "") + "...)"
+
+
+class Image(MediaElement[np.ndarray]):
+    _type = MediaType.IMAGE
+
+    _DEFAULT_EXT = ".png"
+
     def __init__(
         self,
-        data: Union[np.ndarray, Callable[[str], np.ndarray], None] = None,
-        *,
-        path: Optional[str] = None,
-        ext: Optional[str] = None,
         size: Optional[Tuple[int, int]] = None,
+        ext: Optional[str] = None,
+        *args,
+        **kwargs,
     ) -> None:
-        """
-        Creates an image.
+        assert self.__class__ != Image, (
+            f"Directly initalizing {self.__class__.__name__} is not supported. "
+            f"Please use one of fractory functions ({self.__class__.__name__}.from_file(), "
+            f"{self.__class__.__name__}.from_numpy(), {self.__class__.__name__}.from_bytes())."
+        )
+        super().__init__(*args, **kwargs)
+        self._dtype = np.uint8
 
-        Any combination of the `data`, `path` and `size` is possible,
-        but at least one of these arguments must be provided.
-        The `ext` parameter cannot be used as a single argument for
-        construction.
-
-        Args:
-            data: Image pixels or a function to retrieve them. The expected
-                image shape is (H, W [, C]). If a function is provided,
-                it must accept image path as the first argument.
-            path: Image path
-            ext: Image extension. Cannot be used together with `path`. It can
-                be used for saving with a custom extension - in that case,
-                the image need to have the `data` and `ext` fields defined.
-            size: A pair (H, W), which represents image size.
-        """
+        if ext is not None:
+            if not ext.startswith("."):
+                ext = "." + ext
+            ext = ext.lower()
+        self._ext = ext
 
         if size is not None:
             assert (
@@ -73,50 +240,32 @@ class Image(MediaElement):
             size = tuple(map(int, size))
         self._size = size  # (H, W)
 
-        if path is None:
-            path = ""
-        elif path:
-            path = path.replace("\\", "/")
-        self._path = path
+    @classmethod
+    def from_file(cls, path: str, *args, **kwargs):
+        return ImageFromFile(path, *args, **kwargs)
 
-        if ext:
-            assert not path, "Can't specify both 'path' and 'ext' for image"
+    @classmethod
+    def from_numpy(
+        cls,
+        data: Union[np.ndarray, Callable[[], np.ndarray]],
+        *args,
+        **kwargs,
+    ):
+        return ImageFromNumpy(data, *args, **kwargs)
 
-            if not ext.startswith("."):
-                ext = "." + ext
-            ext = ext.lower()
-        else:
-            ext = None
-        self._ext = ext
-
-        if not isinstance(data, np.ndarray):
-            assert path or callable(data) or size, "Image can not be empty"
-            assert data is None or callable(data), f"Image data has unexpected type '{type(data)}'"
-            if data or path and osp.isfile(path):
-                data = lazy_image(path, loader=data)
-        self._data = data
-
-    @property
-    def data(self) -> np.ndarray:
-        """Image data in BGR HWC [0; 255] (float) format"""
-
-        if callable(self._data):
-            data = self._data()
-        else:
-            data = self._data
-
-        if self._size is None and data is not None:
-            self._size = tuple(map(int, data.shape[:2]))
-        return data
-
-    @property
-    def has_data(self) -> bool:
-        return self._data is not None
+    @classmethod
+    def from_bytes(
+        cls,
+        data: Union[bytes, Callable[[], bytes]],
+        *args,
+        **kwargs,
+    ):
+        return ImageFromBytes(data, *args, **kwargs)
 
     @property
     def has_size(self) -> bool:
         """Indicates that size info is cached and won't require image loading"""
-        return self._size is not None or isinstance(self._data, np.ndarray)
+        return self._size is not None
 
     @property
     def size(self) -> Optional[Tuple[int, int]]:
@@ -132,38 +281,141 @@ class Image(MediaElement):
         return self._size
 
     @property
-    def ext(self) -> str:
-        """Media file extension"""
-        if self._ext is not None:
-            return self._ext
+    def ext(self) -> Optional[str]:
+        """Media file extension (with the leading dot)"""
+        return self._ext
+
+    def _get_ext_to_save(self, fp: Union[str, io.IOBase], ext: Optional[str] = None):
+        if isinstance(fp, str):
+            assert ext is None, "'ext' must be empty if string is given."
+            ext = osp.splitext(osp.basename(fp))[1].lower()
         else:
-            return osp.splitext(osp.basename(self.path))[1]
+            ext = ext if ext else self._DEFAULT_EXT
+        return ext
 
     def __eq__(self, other):
+        # Do not compare `_type`
+        # sicne Image is subclass of RoIImage and MosaicImage
         if not isinstance(other, __class__):
             return False
-        return (
-            (np.array_equal(self.size, other.size))
-            and (self.has_data == other.has_data)
-            and (self.has_data and np.array_equal(self.data, other.data) or not self.has_data)
-        )
+        return (np.array_equal(self.size, other.size)) and (np.array_equal(self.data, other.data))
 
-    def save(self, path):
-        cur_path = osp.abspath(self.path)
-        path = osp.abspath(path)
+    def set_crypter(self, crypter: Crypter):
+        super().set_crypter(crypter)
 
-        cur_ext = self.ext.lower()
-        new_ext = osp.splitext(osp.basename(path))[1].lower()
 
-        os.makedirs(osp.dirname(path), exist_ok=True)
-        if cur_ext == new_ext and osp.isfile(cur_path):
-            if cur_path != path:
-                shutil.copyfile(cur_path, path)
+class ImageFromFile(FromFileMixin, Image):
+    def __init__(
+        self,
+        path: str,
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(path, *args, **kwargs)
+        self.__data = lazy_image(self.path, crypter=self._crypter)
+
+        # extension from file name and real extension can be differ
+        self._ext = self._ext if self._ext else osp.splitext(osp.basename(path))[1]
+
+    @property
+    def data(self) -> Optional[np.ndarray]:
+        """Image data in BGRA HWC [0; 255] (uint8) format"""
+
+        if not self.has_data:
+            return None
+
+        if self.__data._dtype != self._dtype:
+            self.__data._loader = partial(load_image, dtype=self._dtype)
+        data = self.__data()
+
+        if self._size is None and data is not None:
+            if not 2 <= data.ndim <= 3:
+                raise MediaShapeError("An image should have 2 (gray) or 3 (bgra) dims.")
+            self._size = tuple(map(int, data.shape[:2]))
+        return data
+
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        ext: Optional[str] = None,
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        cur_path = osp.abspath(self.path) if self.path else None
+        cur_ext = self.ext
+        new_ext = self._get_ext_to_save(fp, ext)
+        if isinstance(fp, str):
+            os.makedirs(osp.dirname(fp), exist_ok=True)
+
+        if cur_path is not None and osp.isfile(cur_path):
+            if cur_ext == new_ext:
+                copyto_image(src=cur_path, dst=fp, src_crypter=self._crypter, dst_crypter=crypter)
+            else:
+                save_image(fp, self.data, ext=new_ext, crypter=crypter)
         else:
-            save_image(path, self.data)
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), cur_path)
+
+    def set_crypter(self, crypter: Crypter):
+        super().set_crypter(crypter)
+        if isinstance(self.__data, lazy_image):
+            self.__data._crypter = crypter
+
+    def get_data_as_dtype(self, dtype: Optional[np.dtype] = np.uint8) -> Optional[np.ndarray]:
+        """Get image data with a specific data type"""
+        self._dtype = dtype
+        return self.data
 
 
-class ByteImage(Image):
+class ImageFromData(FromDataMixin, Image):
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        ext: Optional[str] = None,
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        data = self.data
+        if data is None:
+            raise ValueError(f"{self.__class__.__name__} is empty.")
+        new_ext = self._get_ext_to_save(fp, ext)
+        if isinstance(fp, str):
+            os.makedirs(osp.dirname(fp), exist_ok=True)
+        save_image(fp, data, ext=new_ext, crypter=crypter)
+
+
+class ImageFromNumpy(ImageFromData):
+    def __init__(
+        self,
+        data: Union[Callable[[], bytes], bytes],
+        *args,
+        **kwargs,
+    ):
+        super().__init__(data=data, *args, **kwargs)
+
+    @property
+    def data(self) -> Optional[np.ndarray]:
+        """Image data in BGRA HWC [0; 255] (uint8) format"""
+
+        data = super().data
+
+        if isinstance(data, np.ndarray) and data.dtype != self._dtype:
+            data = np.clip(data, 0.0, 255.0).astype(self._dtype)
+        if self._size is None and data is not None:
+            if not 2 <= data.ndim <= 3:
+                raise MediaShapeError("An image should have 2 (gray) or 3 (bgra) dims.")
+            self._size = tuple(map(int, data.shape[:2]))
+        return data
+
+    @property
+    def has_size(self) -> bool:
+        """Indicates that size info is cached and won't require image loading"""
+        return self._size is not None or isinstance(self._data, np.ndarray)
+
+    def get_data_as_dtype(self, dtype: Optional[np.dtype] = np.uint8) -> Optional[np.ndarray]:
+        """Get image data with a specific data type"""
+        self._dtype = dtype
+        return self.data
+
+
+class ImageFromBytes(ImageFromData):
     _FORMAT_MAGICS = (
         (b"\x89PNG\r\n\x1a\n", ".png"),
         (b"\xff\xd8\xff", ".jpg"),
@@ -172,32 +424,14 @@ class ByteImage(Image):
 
     def __init__(
         self,
-        data: Union[bytes, Callable[[str], bytes], None] = None,
-        *,
-        path: Optional[str] = None,
-        ext: Optional[str] = None,
-        size: Optional[Tuple[int, int]] = None,
+        data: Union[Callable[[], bytes], bytes],
+        *args,
+        **kwargs,
     ):
-        if not isinstance(data, bytes):
-            assert path or callable(data), "Image can not be empty"
-            assert data is None or callable(data)
-            if path and osp.isfile(path) or data:
-                data = lazy_image(path, loader=data)
+        super().__init__(data=data, *args, **kwargs)
 
-        self._bytes_data = data
-
-        if ext is None and path is None and isinstance(data, bytes):
-            ext = self._guess_ext(data)
-
-        super().__init__(
-            path=path, ext=ext, size=size, data=lambda _: decode_image(self.get_bytes())
-        )
-        if data is None:
-            # We don't expect decoder to produce images from nothing,
-            # otherwise using this class makes no sense. We undefine
-            # data to avoid using default image loader for loading binaries
-            # from the path, when no data is provided.
-            self._data = None
+        if self._ext is None and isinstance(data, bytes):
+            self._ext = self._guess_ext(data)
 
     @classmethod
     def _guess_ext(cls, data: bytes) -> Optional[str]:
@@ -206,35 +440,46 @@ class ByteImage(Image):
             None,
         )
 
-    def get_bytes(self):
-        if callable(self._bytes_data):
-            return self._bytes_data()
-        return self._bytes_data
+    @property
+    def data(self) -> Optional[np.ndarray]:
+        """Image data in BGRA HWC [0; 255] (uint8) format"""
 
-    def save(self, path):
-        cur_path = osp.abspath(self.path)
-        path = osp.abspath(path)
+        data = super().data
 
-        cur_ext = self.ext.lower()
-        new_ext = osp.splitext(osp.basename(path))[1].lower()
+        if isinstance(data, bytes):
+            data = decode_image(data, dtype=self._dtype)
+        if self._size is None and data is not None:
+            if not 2 <= data.ndim <= 3:
+                raise MediaShapeError("An image should have 2 (gray) or 3 (bgra) dims.")
+            self._size = tuple(map(int, data.shape[:2]))
+        return data
 
-        os.makedirs(osp.dirname(path), exist_ok=True)
-        if cur_ext == new_ext and osp.isfile(cur_path):
-            if cur_path != path:
-                shutil.copyfile(cur_path, path)
-        elif cur_ext == new_ext:
-            with open(path, "wb") as f:
-                f.write(self.get_bytes())
-        else:
-            save_image(path, self.data)
+    def get_data_as_dtype(self, dtype: Optional[np.dtype] = np.uint8) -> Optional[np.ndarray]:
+        """Get image data with a specific data type"""
+
+        if dtype != np.uint8:
+            raise ValueError("ImageFromBytes only support `dtype=np.uint8`.")
+        self._dtype = dtype
+        return self.data
 
 
-class VideoFrame(Image):
+class VideoFrame(ImageFromNumpy):
+    _type = MediaType.VIDEO_FRAME
+
+    _DEFAULT_EXT = None
+
     def __init__(self, video: Video, index: int):
         self._video = video
         self._index = index
 
-        super().__init__(lambda _: self._video.get_frame_data(self._index))
+        super().__init__(data=lambda: self._video.get_frame_data(self._index))
+
+    def as_dict(self) -> Dict[str, Any]:
+        attrs = super().as_dict()
+        return {
+            "video": attrs["video"],
+            "index": attrs["index"],
+        }
 
     @property
     def size(self) -> Tuple[int, int]:
@@ -247,6 +492,30 @@ class VideoFrame(Image):
     @property
     def video(self) -> Video:
         return self._video
+
+    @property
+    def path(self) -> str:
+        return self._video.path
+
+    def from_self(self, **kwargs):
+        attrs = deepcopy(self.as_dict())
+        if "path" in kwargs:
+            attrs.update({"video": self.video.from_self(**kwargs)})
+            kwargs.pop("path")
+        attrs.update(kwargs)
+        return self.__class__(**attrs)
+
+    def __getstate__(self):
+        # Return only the picklable parts of the state.
+        state = self.__dict__.copy()
+        del state["_data"]
+        return state
+
+    def __setstate__(self, state):
+        # Restore the objects' state.
+        self.__dict__.update(state)
+        # Reinitialize unpichlable attributes
+        self._data = lambda: self._video.get_frame_data(self._index)
 
 
 class _VideoFrameIterator(Iterator[VideoFrame]):
@@ -287,6 +556,11 @@ class _VideoFrameIterator(Iterator[VideoFrame]):
 
         if self._video._frame_count is None:
             self._video._frame_count = self._pos + 1
+            if self._video._end_frame and self._video._end_frame >= self._video._frame_count:
+                raise ValueError(
+                    f"The end_frame value({self._video._end_frame}) of the video "
+                    f"must be less than the frame count({self._video._frame_count})."
+                )
 
     def _make_frame(self, index) -> VideoFrame:
         return VideoFrame(self._video, index=index)
@@ -328,21 +602,33 @@ class _VideoFrameIterator(Iterator[VideoFrame]):
 
 
 class Video(MediaElement, Iterable[VideoFrame]):
+    _type = MediaType.VIDEO
+
     """
     Provides random access to the video frames.
     """
 
     def __init__(
-        self, path: str, *, step: int = 1, start_frame: int = 0, end_frame: Optional[int] = None
+        self,
+        path: str,
+        step: int = 1,
+        start_frame: int = 0,
+        end_frame: Optional[int] = None,
+        *args,
+        **kwargs,
     ) -> None:
-        super().__init__(path)
+        super().__init__(*args, **kwargs)
+        self._path = path
 
-        if end_frame:
-            assert start_frame < end_frame
+        assert 0 <= start_frame
+        if end_frame is not None:
+            assert start_frame <= end_frame
+            # we can't know the video length here,
+            # so we cannot validate if the end_frame is valid.
         assert 0 < step
         self._step = step
         self._start_frame = start_frame
-        self._end_frame = end_frame or None
+        self._end_frame = end_frame
 
         self._reader = None
         self._iterator: Optional[_VideoFrameIterator] = None
@@ -358,10 +644,6 @@ class Video(MediaElement, Iterable[VideoFrame]):
         # https://stackoverflow.com/a/47796468
         self._frame_count = None
         self._length = None
-
-        from .media_manager import MediaManager
-
-        MediaManager.get_instance().push(weakref.ref(self), self)
 
     def close(self):
         self._iterator = None
@@ -391,7 +673,7 @@ class Video(MediaElement, Iterable[VideoFrame]):
             # Decoding is not necessary to get frame pointers
             # However, it can be inacurrate
             end_frame = self._get_end_frame()
-            for index in range(self._start_frame, end_frame, self._step):
+            for index in range(self._start_frame, end_frame + 1, self._step):
                 yield VideoFrame(video=self, index=index)
         else:
             # Need to decode to iterate over frames
@@ -400,7 +682,8 @@ class Video(MediaElement, Iterable[VideoFrame]):
     @property
     def length(self) -> Optional[int]:
         """
-        Returns frame count, if video provides such information.
+        Returns frame count of the closed interval [start_frame, end_frame],
+        if video provides such information.
 
         Note that not all videos provide length / duration metainfo, so the
         result may be undefined.
@@ -416,12 +699,15 @@ class Video(MediaElement, Iterable[VideoFrame]):
         if self._length is None:
             end_frame = self._get_end_frame()
 
-            length = None
             if end_frame is not None:
-                length = (end_frame - self._start_frame) // self._step
-                assert 0 < length
-
-            self._length = length
+                length = (end_frame + 1 - self._start_frame) // self._step
+                if 0 >= length:
+                    raise ValueError(
+                        "There is no valid frame for the closed interval"
+                        f"[start_frame({self._start_frame}),"
+                        f" end_frame({end_frame})] with step({self._step})."
+                    )
+                self._length = length
 
         return self._length
 
@@ -447,18 +733,23 @@ class Video(MediaElement, Iterable[VideoFrame]):
         return frame_size
 
     def _get_end_frame(self):
+        # Note that end_frame could less than the last frame of the video
         if self._end_frame is not None and self._frame_count is not None:
             end_frame = min(self._end_frame, self._frame_count)
+        elif self._end_frame is not None:
+            end_frame = self._end_frame
+        elif self._frame_count is not None:
+            end_frame = self._frame_count - 1
         else:
-            end_frame = self._end_frame or self._frame_count
+            end_frame = None
 
         return end_frame
 
     def _includes_frame(self, i):
-        end_frame = self._get_end_frame()
         if self._start_frame <= i:
             if (i - self._start_frame) % self._step == 0:
-                if end_frame is None or i < end_frame:
+                end_frame = self._get_end_frame()
+                if end_frame is None or i <= end_frame:
                     return True
 
         return False
@@ -480,36 +771,207 @@ class Video(MediaElement, Iterable[VideoFrame]):
         assert self._reader.isOpened()
 
     def __eq__(self, other: object) -> bool:
+        def _get_frame(obj: Video, idx: int):
+            try:
+                return obj[idx]
+            except IndexError:
+                return None
+
         if not isinstance(other, __class__):
             return False
+        if self._start_frame != other._start_frame or self._step != other._step:
+            return False
 
-        return (
-            self.path == other.path
-            and self._start_frame == other._start_frame
-            and self._step == other._step
-            and self._end_frame == other._end_frame
-        )
+        # The video path can vary if a dataset is copied.
+        # So, we need to check if the video data is the same instead of checking paths.
+        if self._end_frame is not None and self._end_frame == other._end_frame:
+            for idx in range(self._start_frame, self._end_frame + 1, self._step):
+                if self[idx] != other[idx]:
+                    return False
+            return True
+
+        end_frame = self._end_frame or other._end_frame
+        if end_frame is None:
+            last_frame = None
+            for idx, frame in enumerate(self):
+                if frame != _get_frame(other, frame.index):
+                    return False
+                last_frame = frame
+            # check if the actual last frames are same
+            try:
+                other[last_frame.index + self._step if last_frame else self._start_frame]
+            except IndexError:
+                return True
+            return False
+
+        # _end_frame values, only one of the two is valid
+        for idx in range(self._start_frame, end_frame + 1, self._step):
+            frame = _get_frame(self, idx)
+            if frame is None:
+                return False
+            if frame != _get_frame(other, idx):
+                return False
+        # check if the actual last frames are same
+        idx_next = end_frame + self._step
+        return None is (_get_frame(self, idx_next) or _get_frame(other, idx_next))
 
     def __hash__(self):
         # Required for caching
         return hash((self._path, self._step, self._start_frame, self._end_frame))
 
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        if isinstance(fp, str):
+            os.makedirs(osp.dirname(fp), exist_ok=True)
+        if isinstance(fp, str):
+            if fp != self.path:
+                shutil.copyfile(self.path, fp)
+        elif isinstance(fp, io.IOBase):
+            with open(self.path, "rb") as f_video:
+                fp.write(f_video.read())
 
-class PointCloud(MediaElement):
-    def __init__(self, path: str, extra_images: Optional[List[Image]] = None):
-        self._path = path
+    @property
+    def path(self) -> str:
+        """Path to the media file"""
+        return self._path
 
-        self.extra_images: List[Image] = extra_images or []
+    @property
+    def ext(self) -> str:
+        """Media file extension (with the leading dot)"""
+        return osp.splitext(osp.basename(self.path))[1]
+
+
+class PointCloud(MediaElement[bytes]):
+    _type = MediaType.POINT_CLOUD
+
+    def __init__(
+        self,
+        extra_images: Optional[Union[List[Image], Callable[[], List[Image]]]] = None,
+        *args,
+        **kwargs,
+    ):
+        assert self.__class__ != PointCloud, (
+            f"Directly initalizing {self.__class__.__name__} is not supported. "
+            f"Please use one of fractory function ({self.__class__.__name__}.from_file(), "
+            f"{self.__class__.__name__}.from_bytes())."
+        )
+        super().__init__(*args, **kwargs)
+        self._extra_images = extra_images or []
+
+    @classmethod
+    def from_file(cls, path: str, *args, **kwargs):
+        return PointCloudFromFile(path, *args, **kwargs)
+
+    @classmethod
+    def from_bytes(cls, data: Union[bytes, Callable[[], bytes]], *args, **kwargs):
+        return PointCloudFromBytes(data, *args, **kwargs)
+
+    @property
+    def extra_images(self) -> List[Image]:
+        if callable(self._extra_images):
+            extra_images = self._extra_images()
+            assert isinstance(extra_images, list) and all(
+                [isinstance(image, Image) for image in extra_images]
+            )
+            return extra_images
+        return self._extra_images
+
+    def _save_extra_images(
+        self,
+        fn: Callable[[int, Image], Dict[str, Any]],
+        crypter: Optional[Crypter] = None,
+    ):
+        crypter = crypter if crypter else self._crypter
+        for i, img in enumerate(self.extra_images):
+            if img.has_data:
+                kwargs: Dict[str, Any] = {"crypter": crypter}
+                kwargs.update(fn(i, img))
+                img.save(**kwargs)
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, __class__)
-            and self.path == other.path
-            and set(self.extra_images) == set(other.extra_images)
+            super().__eq__(other)
+            and (self.data == other.data)
+            and self.extra_images == other.extra_images
         )
 
 
+class PointCloudFromFile(FromFileMixin, PointCloud):
+    @property
+    def data(self) -> Optional[bytes]:
+        if self.has_data:
+            with open(self.path, "rb") as f:
+                bytes_data = f.read()
+            return bytes_data
+        return None
+
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        extra_images_fn: Optional[Callable[[int, Image], Dict[str, Any]]] = None,
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        if not crypter.is_null_crypter:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} does not implement save() with non NullCrypter."
+            )
+
+        cur_path = osp.abspath(self.path) if self.path else None
+
+        if cur_path is not None and osp.isfile(cur_path):
+            with open(cur_path, "rb") as reader:
+                _bytes = reader.read()
+            if isinstance(fp, str):
+                os.makedirs(osp.dirname(fp), exist_ok=True)
+                with open(fp, "wb") as f:
+                    f.write(_bytes)
+            else:
+                fp.write(_bytes)
+        else:
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), cur_path)
+
+        if extra_images_fn is not None:
+            self._save_extra_images(extra_images_fn, crypter)
+
+
+class PointCloudFromData(FromDataMixin, PointCloud):
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        extra_images_fn: Optional[Callable[[int, Image], Dict[str, Any]]] = None,
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        if not crypter.is_null_crypter:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} does not implement save() with non NullCrypter."
+            )
+
+        _bytes = self.data
+        if _bytes is None:
+            raise ValueError(f"{self.__class__.__name__} is empty.")
+        if isinstance(fp, str):
+            os.makedirs(osp.dirname(fp), exist_ok=True)
+            with open(fp, "wb") as f:
+                f.write(_bytes)
+        else:
+            fp.write(_bytes)
+
+        if extra_images_fn is not None:
+            self._save_extra_images(extra_images_fn, crypter)
+
+
+class PointCloudFromBytes(PointCloudFromData):
+    @property
+    def data(self) -> Optional[bytes]:
+        return super().data
+
+
 class MultiframeImage(MediaElement):
+    _type = MediaType.MULTIFRAME_IMAGE
+
     def __init__(
         self,
         images: Optional[Iterable[Union[str, Image, np.ndarray, Callable[[str], np.ndarray]]]],
@@ -526,9 +988,9 @@ class MultiframeImage(MediaElement):
             assert isinstance(image, (str, Image, np.ndarray)) or callable(image)
 
             if isinstance(image, str):
-                image = Image(path=image)
+                image = Image.from_file(path=image)
             elif isinstance(image, np.ndarray) or callable(image):
-                image = Image(data=image)
+                image = Image.from_numpy(data=image)
 
             self._images[i] = image
 
@@ -537,3 +999,513 @@ class MultiframeImage(MediaElement):
     @property
     def data(self) -> List[Image]:
         return self._images
+
+    @property
+    def path(self) -> str:
+        """Path to the media file"""
+        return self._path
+
+    @property
+    def ext(self) -> str:
+        """Media file extension (with the leading dot)"""
+        return osp.splitext(osp.basename(self.path))[1]
+
+
+class RoIImage(Image):
+    _type = MediaType.ROI_IMAGE
+
+    def __init__(
+        self,
+        roi: BboxIntCoords,
+        *args,
+        **kwargs,
+    ):
+        assert self.__class__ != RoIImage, (
+            f"Directly initalizing {self.__class__.__name__} is not supported. "
+            f"Please use a fractory function '{self.__class__.__name__}.from_image()'. "
+        )
+
+        assert len(roi) == 4 and all(isinstance(v, int) for v in roi)
+        self._roi = roi
+        _, _, w, h = self._roi
+        super().__init__(size=(h, w), *args, **kwargs)
+
+    def as_dict(self) -> Dict[str, Any]:
+        attrs = super().as_dict()
+        attrs.pop("size", None)
+        return attrs
+
+    @classmethod
+    def from_file(cls, *args, **kwargs):
+        raise DatumaroError(f"Please use a factory function '{cls.__name__}.from_image'.")
+
+    @classmethod
+    def from_image(cls, data: Image, roi: BboxIntCoords, *args, **kwargs):
+        if not isinstance(data, Image):
+            raise TypeError(f"type(image)={type(data)} should be Image.")
+
+        if isinstance(data, ImageFromFile):
+            return RoIImageFromFile(path=data.path, roi=roi, ext=data._ext, *args, **kwargs)
+        if isinstance(data, ImageFromNumpy):
+            return RoIImageFromNumpy(data=data._data, roi=roi, ext=data._ext, *args, **kwargs)
+        if isinstance(data, ImageFromBytes):
+            return RoIImageFromBytes(data=data._data, roi=roi, ext=data._ext, *args, **kwargs)
+        raise NotImplementedError
+
+    @classmethod
+    def from_numpy(cls, *args, **kwargs):
+        raise DatumaroError(f"Please use a factory function '{cls.__name__}.from_image'.")
+
+    @classmethod
+    def from_bytes(cls, *args, **kwargs):
+        raise DatumaroError(f"Please use a factory function '{cls.__name__}.from_image'.")
+
+    @property
+    def roi(self) -> BboxIntCoords:
+        return self._roi
+
+    def _get_roi_data(self, data: np.ndarray) -> np.ndarray:
+        x, y, w, h = self._roi
+        return data[y : y + h, x : x + w]
+
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        ext: Optional[str] = None,
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        if not crypter.is_null_crypter:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} does not implement save() with non NullCrypter."
+            )
+        data = self.data
+        if data is None:
+            raise ValueError(f"{self.__class__.__name__} is empty.")
+        new_ext = self._get_ext_to_save(fp, ext)
+        if isinstance(fp, str):
+            os.makedirs(osp.dirname(fp), exist_ok=True)
+        save_image(fp, data, ext=new_ext, crypter=crypter)
+
+
+class RoIImageFromFile(FromFileMixin, RoIImage):
+    def __init__(
+        self,
+        path: str,
+        roi: BboxIntCoords,
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(path, roi, *args, **kwargs)
+        self.__data = lazy_image(self.path, crypter=self._crypter)
+
+    @property
+    def data(self) -> Optional[np.ndarray]:
+        """Image data in BGRA HWC [0; 255] (uint8) format"""
+        if not self.has_data:
+            return None
+        data = self.__data()
+        return self._get_roi_data(data)
+
+
+class RoIImageFromData(FromDataMixin, RoIImage):
+    pass
+
+
+class RoIImageFromBytes(RoIImageFromData):
+    def __init__(
+        self,
+        data: Union[bytes, Callable[[], bytes]],
+        roi: BboxIntCoords,
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(data, roi, *args, **kwargs)
+
+    @property
+    def data(self) -> Optional[np.ndarray]:
+        """Image data in BGRA HWC [0; 255] (uint8) format"""
+        data = super().data
+        if data is None:
+            return None
+        if isinstance(data, bytes):
+            data = decode_image(data)
+        return self._get_roi_data(data)
+
+
+class RoIImageFromNumpy(RoIImageFromData):
+    def __init__(
+        self,
+        data: Union[np.ndarray, Callable[[], np.ndarray]],
+        roi: BboxIntCoords,
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(data, roi, *args, **kwargs)
+
+    @property
+    def data(self) -> Optional[np.ndarray]:
+        """Image data in BGRA HWC [0; 255] (uint8) format"""
+        data = super().data
+        if data is None:
+            return None
+        return self._get_roi_data(data)
+
+
+ImageWithRoI = Tuple[Image, BboxIntCoords]
+
+
+class MosaicImage(Image):
+    _type = MediaType.MOSAIC_IMAGE
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        assert self.__class__ != MosaicImage, (
+            f"Directly initalizing {self.__class__.__name__} is not supported. "
+            f"Please use a fractory function '{self.__class__.__name__}.from_image_roi_pairs()'."
+        )
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def from_file(cls, *args, **kwargs):
+        raise DatumaroError(f"Please use a factory function '{cls.__name__}.from_image_roi_pairs'.")
+
+    @classmethod
+    def from_image_roi_pairs(cls, data: List[ImageWithRoI], size: Tuple[int, int], *args, **kwargs):
+        return MosaicImageFromImageRoIPairs(data, size)
+
+    @classmethod
+    def from_numpy(cls, *args, **kwargs):
+        raise DatumaroError(f"Please use a factory function '{cls.__name__}.from_image_roi_pairs'.")
+
+    @classmethod
+    def from_bytes(cls, *args, **kwargs):
+        raise DatumaroError(f"Please use a factory function '{cls.__name__}.from_image_roi_pairs'.")
+
+
+class MosaicImageFromData(FromDataMixin, MosaicImage):
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        ext: Optional[str] = None,
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        if not crypter.is_null_crypter:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} does not implement save() with non NullCrypter."
+            )
+        data = self.data
+        if data is None:
+            raise ValueError(f"{self.__class__.__name__} is empty.")
+        new_ext = self._get_ext_to_save(fp, ext)
+        if isinstance(fp, str):
+            os.makedirs(osp.dirname(fp), exist_ok=True)
+        save_image(fp, data, ext=new_ext, crypter=crypter)
+
+
+class MosaicImageFromImageRoIPairs(MosaicImageFromData):
+    def __init__(self, data: List[ImageWithRoI], size: Tuple[int, int]) -> None:
+        def _get_mosaic_img() -> np.ndarray:
+            h, w = self.size
+            mosaic_img = np.zeros(shape=(h, w, 3), dtype=np.uint8)
+            for img, roi in data:
+                assert isinstance(img, Image), "MosaicImage can only take a list of Images."
+                x, y, w, h = roi
+                mosaic_img[y : y + h, x : x + w] = img.data
+            return mosaic_img
+
+        super().__init__(data=_get_mosaic_img, size=size)
+        self._data_in = data
+
+    def as_dict(self) -> Dict[str, Any]:
+        attrs = super().as_dict()
+        return {
+            "data": attrs["data_in"],
+            "size": attrs["size"],
+        }
+
+
+TableDtype = TypeVar("TableDtype", str, int, float)
+
+
+class Table:
+    def __init__(
+        self,
+    ) -> None:
+        """
+        Table data with multiple rows and columns.
+        This provides random access to the table row.
+
+        Initialization must be done in the child class.
+        """
+        assert self.__class__ != Table, (
+            f"Directly initalizing {self.__class__.__name__} is not supported. "
+            f"Please use one of fractory functions ({self.__class__.__name__}.from_csv(), "
+            f"{self.__class__.__name__}.from_dataframe(), "
+            f"or ({self.__class__.__name__}.from_list())."
+        )
+        self._shape: Tuple[int, int] = (0, 0)
+
+    @classmethod
+    def from_csv(cls, path: str, *args, **kwargs) -> Type[Table]:
+        """
+        Returns Table instance creating from a csv file.
+
+        Args:
+            path (str) : Path to csv file.
+        """
+        return TableFromCSV(path, *args, **kwargs)
+
+    @classmethod
+    def from_dataframe(
+        cls,
+        data: Union[pd.DataFrame, Callable[[], pd.DataFrame]],
+        *args,
+        **kwargs,
+    ) -> Type[Table]:
+        """
+        Returns Table instance creating from a pandas DataFrame.
+
+        Args:
+            data (DataFrame) : Data in pandas DataFrame format.
+        """
+        return TableFromDataFrame(data, *args, **kwargs)
+
+    @classmethod
+    def from_list(
+        cls,
+        data: List[Dict[str, TableDtype]],
+        *args,
+        **kwargs,
+    ) -> Type[Table]:
+        """
+        Returns Table instance creating from a list of dicts.
+
+        Args:
+            data (list(dict(str,str|int|float))) : A list of table row data.
+        """
+        return TableFromListOfDict(data, *args, **kwargs)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        return self.data.equals(other)
+
+    def __getitem__(self, idx: int) -> TableRow:
+        """
+        Random access to a specific row by index.
+        """
+        if idx >= self.shape[0]:
+            raise IndexError(f"Table doesn't contain row #{idx}.")
+        return TableRow(table=self, index=idx)
+
+    def __iter__(self) -> Iterator[TableRow]:
+        """
+        Iterates over rows.
+        """
+        for index in range(self.shape[0]):
+            yield TableRow(table=self, index=index)
+
+    @property
+    def shape(self) -> Tuple[int, int]:
+        """Returns table size as (#rows, #cols)"""
+        return self._shape
+
+    @property
+    def columns(self) -> List[str]:
+        """Returns column names"""
+        return self.data.columns.to_list()
+
+    def dtype(self, column: str) -> Optional[Type[TableDtype]]:
+        """Returns native python type for a given column"""
+        numpy_type = self.data.dtypes[column]
+        if self.data[column].nunique() / self.shape[0] < 0.1:  # TODO
+            # Convert to CategoricalDtype for efficient storage and categorical analysis
+            return pd.api.types.CategoricalDtype()
+        if isinstance(numpy_type, np.dtypes.ObjectDType):
+            return str
+        else:
+            return type(np.zeros(1, numpy_type).tolist()[0])
+
+    def features(self, column: str, unique: Optional[bool] = False) -> List[TableDtype]:
+        """Get features for a given column name."""
+        if unique:
+            return list(self.data[column].unique())
+        else:
+            return self.data[column].to_list()
+
+    def save(
+        self,
+        path: str,
+    ):
+        """
+        Save table instance to a '.csv' file.
+
+        Args:
+            path (str) : Path to the output csv file.
+        """
+        data: pd.DataFrame = self.data
+        os.makedirs(osp.dirname(path), exist_ok=True)
+        data.to_csv(path, index=False)
+
+
+class TableFromCSV(FromFileMixin, Table):
+    def __init__(
+        self,
+        path: str,
+        dtype: Optional[Dict] = None,
+        sep: Optional[str] = None,
+        encoding: Optional[str] = None,
+        *args,
+        **kwargs,
+    ) -> None:
+        """
+        Read a '.csv' file and compose a Table instance.
+
+        Args:
+            path (str) : Path to csv file.
+            dtype (optional, dict(str,str)) :
+                Dictionary of column name -> type str ('str', 'int', or 'float').
+            sep (optional, str) : Delimiter to use.
+            encoding (optional, str) : Encoding to use for UTF when reading/writing (ex. 'utf-8').
+        """
+        super().__init__(path, *args, **kwargs)
+
+        # assumes that the 1st row is a header.
+        data: pd.DataFrame = pd.read_csv(
+            path, dtype=dtype, sep=sep, engine="python", encoding=encoding, index_col=False
+        )
+        if data is None:
+            raise ValueError(f"Can't read csv File from {path}")
+        if data.shape[1] == 0:
+            raise MediaShapeError("A table should have 1 or more columns.")
+
+        self.__data = data
+        self._shape = data.shape
+
+    @property
+    def data(self) -> Optional[pd.DataFrame]:
+        """Table data in pandas DataFrame format"""
+        return self.__data
+
+    def select(self, columns: List[str]):
+        self.__data = self.__data[columns]
+        self._shape = self.__data.shape
+
+
+class TableFromDataFrame(FromDataMixin, Table):
+    def __init__(
+        self,
+        data: Union[Callable[[], pd.DataFrame], pd.DataFrame],
+        *args,
+        **kwargs,
+    ):
+        """
+        Read a pandas DataFrame and compose a Table instance.
+
+        Args:
+            data (DataFrame) : Data in pandas DataFrame format.
+        """
+        super().__init__(data=data, *args, **kwargs)
+
+        if data is None:
+            raise ValueError("'data' can't be None")
+        if data.shape[1] == 0:
+            raise MediaShapeError("A table should have 1 or more columns.")
+        for col in data.columns:
+            if not isinstance(col, str):
+                raise TypeError("A table should have column names as a list of str values")
+
+        self._shape = data.shape
+
+    @property
+    def data(self) -> Optional[pd.DataFrame]:
+        """Table data in pandas DataFrame format"""
+        return super().data
+
+
+class TableFromListOfDict(TableFromDataFrame):
+    def __init__(
+        self,
+        data: List[Dict[str, TableDtype]],
+        *args,
+        **kwargs,
+    ):
+        """
+        Read a list of table row data and compose a Table instance.
+        The table row data is in dictionary format.
+
+        Args:
+            data (list(dict(str,str|int|float))) : A list of table row data.
+        """
+        super().__init__(data=pd.DataFrame(data), *args, **kwargs)
+
+
+class TableRow(MediaElement):
+    _type = MediaType.TABLE_ROW
+
+    def __init__(self, table: Table, index: int):
+        """
+        TableRow media refers to a Table instance and its row index.
+
+        Args:
+            table (Table) : Table instance.
+            index (int) : Row index.
+        """
+        if table is None:
+            raise ValueError("'table' can't be None")
+        if index < 0 or index >= table.shape[0]:
+            raise IndexError(f"'index({index})' is out of range.")
+        self._table = table
+        self._index = index
+
+    @property
+    def table(self) -> Table:
+        """Table instance"""
+        return self._table
+
+    @property
+    def index(self) -> int:
+        """Row index"""
+        return self._index
+
+    @property
+    def path(self) -> str:
+        return self._table.data.path
+
+    @property
+    def has_data(self) -> bool:
+        return self.data() is not None
+
+    def data(self, targets: Optional[List[str]] = None) -> Dict:
+        """
+        Row data in dict format.
+
+        Args:
+            targets (optional, list(str)) : If this is specified,
+                the values corresponding to target colums will be returned.
+                Otherwise, whole row data will be returned.
+        """
+        row = self.table.data.iloc[self.index]
+        if targets:
+            row = row[targets]
+        return row.to_dict()
+
+    def __repr__(self):
+        return f"TableRow(row_idx:{self.index}, data:{self.data()})"
+
+    @classmethod
+    def from_data(cls, data: Dict, *args, **kwargs):
+        return TableRowFromData(data, *args, **kwargs)
+
+
+class TableRowFromData(FromDataMixin, TableRow):
+    def __init__(self, data: Dict, *args, **kwargs):
+        super().__init__(data=data, *args, **kwargs)
+
+    @property
+    def data(self) -> Dict:
+        data = super().data
+        return data

@@ -135,7 +135,7 @@ class MotSeqBase(SubsetBase):
                 items[str(frame_id)] = DatasetItem(
                     id=str(frame_id),
                     subset=self._subset,
-                    media=Image(
+                    media=Image.from_file(
                         path=osp.join(
                             self._image_dir, "%06d%s" % (frame_id, self._seq_info["imext"])
                         ),
@@ -145,7 +145,9 @@ class MotSeqBase(SubsetBase):
         elif osp.isdir(self._image_dir):
             for p in find_images(self._image_dir):
                 frame_id = osp.splitext(osp.relpath(p, self._image_dir))[0]
-                items[frame_id] = DatasetItem(id=frame_id, subset=self._subset, media=Image(path=p))
+                items[frame_id] = DatasetItem(
+                    id=frame_id, subset=self._subset, media=Image.from_file(path=p)
+                )
 
         with open(path, newline="", encoding="utf-8") as csv_file:
             # NOTE: Different MOT files have different count of fields

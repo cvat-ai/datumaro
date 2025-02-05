@@ -433,14 +433,14 @@ class EqualityComparatorTest(TestCase):
             [
                 DatasetItem(
                     id=11,
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[
                         Bbox(5, 6, 7, 8),
                     ],
                 ),
                 DatasetItem(
                     id=12,
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4),
                         Bbox(5, 6, 7, 8),
@@ -448,14 +448,14 @@ class EqualityComparatorTest(TestCase):
                 ),
                 DatasetItem(
                     id=13,
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[
                         Bbox(9, 10, 11, 12),  # mismatch
                     ],
                 ),
                 DatasetItem(
                     id=14,
-                    media=Image(data=np.zeros((5, 4, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 4, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4),
                         Bbox(5, 6, 7, 8),
@@ -464,7 +464,7 @@ class EqualityComparatorTest(TestCase):
                 ),
                 DatasetItem(
                     id=15,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4),
                         Bbox(5, 6, 7, 8),
@@ -478,14 +478,14 @@ class EqualityComparatorTest(TestCase):
             [
                 DatasetItem(
                     id=21,
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[
                         Bbox(5, 6, 7, 8),
                     ],
                 ),
                 DatasetItem(
                     id=22,
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4),
                         Bbox(5, 6, 7, 8),
@@ -493,14 +493,14 @@ class EqualityComparatorTest(TestCase):
                 ),
                 DatasetItem(
                     id=23,
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[
                         Bbox(10, 10, 11, 12),  # mismatch
                     ],
                 ),
                 DatasetItem(
                     id=24,
-                    media=Image(data=np.zeros((5, 4, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 4, 3))),
                     annotations=[
                         Bbox(6, 6, 7, 8),  # 1 ann missing, mismatch
                     ],
@@ -508,7 +508,7 @@ class EqualityComparatorTest(TestCase):
                 ),
                 DatasetItem(
                     id=25,
-                    media=Image(data=np.zeros((4, 4, 3))),
+                    media=Image.from_numpy(data=np.zeros((4, 4, 3))),
                     annotations=[
                         Bbox(6, 6, 7, 8),
                     ],

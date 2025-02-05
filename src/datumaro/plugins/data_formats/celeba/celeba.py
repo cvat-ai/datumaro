@@ -77,7 +77,7 @@ class CelebaBase(SubsetBase):
 
                 image = images.get(item_id)
                 if image:
-                    image = Image(path=image)
+                    image = Image.from_file(path=image)
 
                 items[item_id] = DatasetItem(id=item_id, media=image, annotations=anno)
 
@@ -177,7 +177,7 @@ class CelebaBase(SubsetBase):
                     if item_id not in items:
                         image = images.get(item_id)
                         if image:
-                            image = Image(path=image)
+                            image = Image.from_file(path=image)
 
                         items[item_id] = DatasetItem(id=item_id, media=image)
 
@@ -201,7 +201,7 @@ class CelebaBase(SubsetBase):
                     if item_id not in items:
                         image = images.get(item_id)
                         if image:
-                            image = Image(path=image)
+                            image = Image.from_file(path=image)
 
                         items[item_id] = DatasetItem(id=item_id, media=image)
 

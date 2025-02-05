@@ -30,9 +30,15 @@ class KittiRawImporterTest(TestCase):
         pcd2 = osp.join(DUMMY_DATASET_DIR, "velodyne_points", "data", "0000000001.pcd")
         pcd3 = osp.join(DUMMY_DATASET_DIR, "velodyne_points", "data", "0000000002.pcd")
 
-        image1 = Image(path=osp.join(DUMMY_DATASET_DIR, "IMAGE_00", "data", "0000000000.png"))
-        image2 = Image(path=osp.join(DUMMY_DATASET_DIR, "IMAGE_00", "data", "0000000001.png"))
-        image3 = Image(path=osp.join(DUMMY_DATASET_DIR, "IMAGE_00", "data", "0000000002.png"))
+        image1 = Image.from_file(
+            path=osp.join(DUMMY_DATASET_DIR, "IMAGE_00", "data", "0000000000.png")
+        )
+        image2 = Image.from_file(
+            path=osp.join(DUMMY_DATASET_DIR, "IMAGE_00", "data", "0000000001.png")
+        )
+        image3 = Image.from_file(
+            path=osp.join(DUMMY_DATASET_DIR, "IMAGE_00", "data", "0000000002.png")
+        )
 
         expected_label_cat = LabelCategories(attributes={"occluded"})
         expected_label_cat.add("bus")
@@ -55,7 +61,7 @@ class KittiRawImporterTest(TestCase):
                             attributes={"occluded": False, "track_id": 2},
                         ),
                     ],
-                    media=PointCloud(pcd1, extra_images=[image1]),
+                    media=PointCloud.from_file(pcd1, extra_images=[image1]),
                     attributes={"frame": 0},
                 ),
                 DatasetItem(
@@ -69,7 +75,7 @@ class KittiRawImporterTest(TestCase):
                             attributes={"occluded": True, "track_id": 2},
                         )
                     ],
-                    media=PointCloud(pcd2, extra_images=[image2]),
+                    media=PointCloud.from_file(pcd2, extra_images=[image2]),
                     attributes={"frame": 1},
                 ),
                 DatasetItem(
@@ -82,7 +88,7 @@ class KittiRawImporterTest(TestCase):
                             attributes={"occluded": False, "track_id": 3},
                         )
                     ],
-                    media=PointCloud(pcd3, extra_images=[image3]),
+                    media=PointCloud.from_file(pcd3, extra_images=[image3]),
                     attributes={"frame": 2},
                 ),
             ],
@@ -100,13 +106,13 @@ class KittiRawExporterTest(TestCase):
     pcd2 = osp.abspath(osp.join(DUMMY_DATASET_DIR, "velodyne_points", "data", "0000000001.pcd"))
     pcd3 = osp.abspath(osp.join(DUMMY_DATASET_DIR, "velodyne_points", "data", "0000000002.pcd"))
 
-    image1 = Image(
+    image1 = Image.from_file(
         path=osp.abspath(osp.join(DUMMY_DATASET_DIR, "IMAGE_00", "data", "0000000000.png"))
     )
-    image2 = Image(
+    image2 = Image.from_file(
         path=osp.abspath(osp.join(DUMMY_DATASET_DIR, "IMAGE_00", "data", "0000000001.png"))
     )
-    image3 = Image(
+    image3 = Image.from_file(
         path=osp.abspath(osp.join(DUMMY_DATASET_DIR, "IMAGE_00", "data", "0000000002.png"))
     )
 
@@ -144,7 +150,7 @@ class KittiRawExporterTest(TestCase):
                             attributes={"occluded": True, "track_id": 2},
                         ),
                     ],
-                    media=PointCloud(self.pcd1, extra_images=[self.image1]),
+                    media=PointCloud.from_file(self.pcd1, extra_images=[self.image1]),
                     attributes={"frame": 0},
                 ),
                 DatasetItem(
@@ -169,7 +175,7 @@ class KittiRawExporterTest(TestCase):
                             attributes={"track_id": 3},
                         ),
                     ],
-                    media=PointCloud(self.pcd3),
+                    media=PointCloud.from_file(self.pcd3),
                     attributes={"frame": 2},
                 ),
             ],
@@ -198,10 +204,12 @@ class KittiRawExporterTest(TestCase):
                                 attributes={"occluded": True, "track_id": 2},
                             ),
                         ],
-                        media=PointCloud(
+                        media=PointCloud.from_file(
                             osp.join(test_dir, "velodyne_points", "data", "0000000000.pcd"),
                             extra_images=[
-                                Image(path=osp.join(test_dir, "image_00", "data", "0000000000.png"))
+                                Image.from_file(
+                                    path=osp.join(test_dir, "image_00", "data", "0000000000.png")
+                                )
                             ],
                         ),
                         attributes={"frame": 0},
@@ -233,7 +241,7 @@ class KittiRawExporterTest(TestCase):
                                 attributes={"occluded": False, "track_id": 3},
                             ),
                         ],
-                        media=PointCloud(
+                        media=PointCloud.from_file(
                             osp.join(test_dir, "velodyne_points", "data", "0000000002.pcd")
                         ),
                         attributes={"frame": 2},
@@ -449,7 +457,7 @@ class KittiRawExporterTest(TestCase):
                 DatasetItem(
                     id="a/d",
                     annotations=[Cuboid3d(position=[1, 2, 3], label=0, attributes={"track_id": 1})],
-                    media=PointCloud(self.pcd1, extra_images=[self.image1]),
+                    media=PointCloud.from_file(self.pcd1, extra_images=[self.image1]),
                     attributes={"frame": 3},
                 ),
             ],
@@ -471,10 +479,12 @@ class KittiRawExporterTest(TestCase):
                                 attributes={"track_id": 1, "occluded": False},
                             )
                         ],
-                        media=PointCloud(
+                        media=PointCloud.from_file(
                             osp.join(test_dir, "velodyne_points", "data", "a", "d.pcd"),
                             extra_images=[
-                                Image(path=osp.join(test_dir, "image_00", "data", "a", "d.png")),
+                                Image.from_file(
+                                    path=osp.join(test_dir, "image_00", "data", "a", "d.png")
+                                ),
                             ],
                         ),
                         attributes={"frame": 3},
@@ -500,7 +510,7 @@ class KittiRawExporterTest(TestCase):
                 DatasetItem(
                     id="a/d",
                     annotations=[Cuboid3d(position=[1, 2, 3], label=0, attributes={"track_id": 1})],
-                    media=PointCloud(
+                    media=PointCloud.from_file(
                         self.pcd1, extra_images=[self.image1, self.image2, self.image3]
                     ),
                     attributes={"frame": 3},
@@ -524,12 +534,18 @@ class KittiRawExporterTest(TestCase):
                                 attributes={"track_id": 1, "occluded": False},
                             )
                         ],
-                        media=PointCloud(
+                        media=PointCloud.from_file(
                             osp.join(test_dir, "velodyne_points", "data", "a", "d.pcd"),
                             extra_images=[
-                                Image(path=osp.join(test_dir, "image_00", "data", "a", "d.png")),
-                                Image(path=osp.join(test_dir, "image_01", "data", "a", "d.png")),
-                                Image(path=osp.join(test_dir, "image_02", "data", "a", "d.png")),
+                                Image.from_file(
+                                    path=osp.join(test_dir, "image_00", "data", "a", "d.png")
+                                ),
+                                Image.from_file(
+                                    path=osp.join(test_dir, "image_01", "data", "a", "d.png")
+                                ),
+                                Image.from_file(
+                                    path=osp.join(test_dir, "image_02", "data", "a", "d.png")
+                                ),
                             ],
                         ),
                         attributes={"frame": 3},
@@ -560,7 +576,7 @@ class KittiRawExporterTest(TestCase):
                         annotations=[
                             Cuboid3d(position=[3.5, 9.8, 0.3], label=0, attributes={"track_id": 1})
                         ],
-                        media=PointCloud(self.pcd1, extra_images=[self.image1]),
+                        media=PointCloud.from_file(self.pcd1, extra_images=[self.image1]),
                         attributes={"frame": 0},
                     )
                 ],
@@ -573,7 +589,7 @@ class KittiRawExporterTest(TestCase):
                 DatasetItem(
                     "frame2",
                     annotations=[Cuboid3d(position=[1, 2, 0], label=1, attributes={"track_id": 1})],
-                    media=PointCloud(self.pcd2, extra_images=[self.image2]),
+                    media=PointCloud.from_file(self.pcd2, extra_images=[self.image2]),
                     attributes={"frame": 1},
                 )
             )
@@ -598,7 +614,7 @@ class KittiRawExporterTest(TestCase):
                             attributes={"occluded": False, "track_id": 1},
                         )
                     ],
-                    media=PointCloud(self.pcd1, extra_images=[self.image1]),
+                    media=PointCloud.from_file(self.pcd1, extra_images=[self.image1]),
                     attributes={"frame": 0},
                 ),
                 DatasetItem(
@@ -628,10 +644,12 @@ class KittiRawExporterTest(TestCase):
                                 attributes={"occluded": False, "track_id": 1},
                             )
                         ],
-                        media=PointCloud(
+                        media=PointCloud.from_file(
                             osp.join(test_dir, "velodyne_points", "data", "0000000000.pcd"),
                             extra_images=[
-                                Image(path=osp.join(test_dir, "image_00", "data", "0000000000.png"))
+                                Image.from_file(
+                                    path=osp.join(test_dir, "image_00", "data", "0000000000.png")
+                                )
                             ],
                         ),
                         attributes={"frame": 0},

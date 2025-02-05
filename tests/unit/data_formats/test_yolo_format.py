@@ -147,7 +147,7 @@ class YoloExporterTest(CompareDatasetMixin):
                 subset=recipe.get("subset", "train"),
                 media=recipe.get(
                     "media",
-                    Image(data=np.ones((randint(8, 10), randint(8, 10), 3))),
+                    Image.from_numpy(data=np.ones((randint(8, 10), randint(8, 10), 3))),
                 ),
                 annotations=[
                     self._generate_random_annotation(n_of_labels=n_of_labels)
@@ -199,7 +199,7 @@ class YoloExporterTest(CompareDatasetMixin):
             [
                 {
                     "annotations": 2,
-                    "media": Image(path="1.jpg", size=(10, 15)),
+                    "media": Image.from_file(path="1.jpg", size=(10, 15)),
                 },
             ]
         )
@@ -220,7 +220,7 @@ class YoloExporterTest(CompareDatasetMixin):
             [
                 {
                     "annotations": 2,
-                    "media": Image(path="1.jpg", size=(10, 15)),
+                    "media": Image.from_file(path="1.jpg", size=(10, 15)),
                 },
             ]
         )
@@ -251,9 +251,15 @@ class YoloExporterTest(CompareDatasetMixin):
     def test_relative_paths(self, save_media, test_dir):
         source_dataset = Dataset.from_iterable(
             [
-                DatasetItem(id="1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
-                DatasetItem(id="subdir1/1", subset="train", media=Image(data=np.ones((2, 6, 3)))),
-                DatasetItem(id="subdir2/1", subset="train", media=Image(data=np.ones((5, 4, 3)))),
+                DatasetItem(
+                    id="1", subset="train", media=Image.from_numpy(data=np.ones((4, 2, 3)))
+                ),
+                DatasetItem(
+                    id="subdir1/1", subset="train", media=Image.from_numpy(data=np.ones((2, 6, 3)))
+                ),
+                DatasetItem(
+                    id="subdir2/1", subset="train", media=Image.from_numpy(data=np.ones((5, 4, 3)))
+                ),
             ],
             categories=[],
         )
@@ -267,12 +273,14 @@ class YoloExporterTest(CompareDatasetMixin):
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    "q/1", subset="train", media=Image(path="q/1.JPEG", data=np.zeros((4, 3, 3)))
+                    "q/1",
+                    subset="train",
+                    media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG"),
                 ),
                 DatasetItem(
                     "a/b/c/2",
                     subset="valid",
-                    media=Image(path="a/b/c/2.bmp", data=np.zeros((3, 4, 3))),
+                    media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp"),
                 ),
             ],
             categories=[],
@@ -286,23 +294,23 @@ class YoloExporterTest(CompareDatasetMixin):
     def test_inplace_save_writes_only_updated_data(self, test_dir):
         expected = Dataset.from_iterable(
             [
-                DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
-                DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))),
+                DatasetItem(1, subset="train", media=Image.from_numpy(data=np.ones((2, 4, 3)))),
+                DatasetItem(2, subset="train", media=Image.from_numpy(data=np.ones((3, 2, 3)))),
             ],
             categories=[],
         )
 
         dataset = Dataset.from_iterable(
             [
-                DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
-                DatasetItem(2, subset="train", media=Image(path="2.jpg", size=(3, 2))),
-                DatasetItem(3, subset="valid", media=Image(data=np.ones((2, 2, 3)))),
+                DatasetItem(1, subset="train", media=Image.from_numpy(data=np.ones((2, 4, 3)))),
+                DatasetItem(2, subset="train", media=Image.from_file(path="2.jpg", size=(3, 2))),
+                DatasetItem(3, subset="valid", media=Image.from_numpy(data=np.ones((2, 2, 3)))),
             ],
             categories=[],
         )
         dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
 
-        dataset.put(DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))))
+        dataset.put(DatasetItem(2, subset="train", media=Image.from_numpy(data=np.ones((3, 2, 3)))))
         dataset.remove(3, "valid")
         dataset.save(save_media=True)
 
@@ -362,7 +370,7 @@ class YoloExporterTest(CompareDatasetMixin):
                 DatasetItem(
                     id=3,
                     subset=subset,
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                 ),
             ],
             categories=["a"],
@@ -400,7 +408,7 @@ class YoloExporterTest(CompareDatasetMixin):
                 DatasetItem(
                     id=3,
                     subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         self._generate_random_bbox(n_of_labels=2),
                         self._generate_random_bbox(n_of_labels=2),
@@ -414,7 +422,7 @@ class YoloExporterTest(CompareDatasetMixin):
                 DatasetItem(
                     id=3,
                     subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=list(expected_dataset)[0].annotations
                     + [
                         self._generate_random_bbox(n_of_labels=2, rotation=30.0),
@@ -488,7 +496,7 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         # Mask annotation is not supported by yolo8 formats, so should be omitted
                         Mask(np.array([[0, 1, 1, 1, 0]]), label=0),
@@ -502,7 +510,7 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                 )
             ],
             categories=categories,
@@ -535,7 +543,7 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
                 DatasetItem(
                     id=3,
                     subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[anno1, anno3],
                 ),
             ],
@@ -564,7 +572,7 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
                 DatasetItem(
                     id=3,
                     subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[anno1, anno3],
                 ),
             ],
@@ -647,7 +655,7 @@ class YoloUltralyticsOrientedBoxesExporterTest(
                 DatasetItem(
                     id=3,
                     subset="valid",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         self._generate_random_bbox(n_of_labels=2, rotation=30.0),
                     ],
@@ -701,7 +709,7 @@ class YoloUltralyticsPoseExporterTest(YoloUltralyticsDetectionExporterTest):
                 subset=recipe.get("subset", "train"),
                 media=recipe.get(
                     "media",
-                    Image(data=np.ones((randint(8, 10), randint(8, 10), 3))),
+                    Image.from_numpy(data=np.ones((randint(8, 10), randint(8, 10), 3))),
                 ),
                 annotations=[
                     self._generate_random_skeleton_annotation(
@@ -745,7 +753,7 @@ class YoloUltralyticsPoseExporterTest(YoloUltralyticsDetectionExporterTest):
             DatasetItem(
                 id="1",
                 subset="train",
-                media=Image(data=np.ones((5, 10, 3))),
+                media=Image.from_numpy(data=np.ones((5, 10, 3))),
                 annotations=[
                     Skeleton(
                         [
@@ -800,7 +808,7 @@ class YoloUltralyticsPoseExporterTest(YoloUltralyticsDetectionExporterTest):
                 DatasetItem(
                     id="1",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     annotations=[
                         Skeleton(
                             [
@@ -882,7 +890,7 @@ class YoloUltralyticsPoseExporterTest(YoloUltralyticsDetectionExporterTest):
                 DatasetItem(
                     id="1",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     annotations=[
                         Skeleton(
                             [
@@ -916,7 +924,7 @@ class YoloUltralyticsPoseExporterTest(YoloUltralyticsDetectionExporterTest):
                 DatasetItem(
                     id="1",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     annotations=[
                         Skeleton(
                             [
@@ -966,7 +974,7 @@ class YoloUltralyticsClassificationExporterTest(YoloExporterTest):
                 subset=recipe.get("subset", "train"),
                 media=recipe.get(
                     "media",
-                    Image(data=np.ones((randint(8, 10), randint(8, 10), 3))),
+                    Image.from_numpy(data=np.ones((randint(8, 10), randint(8, 10), 3))),
                 ),
                 annotations=[Label(label=index)],
             )
@@ -982,24 +990,28 @@ class YoloUltralyticsClassificationExporterTest(YoloExporterTest):
     def test_relative_paths(self, test_dir, save_media):
         source_dataset = Dataset.from_iterable(
             [
-                DatasetItem(id="1", subset="train", media=Image(data=np.ones((4, 2, 3)))),
-                DatasetItem(id="2", subset="train", media=Image(data=np.ones((4, 2, 3)))),
+                DatasetItem(
+                    id="1", subset="train", media=Image.from_numpy(data=np.ones((4, 2, 3)))
+                ),
+                DatasetItem(
+                    id="2", subset="train", media=Image.from_numpy(data=np.ones((4, 2, 3)))
+                ),
                 DatasetItem(
                     id="subdir1/1",
                     subset="train",
-                    media=Image(data=np.ones((2, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 6, 3))),
                     annotations=[Label(label=0)],
                 ),
                 DatasetItem(
                     id="label_1/1",
                     subset="train",
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[Label(label=1)],
                 ),
                 DatasetItem(
                     id="label_1/subdir2/1",
                     subset="train",
-                    media=Image(data=np.ones((6, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((6, 5, 3))),
                     annotations=[Label(label=1)],
                 ),
             ],
@@ -1015,27 +1027,31 @@ class YoloUltralyticsClassificationExporterTest(YoloExporterTest):
             expected_dataset = Dataset.from_iterable(
                 [
                     DatasetItem(
-                        id="no_label/1", subset="train", media=Image(data=np.ones((4, 2, 3)))
+                        id="no_label/1",
+                        subset="train",
+                        media=Image.from_numpy(data=np.ones((4, 2, 3))),
                     ),
                     DatasetItem(
-                        id="no_label/2", subset="train", media=Image(data=np.ones((4, 2, 3)))
+                        id="no_label/2",
+                        subset="train",
+                        media=Image.from_numpy(data=np.ones((4, 2, 3))),
                     ),
                     DatasetItem(
                         id="label_0/1",
                         subset="train",
-                        media=Image(data=np.ones((2, 6, 3))),
+                        media=Image.from_numpy(data=np.ones((2, 6, 3))),
                         annotations=[Label(label=0)],
                     ),
                     DatasetItem(
                         id="label_1/1",
                         subset="train",
-                        media=Image(data=np.ones((5, 4, 3))),
+                        media=Image.from_numpy(data=np.ones((5, 4, 3))),
                         annotations=[Label(label=1)],
                     ),
                     DatasetItem(
                         id="label_1/1.0",
                         subset="train",
-                        media=Image(data=np.ones((6, 5, 3))),
+                        media=Image.from_numpy(data=np.ones((6, 5, 3))),
                         annotations=[Label(label=1)],
                     ),
                 ],
@@ -1051,13 +1067,13 @@ class YoloUltralyticsClassificationExporterTest(YoloExporterTest):
                 DatasetItem(
                     "label_0/q/1",
                     subset="train",
-                    media=Image(path="label_0/q/1.JPEG", data=np.zeros((4, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG"),
                     annotations=[Label(label=0)],
                 ),
                 DatasetItem(
                     "label_0/a/b/c/2",
                     subset="valid",
-                    media=Image(path="label_0/a/b/c/2.bmp", data=np.zeros((3, 4, 3))),
+                    media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp"),
                     annotations=[Label(label=0)],
                 ),
             ],
@@ -1075,13 +1091,13 @@ class YoloUltralyticsClassificationExporterTest(YoloExporterTest):
                 DatasetItem(
                     "1",
                     subset="train",
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[Label(label=0), Label(label=1), Label(label=2)],
                 ),
                 DatasetItem(
                     "2",
                     subset="train",
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[],
                 ),
             ],
@@ -1121,7 +1137,7 @@ class YoloImporterTest(CompareDatasetMixin):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[
                         Bbox(0, 2, 4, 2, label=2),
                         Bbox(3, 3, 2, 3, label=4),
@@ -1146,7 +1162,7 @@ class YoloImporterTest(CompareDatasetMixin):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((15, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((15, 10, 3))),
                     annotations=[
                         Bbox(0, 3, 2.67, 3.0, label=2),
                         Bbox(2, 4.5, 1.33, 4.5, label=4),
@@ -1274,7 +1290,7 @@ class YoloUltralyticsDetectionImporterTest(YoloImporterTest):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[
                         Bbox(0, 2, 4, 2, label=2),
                         Bbox(3, 3, 2, 3, label=4),
@@ -1339,7 +1355,7 @@ class YoloUltralyticsSegmentationImporterTest(YoloUltralyticsDetectionImporterTe
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[
                         Polygon([1.5, 1.0, 6.0, 1.0, 6.0, 5.0], label=2),
                         Polygon([3.0, 1.5, 6.0, 1.5, 6.0, 7.5, 4.5, 7.5, 3.75, 3.0], label=4),
@@ -1363,7 +1379,7 @@ class YoloUltralyticsOrientedBoxesImporterTest(
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4, label=2, attributes=dict(rotation=30)),
                         Bbox(3, 2, 6, 2, label=4, attributes=dict(rotation=120)),
@@ -1394,7 +1410,7 @@ class YoloUltralyticsPoseImporterTest(YoloUltralyticsDetectionImporterTest):
                 DatasetItem(
                     id="1",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     annotations=[
                         Skeleton(
                             [
@@ -1449,19 +1465,19 @@ class YoloUltralyticsClassificationImporterTest(YoloImporterTest):
                 DatasetItem(
                     id="label_0/1",
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[Label(label=0)],
                 ),
                 DatasetItem(
                     id="label_0/2",
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[Label(label=0)],
                 ),
                 DatasetItem(
                     id="label_1/3",
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[Label(label=1)],
                 ),
             ],
@@ -1475,7 +1491,7 @@ class YoloUltralyticsClassificationImporterTest(YoloImporterTest):
                 DatasetItem(
                     id="label_1/3",
                     subset="train",
-                    media=Image(data=np.ones((15, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((15, 10, 3))),
                     annotations=[Label(label=0)],
                 ),
             ],
@@ -1520,7 +1536,7 @@ class YoloExtractorTest:
                 DatasetItem(
                     "a",
                     subset="train",
-                    media=Image(np.ones((5, 10, 3))),
+                    media=Image.from_numpy(np.ones((5, 10, 3))),
                     annotations=[anno],
                 )
             ],
@@ -1755,7 +1771,7 @@ class YoloUltralyticsPoseExtractorTest(YoloUltralyticsDetectionExtractorTest):
                 DatasetItem(
                     "a",
                     subset="train",
-                    media=Image(np.ones((5, 10, 3))),
+                    media=Image.from_numpy(np.ones((5, 10, 3))),
                     annotations=[
                         Skeleton(
                             [
@@ -1793,7 +1809,7 @@ class YoloUltralyticsPoseExtractorTest(YoloUltralyticsDetectionExtractorTest):
                 DatasetItem(
                     "a",
                     subset="train",
-                    media=Image(np.ones((5, 10, 3))),
+                    media=Image.from_numpy(np.ones((5, 10, 3))),
                     annotations=[
                         Skeleton(
                             [
@@ -1950,7 +1966,7 @@ class YoloUltralyticsClassificationExtractorTest:
                 DatasetItem(
                     "test_label/a",
                     subset="train",
-                    media=Image(np.ones((5, 10, 3))),
+                    media=Image.from_numpy(np.ones((5, 10, 3))),
                     annotations=[Label(0)],
                 )
             ],

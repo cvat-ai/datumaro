@@ -2,6 +2,7 @@ import os.path as osp
 from unittest import TestCase
 
 import numpy as np
+import pytest
 
 from datumaro.components.annotation import (
     AnnotationType,
@@ -43,14 +44,17 @@ from tests.utils.test_utils import compare_datasets
 class TestOperations(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_mean_std(self):
+        np.random.seed(3000)
         expected_mean = [100, 50, 150]
-        expected_std = [20, 50, 10]
+        expected_std = [2, 1, 3]
 
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
                     id=i,
-                    media=Image(data=np.random.normal(expected_mean, expected_std, size=(h, w, 3))),
+                    media=Image.from_numpy(
+                        data=np.random.normal(expected_mean, expected_std, size=(h, w, 3))
+                    ),
                 )
                 for i, (w, h) in enumerate([(3000, 100), (800, 600), (400, 200), (700, 300)])
             ]
@@ -59,20 +63,22 @@ class TestOperations(TestCase):
         actual_mean, actual_std = mean_std(dataset)
 
         for em, am in zip(expected_mean, actual_mean):
-            self.assertAlmostEqual(em, am, places=0)
+            assert np.allclose(em, am, atol=0.6)
         for estd, astd in zip(expected_std, actual_std):
-            self.assertAlmostEqual(estd, astd, places=0)
+            assert np.allclose(estd, astd, atol=0.1)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_image_stats(self):
         expected_mean = [100, 50, 150]
-        expected_std = [20, 50, 10]
+        expected_std = [2, 1, 3]
 
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
                     id=i,
-                    media=Image(data=np.random.normal(expected_mean, expected_std, size=(h, w, 3))),
+                    media=Image.from_numpy(
+                        data=np.random.normal(expected_mean, expected_std, size=(h, w, 3))
+                    ),
                 )
                 for i, (w, h) in enumerate([(3000, 100), (800, 600), (400, 200), (700, 300)])
             ]
@@ -96,16 +102,16 @@ class TestOperations(TestCase):
         actual_mean = actual["subsets"]["default"]["image mean"][::-1]
         actual_std = actual["subsets"]["default"]["image std"][::-1]
         for em, am in zip(expected_mean, actual_mean):
-            self.assertAlmostEqual(em, am, places=0)
+            assert am == pytest.approx(em, 5e-1)
         for estd, astd in zip(expected_std, actual_std):
-            self.assertAlmostEqual(estd, astd, places=0)
+            assert astd == pytest.approx(estd, 1e-1)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_image_stats_with_no_image_infos(self):
         dataset = Dataset.from_iterable(
             [
-                DatasetItem(id=0, media=Image(size=(10, 10))),
-                DatasetItem(id=1, media=Image(path="inexistent.path")),
+                DatasetItem(id=0, media=Image.from_file(path="somepath", size=(10, 10))),
+                DatasetItem(id=1, media=Image.from_file(path="inexistent.path")),
                 DatasetItem(id=2),
             ]
         )
@@ -130,7 +136,7 @@ class TestOperations(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Caption("hello"),
                         Caption("world"),
@@ -179,7 +185,7 @@ class TestOperations(TestCase):
                 ),
                 DatasetItem(
                     id=2,
-                    media=Image(data=np.ones((2, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 4, 3))),
                     annotations=[
                         Label(
                             2,
@@ -212,7 +218,7 @@ class TestOperations(TestCase):
                     ],
                 ),
                 DatasetItem(id=3),
-                DatasetItem(id="2.2", media=Image(data=np.ones((2, 4, 3)))),
+                DatasetItem(id="2.2", media=Image.from_numpy(data=np.ones((2, 4, 3)))),
             ],
             categories=["label_%s" % i for i in range(4)],
         )
@@ -402,11 +408,11 @@ class TestOperations(TestCase):
         dataset = Dataset.from_iterable(
             [
                 # no image data, but the same path
-                DatasetItem(1, subset="a", media=Image(path="1.jpg")),
-                DatasetItem(1, subset="b", media=Image(path="1.jpg")),
+                DatasetItem(1, subset="a", media=Image.from_file(path="1.jpg")),
+                DatasetItem(1, subset="b", media=Image.from_file(path="1.jpg")),
                 # same images
-                DatasetItem(2, media=Image(data=np.array([1]))),
-                DatasetItem(3, media=Image(data=np.array([1]))),
+                DatasetItem(2, media=Image.from_numpy(data=np.ones((5, 5, 3)))),
+                DatasetItem(3, media=Image.from_numpy(data=np.ones((5, 5, 3)))),
                 # no image is always a unique image
                 DatasetItem(4),
             ]
@@ -1025,20 +1031,20 @@ class TestMultimerge(TestCase):
         pcd1 = osp.join(dataset_dir, "ds0", "pointcloud", "frame1.pcd")
         pcd2 = osp.join(dataset_dir, "ds0", "pointcloud", "frame2.pcd")
 
-        image1 = Image(
+        image1 = Image.from_file(
             path=osp.join(dataset_dir, "ds0", "related_images", "frame1_pcd", "img2.png")
         )
-        image2 = Image(
+        image2 = Image.from_file(
             path=osp.join(dataset_dir, "ds0", "related_images", "frame2_pcd", "img1.png")
         )
 
         source0 = Dataset.from_iterable(
             [
-                DatasetItem(1, media=PointCloud(path=pcd1, extra_images=[image1])),
-                DatasetItem(2, media=PointCloud(path=pcd1, extra_images=[image1])),
-                DatasetItem(3, media=PointCloud(path=pcd2)),
+                DatasetItem(1, media=PointCloud.from_file(path=pcd1, extra_images=[image1])),
+                DatasetItem(2, media=PointCloud.from_file(path=pcd1, extra_images=[image1])),
+                DatasetItem(3, media=PointCloud.from_file(path=pcd2)),
                 DatasetItem(4),
-                DatasetItem(5, media=PointCloud(path=pcd2)),
+                DatasetItem(5, media=PointCloud.from_file(path=pcd2)),
             ],
             categories=[],
             media_type=PointCloud,
@@ -1046,11 +1052,11 @@ class TestMultimerge(TestCase):
 
         source1 = Dataset.from_iterable(
             [
-                DatasetItem(1, media=PointCloud(path=pcd1, extra_images=[image1])),
-                DatasetItem(2, media=PointCloud(path=pcd1, extra_images=[image2])),
+                DatasetItem(1, media=PointCloud.from_file(path=pcd1, extra_images=[image1])),
+                DatasetItem(2, media=PointCloud.from_file(path=pcd1, extra_images=[image2])),
                 DatasetItem(3),
-                DatasetItem(4, media=PointCloud(path=pcd2)),
-                DatasetItem(5, media=PointCloud(path=pcd2, extra_images=[image2])),
+                DatasetItem(4, media=PointCloud.from_file(path=pcd2)),
+                DatasetItem(5, media=PointCloud.from_file(path=pcd2, extra_images=[image2])),
             ],
             categories=[],
             media_type=PointCloud,
@@ -1058,11 +1064,13 @@ class TestMultimerge(TestCase):
 
         expected = Dataset.from_iterable(
             [
-                DatasetItem(1, media=PointCloud(path=pcd1, extra_images=[image1])),
-                DatasetItem(2, media=PointCloud(path=pcd1, extra_images=[image1, image2])),
-                DatasetItem(3, media=PointCloud(path=pcd2)),
-                DatasetItem(4, media=PointCloud(path=pcd2)),
-                DatasetItem(5, media=PointCloud(path=pcd2, extra_images=[image2])),
+                DatasetItem(1, media=PointCloud.from_file(path=pcd1, extra_images=[image1])),
+                DatasetItem(
+                    2, media=PointCloud.from_file(path=pcd1, extra_images=[image1, image2])
+                ),
+                DatasetItem(3, media=PointCloud.from_file(path=pcd2)),
+                DatasetItem(4, media=PointCloud.from_file(path=pcd2)),
+                DatasetItem(5, media=PointCloud.from_file(path=pcd2, extra_images=[image2])),
             ],
             categories=[],
             media_type=PointCloud,

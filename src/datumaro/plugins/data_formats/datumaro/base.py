@@ -108,7 +108,7 @@ class DatumaroBase(SubsetBase):
                     if osp.isfile(old_image_path):
                         image_path = old_image_path
 
-                media = Image(path=image_path, size=image_info.get("size"))
+                media = Image.from_file(path=image_path, size=image_info.get("size"))
                 self._media_type = Image
 
             pcd_info = item_desc.get("point_cloud")
@@ -122,7 +122,7 @@ class DatumaroBase(SubsetBase):
                 ri_info = item_desc.get("related_images")
                 if ri_info:
                     related_images = [
-                        Image(
+                        Image.from_file(
                             size=ri.get("size"),
                             path=osp.join(
                                 self._related_images_dir, self._subset, item_id, ri.get("path")
@@ -131,7 +131,7 @@ class DatumaroBase(SubsetBase):
                         for ri in ri_info
                     ]
 
-                media = PointCloud(point_cloud, extra_images=related_images)
+                media = PointCloud.from_file(point_cloud, extra_images=related_images)
                 self._media_type = PointCloud
 
             media_desc = item_desc.get("media")

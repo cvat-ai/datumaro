@@ -42,7 +42,7 @@ class ProjectIntegrationScenarios(TestCase):
                 "-o",
                 result_dir,
                 "--",
-                "--save-images",
+                "--save-media",
                 "--reindex",
                 "1",
             )
@@ -65,9 +65,7 @@ class ProjectIntegrationScenarios(TestCase):
             run(self, "import", "-f", "coco", "-p", test_dir, coco_dir)
 
             result_dir = osp.join(test_dir, "voc_export")
-            run(
-                self, "export", "-f", "voc", "-p", test_dir, "-o", result_dir, "--", "--save-images"
-            )
+            run(self, "export", "-f", "voc", "-p", test_dir, "-o", result_dir, "--", "--save-media")
 
             self.assertTrue(osp.isdir(result_dir))
 
@@ -183,7 +181,7 @@ class ProjectIntegrationScenarios(TestCase):
                 result_dir,
                 "source-1",
                 "--",
-                "--save-images",
+                "--save-media",
             )
             parsed = Dataset.import_from(result_dir, "coco")
             compare_datasets(
@@ -226,7 +224,7 @@ class ProjectIntegrationScenarios(TestCase):
                 "-o",
                 result_dir,
                 "--",
-                "--save-images",
+                "--save-media",
             )
             parsed = Dataset.import_from(result_dir, "coco")
             compare_datasets(

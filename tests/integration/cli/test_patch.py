@@ -101,7 +101,7 @@ class PatchTest(TestCase):
                 patch_url + ":voc",
                 "--",
                 "--reindex=1",
-                "--save-images",
+                "--save-media",
             )
 
             compare_datasets(

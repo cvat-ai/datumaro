@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2022 Intel Corporation
+# Copyright (C) 2019-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -6,14 +6,15 @@ import logging as log
 import os
 import os.path as osp
 import shutil
-import warnings
 from tempfile import mkdtemp
 from typing import NoReturn, Optional, Tuple, TypeVar, Union
 
 import attr
 from attrs import define, field
 
+from datumaro.components.annotation import HashKey
 from datumaro.components.cli_plugin import CliPlugin
+from datumaro.components.crypter import NULL_CRYPTER, Crypter
 from datumaro.components.dataset_base import DatasetItem, IDataset
 from datumaro.components.errors import (
     AnnotationExportError,
@@ -21,9 +22,9 @@ from datumaro.components.errors import (
     DatumaroError,
     ItemExportError,
 )
-from datumaro.components.media import Image, PointCloud
+from datumaro.components.media import Image, PointCloud, Video, VideoFrame
 from datumaro.components.progress_reporting import NullProgressReporter, ProgressReporter
-from datumaro.util.meta_file_util import save_meta_file
+from datumaro.util.meta_file_util import save_hashkey_file, save_meta_file
 from datumaro.util.os_util import rmtree
 from datumaro.util.scope import on_error_do, scoped
 
@@ -98,18 +99,9 @@ class Exporter(CliPlugin):
     def build_cmdline_parser(cls, **kwargs):
         parser = super().build_cmdline_parser(**kwargs)
 
-        # Deprecated
-        parser.add_argument(
-            "--save-images",
-            action="store_true",
-            default=None,
-            help="(Deprecated. Use --save-media instead) " "Save images (default: False)",
-        )
-
         parser.add_argument(
             "--save-media",
             action="store_true",
-            default=None,  # TODO: remove default once save-images is removed
             help="Save media (default: False)",
         )
         parser.add_argument(
@@ -161,6 +153,12 @@ class Exporter(CliPlugin):
         return retval
 
     def apply(self):
+        """Execute the data-format conversion"""
+        if self._save_hashkey_meta:
+            self._save_hashkey_file(self._save_dir)
+        return self._apply_impl()
+
+    def _apply_impl(self):
         raise NotImplementedError("Should be implemented in a subclass")
 
     def __init__(
@@ -168,48 +166,41 @@ class Exporter(CliPlugin):
         extractor: IDataset,
         save_dir: str,
         *,
-        save_images=None,  # Deprecated
         save_media: Optional[bool] = None,
         image_ext: Optional[str] = None,
         default_image_ext: Optional[str] = None,
         save_dataset_meta: bool = False,
+        save_hashkey_meta: bool = False,
+        stream: bool = False,
         ctx: Optional[ExportContext] = None,
     ):
         default_image_ext = default_image_ext or self.DEFAULT_IMAGE_EXT
         assert default_image_ext
         self._default_image_ext = default_image_ext
 
-        if save_images is not None and save_media is not None:
-            raise DatasetExportError("Can't use both 'save-media' and " "'save-images'")
-
-        if save_media is not None:
-            self._save_media = save_media
-        elif save_images is not None:
-            self._save_media = save_images
-            warnings.warn(
-                "'save-images' is deprecated and will be "
-                "removed in future. Use 'save-media' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        else:
-            self._save_media = False
-
+        self._save_media = save_media
         self._image_ext = image_ext
 
         self._extractor = extractor
         self._save_dir = save_dir
 
         self._save_dataset_meta = save_dataset_meta
+        self._save_hashkey_meta = save_hashkey_meta
 
         # TODO: refactor this variable.
         # Can be used by a subclass to store the current patch info
-        from datumaro.components.dataset_storage import DatasetPatch
+        from datumaro.components.dataset import DatasetPatch
 
         if isinstance(extractor, DatasetPatch.DatasetPatchWrapper):
             self._patch = extractor.patch
         else:
             self._patch = None
+
+        if stream and not self.can_stream:
+            raise DatasetExportError(
+                f"{self.__class__.__name__} cannot export a dataset in a stream manner"
+            )
+        self._stream = stream
 
         self._ctx: ExportContext = ctx or NullExportContext()
 
@@ -234,7 +225,16 @@ class Exporter(CliPlugin):
     def _make_pcd_filename(self, item, *, name=None, subdir=None):
         return self._make_item_filename(item, name=name, subdir=subdir) + ".pcd"
 
-    def _save_image(self, item, path=None, *, name=None, subdir=None, basedir=None):
+    def _save_image(
+        self,
+        item,
+        path=None,
+        *,
+        name=None,
+        subdir=None,
+        basedir=None,
+        crypter: Crypter = NULL_CRYPTER,
+    ):
         assert not (
             (subdir or name or basedir) and path
         ), "Can't use both subdir or name or basedir and path arguments"
@@ -247,7 +247,7 @@ class Exporter(CliPlugin):
         path = path or osp.join(basedir, self._make_image_filename(item, name=name, subdir=subdir))
         path = osp.abspath(path)
 
-        item.media.save(path)
+        item.media.save(path, crypter=crypter)
 
     def _save_point_cloud(self, item=None, path=None, *, name=None, subdir=None, basedir=None):
         assert not (
@@ -263,9 +263,192 @@ class Exporter(CliPlugin):
         path = osp.abspath(path)
 
         os.makedirs(osp.dirname(path), exist_ok=True)
-        if item.media and osp.isfile(item.media.path):
-            if item.media.path != path:
-                shutil.copyfile(item.media.path, path)
+        item.media.save(path, crypter=NULL_CRYPTER)
 
     def _save_meta_file(self, path):
         save_meta_file(path, self._extractor.categories())
+
+    def _save_hashkey_file(self, path):
+        save_hashkey_file(path, self._extractor)
+
+    def _check_hash_key_existence(self, item):
+        if self._save_hashkey_meta:
+            return
+        for annotation in item.annotations:
+            if isinstance(annotation, HashKey):
+                self._save_hashkey_meta = True
+                return
+
+    @property
+    def can_stream(self) -> bool:
+        """
+        Flag to indicate whether the exporter can export the dataset in a stream manner or not.
+        """
+        return False
+
+
+# TODO: Currently, ExportContextComponent is introduced only for Datumaro and DatumaroBinary format
+# for multi-processing. We need to propagate this to everywhere in Datumaro 1.2.0
+
+
+class ExportContextComponent:
+    def __init__(
+        self,
+        save_dir: str,
+        save_media: bool,
+        images_dir: str,
+        pcd_dir: str,
+        video_dir: str,
+        crypter: Crypter = NULL_CRYPTER,
+        image_ext: Optional[str] = None,
+        default_image_ext: Optional[str] = None,
+        source_path: Optional[str] = None,
+    ):
+        self._save_dir = save_dir
+        self._save_media = save_media
+        self._images_dir = images_dir
+        self._pcd_dir = pcd_dir
+        self._video_dir = video_dir
+        self._crypter = crypter
+        self._image_ext = image_ext
+        self._default_image_ext = default_image_ext
+        self._source_path = source_path
+
+    def find_image_ext(self, item: Union[DatasetItem, Image]):
+        src_ext = None
+
+        if isinstance(item, DatasetItem) and isinstance(item.media, Image):
+            src_ext = item.media.ext
+        elif isinstance(item, Image):
+            src_ext = item.ext
+
+        return self._image_ext or src_ext or self._default_image_ext
+
+    def _make_item_filename(self, item, *, name=None, subdir=None):
+        name = name or item.id
+        subdir = subdir or ""
+        return osp.join(subdir, name)
+
+    def make_image_filename(self, item, *, name=None, subdir=None):
+        return self._make_item_filename(item, name=name, subdir=subdir) + self.find_image_ext(item)
+
+    def make_pcd_filename(self, item, *, name=None, subdir=None):
+        return self._make_item_filename(item, name=name, subdir=subdir) + ".pcd"
+
+    def make_pcd_extra_image_filename(self, item, idx, image, *, name=None, subdir=None):
+        return self._make_item_filename(
+            item, name=name if name else f"{item.id}/extra_image_{idx}", subdir=subdir
+        ) + self.find_image_ext(image)
+
+    def make_video_filename(self, item, *, name=None):
+        STR_WRONG_MEDIA_TYPE = "Video item's media type should be Video or VideoFrame"
+        assert isinstance(item, DatasetItem), STR_WRONG_MEDIA_TYPE
+
+        if isinstance(item.media, VideoFrame):
+            video_file_name = osp.basename(item.media.video.path)
+        elif isinstance(item.media, Video):
+            video_file_name = osp.basename(item.media.path)
+        else:
+            assert False, STR_WRONG_MEDIA_TYPE
+
+        return video_file_name
+
+    def save_image(
+        self,
+        item: DatasetItem,
+        *,
+        encryption: bool = False,
+        basedir: Optional[str] = None,
+        subdir: Optional[str] = None,
+        fname: Optional[str] = None,
+    ):
+        if not isinstance(item.media, Image) or not item.media.has_data:
+            log.warning("Item '%s' has no image", item.id)
+            return
+
+        basedir = self._images_dir if basedir is None else basedir
+        basedir = osp.join(basedir, subdir) if subdir is not None else basedir
+        fname = self.make_image_filename(item) if fname is None else fname
+        path = osp.join(basedir, fname)
+        path = osp.abspath(path)
+
+        os.makedirs(osp.dirname(path), exist_ok=True)
+        item.media.save(path, crypter=self._crypter if encryption else NULL_CRYPTER)
+
+    def save_point_cloud(
+        self,
+        item: DatasetItem,
+        *,
+        basedir: Optional[str] = None,
+        subdir: Optional[str] = None,
+        fname: Optional[str] = None,
+    ):
+        if not item.media or not isinstance(item.media, PointCloud):
+            log.warning("Item '%s' has no pcd", item.id)
+            return
+
+        basedir = self._pcd_dir if basedir is None else basedir
+        basedir = osp.join(basedir, subdir) if subdir is not None else basedir
+        fname = self.make_pcd_filename(item) if fname is None else fname
+        path = osp.join(basedir, fname)
+        path = osp.abspath(path)
+
+        os.makedirs(osp.dirname(path), exist_ok=True)
+
+        def helper(i, image):
+            basedir = self._images_dir
+            basedir = osp.join(basedir, subdir) if subdir is not None else basedir
+            return {"fp": osp.join(basedir, self.make_pcd_extra_image_filename(item, i, image))}
+
+        item.media.save(path, helper, crypter=NULL_CRYPTER)
+
+    def save_video(
+        self,
+        item: DatasetItem,
+        *,
+        basedir: Optional[str] = None,
+        subdir: Optional[str] = None,
+        fname: Optional[str] = None,
+    ):
+        if not item.media or not isinstance(item.media, (Video, VideoFrame)):
+            log.warning("Item '%s' has no video", item.id)
+            return
+        basedir = self._video_dir if basedir is None else basedir
+        basedir = osp.join(basedir, subdir) if subdir is not None else basedir
+        fname = self.make_video_filename(item) if fname is None else fname
+
+        path = osp.join(basedir, fname)
+        path = osp.abspath(path)
+
+        # To prevent the video from being overwritten
+        # (A video can have same path but different start/end frames)
+        if not osp.exists(path):
+            os.makedirs(osp.dirname(path), exist_ok=True)
+            if isinstance(item.media, VideoFrame):
+                item.media.video.save(path, crypter=NULL_CRYPTER)
+            else:  # Video
+                item.media.save(path, crypter=NULL_CRYPTER)
+
+    @property
+    def images_dir(self) -> str:
+        return self._images_dir
+
+    @property
+    def pcd_dir(self) -> str:
+        return self._pcd_dir
+
+    @property
+    def save_dir(self) -> str:
+        return self._save_dir
+
+    @property
+    def save_media(self) -> bool:
+        return self._save_media
+
+    @property
+    def crypter(self) -> Crypter:
+        return self._crypter
+
+    @property
+    def source_path(self) -> str:
+        return self._source_path if self._source_path else ""

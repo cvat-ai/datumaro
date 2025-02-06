@@ -509,7 +509,13 @@ class DatumaroExporterTest(TestCase):
                     id=1,
                     subset="test",
                     media=PointCloud.from_file(
-                        "1.pcd",
+                        path=get_test_asset_path(
+                            "datumaro_dataset",
+                            "with_pcd",
+                            "point_clouds",
+                            "default",
+                            "0000000000.pcd",
+                        ),
                         extra_images=[
                             Image.from_numpy(data=np.ones((5, 5, 3)), path="1/a.jpg"),
                             Image.from_numpy(data=np.ones((5, 4, 3)), path="1/b.jpg"),

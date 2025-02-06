@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from datumaro.cli.contexts.project.diff import DiffVisualizer
+from datumaro.cli.util.compare import DiffVisualizer
 from datumaro.components.annotation import (
     AnnotationType,
     Bbox,

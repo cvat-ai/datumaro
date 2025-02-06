@@ -8,53 +8,12 @@ import logging as log
 import os.path as osp
 from functools import partial
 from inspect import isclass
-from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, Type, TypeVar
+from typing import Callable, List, Optional
 
-from datumaro.components.cli_plugin import CliPlugin, plugin_types
+from datumaro.components.cli_plugin import plugin_types
 from datumaro.components.format_detection import RejectionReason, detect_dataset_format
+from datumaro.components.registry import PluginRegistry
 from datumaro.util.os_util import import_foreign_module, split_path
-
-T = TypeVar("T")
-
-
-class Registry(Generic[T]):
-    def __init__(self):
-        self.items: Dict[str, T] = {}
-
-    def register(self, name: str, value: T) -> T:
-        self.items[name] = value
-        return value
-
-    def unregister(self, name: str) -> Optional[T]:
-        return self.items.pop(name, None)
-
-    def get(self, key: str):
-        """Returns a class or a factory function"""
-        return self.items[key]
-
-    def __getitem__(self, key: str) -> T:
-        return self.get(key)
-
-    def __contains__(self, key) -> bool:
-        return key in self.items
-
-    def __iter__(self) -> Iterator[T]:
-        return iter(self.items)
-
-
-class PluginRegistry(Registry[Type[CliPlugin]]):
-    def __init__(
-        self, filter: Callable[[Type[CliPlugin]], bool] = None
-    ):  # pylint: disable=redefined-builtin
-        super().__init__()
-        self._filter = filter
-
-    def batch_register(self, values: Iterable[CliPlugin]):
-        for v in values:
-            if self._filter and not self._filter(v):
-                continue
-
-            self.register(v.NAME, v)
 
 
 class Environment:

@@ -982,7 +982,7 @@ class KittiExporterTest(TestCase):
                 osp.isfile(osp.join(test_dir, "default", KittiPath.IMAGES_DIR, "a/b/c/2.bmp"))
             )
             self.assertTrue(
-                osp.isfile(osp.join(test_dir, "default", KittiPath.IMAGES_DIR, "q/1.JPEG"))
+                osp.isfile(osp.join(test_dir, "default", KittiPath.IMAGES_DIR, "q/1.jpeg"))
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)

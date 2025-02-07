@@ -840,7 +840,7 @@ class CvatExporterTest(TestCase):
                 test_dir,
                 require_media=True,
             )
-            self.assertTrue(osp.isfile(osp.join(test_dir, "images", "q", "1.JPEG")))
+            self.assertTrue(osp.isfile(osp.join(test_dir, "images", "q", "1.jpeg")))
             self.assertTrue(osp.isfile(osp.join(test_dir, "images", "a", "b", "c", "2.bmp")))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)

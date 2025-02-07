@@ -1641,8 +1641,10 @@ class YoloExtractorTest:
         self._prepare_dataset(test_dir)
         os.remove(osp.join(test_dir, "train.txt"))
 
-        with pytest.raises(InvalidAnnotationError, match="subset list file"):
+        with pytest.raises(DatasetImportError) as capture:
             Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert "subset list file" in str(capture.value.__cause__)
 
 
 class YoloUltralyticsDetectionExtractorTest(YoloExtractorTest):
@@ -1663,8 +1665,10 @@ class YoloUltralyticsDetectionExtractorTest(YoloExtractorTest):
         shutil.copytree(get_test_asset_path("yolo_dataset", self.IMPORTER.NAME), dataset_path)
         shutil.rmtree(osp.join(dataset_path, "images", "train"))
 
-        with pytest.raises(InvalidAnnotationError, match="subset image folder"):
+        with pytest.raises(DatasetImportError) as capture:
             Dataset.import_from(dataset_path, self.IMPORTER.NAME).init_cache()
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert "subset image folder" in str(capture.value.__cause__)
 
     def test_can_report_missing_ann_file(self, test_dir):
         # YoloUltralytics does not require annotation files
@@ -1915,9 +1919,7 @@ class YoloUltralyticsPoseExtractorTest(YoloUltralyticsDetectionExtractorTest):
 
     def test_can_report_too_many_sub_labels_in_hint(self, test_dir):
         self._prepare_dataset_different_skeletons(test_dir)
-        with pytest.raises(
-            InvalidAnnotationError, match="Number of points in skeletons according to config file"
-        ):
+        with pytest.raises(DatasetImportError) as capture:
             Dataset.import_from(
                 test_dir,
                 self.IMPORTER.NAME,
@@ -1932,10 +1934,14 @@ class YoloUltralyticsPoseExtractorTest(YoloUltralyticsDetectionExtractorTest):
                     "test2": ["sub_label_1", "sub_label_2"],
                 },
             )
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert "Number of points in skeletons according to config file" in str(
+            capture.value.__cause__
+        )
 
     def test_can_report_the_lack_of_skeleton_label_in_hint(self, test_dir):
         self._prepare_dataset_different_skeletons(test_dir)
-        with pytest.raises(InvalidAnnotationError, match="Labels from config file are absent"):
+        with pytest.raises(DatasetImportError) as capture:
             Dataset.import_from(
                 test_dir,
                 self.IMPORTER.NAME,
@@ -1943,6 +1949,8 @@ class YoloUltralyticsPoseExtractorTest(YoloUltralyticsDetectionExtractorTest):
                     "test2": ["sub_label_1", "sub_label_2"],
                 },
             )
+        assert isinstance(capture.value.__cause__, InvalidAnnotationError)
+        assert "Labels from config file are absent" in str(capture.value.__cause__)
 
     def test_can_import_if_sub_label_hint_has_extra_skeletons(self, test_dir, helper_tc):
         source_dataset = self._prepare_dataset_different_skeletons(test_dir)

@@ -902,10 +902,11 @@ class CocoExtractorTests(TestCase):
                     anns["images"][0].pop(field)
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(ItemImportError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertIsInstance(capture.exception.__cause__, MissingFieldError)
-                    self.assertEqual(capture.exception.__cause__.name, field)
+                    self.assertIsInstance(capture.exception.__cause__, ItemImportError)
+                    self.assertIsInstance(capture.exception.__cause__.__cause__, MissingFieldError)
+                    self.assertEqual(capture.exception.__cause__.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_ann_field(self):
@@ -917,10 +918,11 @@ class CocoExtractorTests(TestCase):
                     anns["annotations"][0].pop(field)
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(AnnotationImportError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertIsInstance(capture.exception.__cause__, MissingFieldError)
-                    self.assertEqual(capture.exception.__cause__.name, field)
+                    self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+                    self.assertIsInstance(capture.exception.__cause__.__cause__, MissingFieldError)
+                    self.assertEqual(capture.exception.__cause__.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_global_field(self):
@@ -932,9 +934,10 @@ class CocoExtractorTests(TestCase):
                     anns.pop(field)
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(MissingFieldError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertEqual(capture.exception.name, field)
+                    self.assertIsInstance(capture.exception.__cause__, MissingFieldError)
+                    self.assertEqual(capture.exception.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_category_field(self):
@@ -946,9 +949,10 @@ class CocoExtractorTests(TestCase):
                     anns["categories"][0].pop(field)
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(MissingFieldError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertEqual(capture.exception.name, field)
+                    self.assertIsInstance(capture.exception.__cause__, MissingFieldError)
+                    self.assertEqual(capture.exception.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_undeclared_label(self):
@@ -958,10 +962,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["category_id"] = 2
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, UndeclaredLabelError)
-            self.assertEqual(capture.exception.__cause__.id, "2")
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, UndeclaredLabelError)
+            self.assertEqual(capture.exception.__cause__.__cause__.id, "2")
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_bbox(self):
@@ -971,10 +976,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["bbox"] = [1, 2, 3, 4, 5]
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, InvalidAnnotationError)
-            self.assertIn("Bbox has wrong value count", str(capture.exception.__cause__))
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
+            self.assertIn("Bbox has wrong value count", str(capture.exception.__cause__.__cause__))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_polygon_odd_points(self):
@@ -984,10 +990,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["segmentation"] = [[1, 2, 3]]
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, InvalidAnnotationError)
-            self.assertIn("not divisible by 2", str(capture.exception.__cause__))
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
+            self.assertIn("not divisible by 2", str(capture.exception.__cause__.__cause__))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_polygon_less_than_3_points(self):
@@ -997,10 +1004,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["segmentation"] = [[1, 2, 3, 4]]
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, InvalidAnnotationError)
-            self.assertIn("at least 3 (x, y) pairs", str(capture.exception.__cause__))
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
+            self.assertIn("at least 3 (x, y) pairs", str(capture.exception.__cause__.__cause__))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_image_id(self):
@@ -1010,10 +1018,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["image_id"] = 10
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, InvalidAnnotationError)
-            self.assertIn("Unknown image id", str(capture.exception.__cause__))
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
+            self.assertIn("Unknown image id", str(capture.exception.__cause__.__cause__))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_item_field_type(self):
@@ -1025,11 +1034,14 @@ class CocoExtractorTests(TestCase):
                     anns["images"][0][field] = value
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(ItemImportError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertIsInstance(capture.exception.__cause__, InvalidFieldTypeError)
-                    self.assertEqual(capture.exception.__cause__.name, field)
-                    self.assertEqual(capture.exception.__cause__.actual, str(type(value)))
+                    self.assertIsInstance(capture.exception.__cause__, ItemImportError)
+                    self.assertIsInstance(
+                        capture.exception.__cause__.__cause__, InvalidFieldTypeError
+                    )
+                    self.assertEqual(capture.exception.__cause__.__cause__.name, field)
+                    self.assertEqual(capture.exception.__cause__.__cause__.actual, str(type(value)))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_ann_field_type(self):
@@ -1049,11 +1061,14 @@ class CocoExtractorTests(TestCase):
                     anns["annotations"][0][field] = value
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(AnnotationImportError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertIsInstance(capture.exception.__cause__, InvalidFieldTypeError)
-                    self.assertEqual(capture.exception.__cause__.name, field)
-                    self.assertEqual(capture.exception.__cause__.actual, str(type(value)))
+                    self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+                    self.assertIsInstance(
+                        capture.exception.__cause__.__cause__, InvalidFieldTypeError
+                    )
+                    self.assertEqual(capture.exception.__cause__.__cause__.name, field)
+                    self.assertEqual(capture.exception.__cause__.__cause__.actual, str(type(value)))
 
 
 class CocoExporterTest(TestCase):

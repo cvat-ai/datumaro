@@ -22,6 +22,7 @@ from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     AnnotationImportError,
+    DatasetImportError,
     InvalidAnnotationError,
     InvalidFieldError,
     ItemImportError,
@@ -614,10 +615,12 @@ class VocExtractorTest(TestCase):
             with open(subset_file, "w") as f:
                 f.write('"qwe 1\n')
 
-            with self.assertRaisesRegex(
-                InvalidAnnotationError, "unexpected number of quotes in filename"
-            ):
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(test_dir, format="voc_layout")
+            self.assertIsInstance(capture.exception.__cause__, InvalidAnnotationError)
+            self.assertIn(
+                "unexpected number of quotes in filename", str(capture.exception.__cause__)
+            )
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_label_in_xml(self):

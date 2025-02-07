@@ -199,9 +199,9 @@ class TfdsExtractorTest(TestCase):
                     DatasetItem(
                         id=osp.splitext(example_file_name)[0],
                         subset="train",
-                        media=Image(
+                        media=Image.from_numpy(
                             data=decode_image(tfds_example["image"].numpy()),
-                            path=example_file_name,
+                            ext=osp.splitext(example_file_name)[1],
                         ),
                         annotations=[Label(tfds_example["label"].numpy())],
                     ),

@@ -9,6 +9,7 @@ import io
 import os
 import os.path as osp
 import shutil
+import weakref
 from copy import deepcopy
 from enum import IntEnum
 from functools import partial
@@ -644,6 +645,10 @@ class Video(MediaElement, Iterable[VideoFrame]):
         # https://stackoverflow.com/a/47796468
         self._frame_count = None
         self._length = None
+
+        from .media_manager import MediaManager
+
+        MediaManager.get_instance().push(weakref.ref(self), self)
 
     def close(self):
         self._iterator = None

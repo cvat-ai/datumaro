@@ -16,7 +16,7 @@ from tests.utils.test_utils import TestDir, compare_datasets
 from tests.utils.video import make_sample_video
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def fxt_sample_video():
     with TestDir() as test_dir:
         video_path = osp.join(test_dir, "video.avi")

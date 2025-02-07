@@ -109,7 +109,7 @@ class DatasetSubset(IDataset):  # non-owning view
             return self.parent.subsets()
         return {self.name: self}
 
-    def infos(self):
+    def infos(self) -> DatasetInfo:
         return self.parent.infos()
 
     def categories(self):

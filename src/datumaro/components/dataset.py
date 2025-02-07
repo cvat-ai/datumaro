@@ -459,7 +459,7 @@ class Dataset(IDataset):
         inplace = save_dir == self._source_path and format == self._format
 
         if isinstance(format, str):
-            converter = self.env.converters[format]
+            converter = self.env.exporters[format]
         else:
             converter = format
 

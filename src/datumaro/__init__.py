@@ -39,14 +39,7 @@ from .components.dataset_item_storage import ItemStatus
 from .components.dataset_storage import DatasetPatch
 from .components.environment import Environment
 from .components.exporter import Exporter, ExportErrorPolicy, FailingExportErrorPolicy
-from .components.hl_ops import (  # pylint: disable=redefined-builtin
-    export,
-    filter,
-    merge,
-    run_model,
-    transform,
-    validate,
-)
+from .components.hl_ops import HLOps
 from .components.importer import Importer
 from .components.launcher import Launcher
 from .components.media import Image, MediaElement, PointCloud, Video, VideoFrame

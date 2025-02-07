@@ -203,7 +203,7 @@ def merge_command(args):
         env = Environment()
 
     try:
-        converter = env.converters[args.format]
+        converter = env.exporters[args.format]
     except KeyError:
         raise CliException("Converter for format '%s' is not found" % args.format)
 

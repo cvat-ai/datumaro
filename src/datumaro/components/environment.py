@@ -8,7 +8,7 @@ import logging as log
 import os.path as osp
 from functools import partial
 from inspect import isclass
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Sequence
 
 from datumaro.components.cli_plugin import plugin_types
 from datumaro.components.format_detection import RejectionReason, detect_dataset_format
@@ -68,7 +68,7 @@ class Environment:
         return self._get_plugin_registry("_launchers")
 
     @property
-    def converters(self) -> PluginRegistry:
+    def exporters(self) -> PluginRegistry:
         return self._get_plugin_registry("_converters")
 
     @property
@@ -176,7 +176,7 @@ class Environment:
         self.extractors.batch_register(plugins)
         self.importers.batch_register(plugins)
         self.launchers.batch_register(plugins)
-        self.converters.batch_register(plugins)
+        self.exporters.batch_register(plugins)
         self.generators.batch_register(plugins)
         self.transforms.batch_register(plugins)
         self.validators.batch_register(plugins)
@@ -191,7 +191,7 @@ class Environment:
         return self.launchers.get(name)(*args, **kwargs)
 
     def make_converter(self, name, *args, **kwargs):
-        result = self.converters.get(name)
+        result = self.exporters.get(name)
         if isclass(result):
             result = result.convert
         return partial(result, *args, **kwargs)
@@ -231,3 +231,27 @@ class Environment:
                 break
 
         return [format.name for format in matched_formats]
+
+    @classmethod
+    def merge(cls, envs: Sequence["Environment"]) -> "Environment":
+        if all([env == DEFAULT_ENVIRONMENT for env in envs]):
+            return DEFAULT_ENVIRONMENT
+
+        merged = Environment()
+
+        def _register(registry: PluginRegistry):
+            merged._register_plugins(list(registry.items.values()))
+
+        for env in envs:
+            _register(env.extractors)
+            _register(env.importers)
+            _register(env.launchers)
+            _register(env.exporters)
+            _register(env.generators)
+            _register(env.transforms)
+            _register(env.validators)
+
+        return merged
+
+
+DEFAULT_ENVIRONMENT = Environment()

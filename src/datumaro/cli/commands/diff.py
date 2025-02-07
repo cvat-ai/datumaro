@@ -8,7 +8,7 @@ import os
 import os.path as osp
 from enum import Enum, auto
 
-from datumaro.cli.util.compare import DiffVisualizer
+from datumaro.cli.util.compare import DistanceCompareVisualizer
 from datumaro.components.comparator import DistanceComparator, EqualityComparator
 from datumaro.components.errors import ProjectNotFoundError
 from datumaro.util import dump_json_file
@@ -78,12 +78,12 @@ def build_parser(parser_ctor=argparse.ArgumentParser):
         formatter_class=MultilineFormatter,
     )
 
-    formats = ", ".join(f.name for f in DiffVisualizer.OutputFormat)
+    formats = ", ".join(f.name for f in DistanceCompareVisualizer.OutputFormat)
     comp_methods = ", ".join(m.name for m in ComparisonMethod)
 
     def _parse_output_format(s):
         try:
-            return DiffVisualizer.OutputFormat[s.lower()]
+            return DistanceCompareVisualizer.OutputFormat[s.lower()]
         except KeyError:
             raise argparse.ArgumentError(
                 "format",
@@ -140,7 +140,7 @@ def build_parser(parser_ctor=argparse.ArgumentParser):
         "-f",
         "--format",
         type=_parse_output_format,
-        default=DiffVisualizer.DEFAULT_FORMAT.name,
+        default=DistanceCompareVisualizer.DEFAULT_FORMAT.name,
         help="Output format, one of {} (default: %(default)s)".format(formats),
     )
 
@@ -239,7 +239,7 @@ def diff_command(args):
     elif args.method is ComparisonMethod.distance:
         comparator = DistanceComparator(iou_threshold=args.iou_thresh)
 
-        with DiffVisualizer(
+        with DistanceCompareVisualizer(
             save_dir=dst_dir, comparator=comparator, output_format=args.format
         ) as visualizer:
             log.info("Saving diff to '%s'" % dst_dir)

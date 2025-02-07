@@ -5,7 +5,6 @@ from unittest import TestCase, mock
 
 import numpy as np
 
-import datumaro.components.hl_ops as hl_ops
 from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
@@ -45,6 +44,7 @@ from datumaro.components.filter import (
     XPathAnnotationsFilter,
     XPathDatasetFilter,
 )
+from datumaro.components.hl_ops import HLOps
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement, Video
 from datumaro.components.progress_reporting import NullProgressReporter
@@ -386,7 +386,7 @@ class DatasetTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_export_by_string_format_name(self):
         env = Environment()
-        env.converters.items = {"qq": env.converters[DEFAULT_FORMAT]}
+        env.exporters.items = {"qq": env.exporters[DEFAULT_FORMAT]}
 
         dataset = Dataset.from_iterable(
             [
@@ -1688,7 +1688,7 @@ class DatasetTest(TestCase):
                         self._save_image(item, name=name)
 
         env = Environment()
-        env.converters.items = {"test": CustomExporter}
+        env.exporters.items = {"test": CustomExporter}
 
         with TestDir() as path:
             dataset = Dataset.from_iterable(
@@ -2235,7 +2235,7 @@ class TestHLOps(TestCase):
             [DatasetItem(10, subset="train")], categories=["cat", "dog"]
         )
 
-        actual = hl_ops.transform(dataset, "reindex", start=0)
+        actual = HLOps.transform(dataset, "reindex", start=0)
 
         compare_datasets(self, expected, actual)
 
@@ -2249,7 +2249,7 @@ class TestHLOps(TestCase):
             categories=["cat", "dog"],
         )
 
-        actual = hl_ops.filter(dataset, "/item[id=0]")
+        actual = HLOps.filter(dataset, "/item[id=0]")
 
         compare_datasets(self, expected, actual)
 
@@ -2274,7 +2274,7 @@ class TestHLOps(TestCase):
             categories=["cat", "dog"],
         )
 
-        actual = hl_ops.filter(
+        actual = HLOps.filter(
             dataset, "/item/annotation[id=1]", filter_annotations=True, remove_empty=True
         )
 
@@ -2297,7 +2297,7 @@ class TestHLOps(TestCase):
             [DatasetItem(1, subset="train")], categories=["cat", "dog"]
         )
 
-        actual = hl_ops.merge(dataset_a, dataset_b)
+        actual = HLOps.merge(dataset_a, dataset_b)
 
         compare_datasets(self, expected, actual)
 
@@ -2313,7 +2313,7 @@ class TestHLOps(TestCase):
         )
 
         with TestDir() as test_dir:
-            hl_ops.export(dataset, test_dir, "datumaro")
+            HLOps.export(dataset, test_dir, "datumaro")
             actual = Dataset.load(test_dir)
 
             compare_datasets(self, expected, actual)

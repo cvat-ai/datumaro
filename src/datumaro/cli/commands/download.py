@@ -17,7 +17,7 @@ from ..util.project import generate_next_file_name
 
 
 def build_parser(parser_ctor=argparse.ArgumentParser):
-    builtin_writers = sorted(Environment().converters)
+    builtin_writers = sorted(Environment().exporters)
     if TFDS_EXTRACTOR_AVAILABLE:
         available_datasets = ", ".join(f"tfds:{name}" for name in AVAILABLE_TFDS_DATASETS)
     else:
@@ -110,7 +110,7 @@ def download_command(args):
     output_format = args.output_format or default_output_format
 
     try:
-        converter = env.converters[output_format]
+        converter = env.exporters[output_format]
     except KeyError:
         raise CliException("Converter for format '%s' is not found" % output_format)
     extra_args = converter.parse_cmdline(args.extra_args)

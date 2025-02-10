@@ -103,7 +103,7 @@ class ImageOperationsTest(TestCase):
             exif.update([(PIL.ExifTags.Base.Orientation, 6)])
             img.save(image_path, exif=exif)
 
-            for load_backend in image_module._IMAGE_BACKENDS:
-                image_module._IMAGE_BACKEND = load_backend
+            for load_backend in image_module.ImageBackend:
+                image_module.IMAGE_BACKEND.set(load_backend)
                 img = image_module.load_image(image_path)
                 assert img.shape == (10, 15, 3)

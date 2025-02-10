@@ -77,6 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `segment_iou()`, added a separate function argument
   (turned off by default)
   (<https://github.com/cvat-ai/datumaro/pull/41>)
+- Always use exif orientation info when loading images
+  (<https://github.com/cvat-ai/datumaro/pull/82>)
 
 ### Deprecated
 - `--save-images` is replaced with `--save-media` in CLI and converter API

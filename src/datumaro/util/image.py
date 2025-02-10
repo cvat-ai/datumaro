@@ -70,17 +70,13 @@ def load_image(path: str, dtype: DTypeLike = np.float32, **kwargs):
         with open(path, "rb") as f:
             image_bytes = f.read()
 
-        if kwargs.get("keep_exif"):
-            return decode_image(image_bytes, dtype=dtype, cv2_read_flag=1)
-
         return decode_image(image_bytes, dtype=dtype)
     elif _IMAGE_BACKEND == _IMAGE_BACKENDS.PIL:
         from PIL import Image, ImageOps
 
         image = Image.open(path)
 
-        if kwargs.get("keep_exif"):
-            image = ImageOps.exif_transpose(image)
+        image = ImageOps.exif_transpose(image)
 
         image = np.asarray(image, dtype=dtype)
         if len(image.shape) == 3 and image.shape[2] in {3, 4}:
@@ -189,7 +185,7 @@ def decode_image(image_bytes: bytes, dtype: DTypeLike = np.float32, **kwargs) ->
         import cv2
 
         image = np.frombuffer(image_bytes, dtype=np.uint8)
-        image = cv2.imdecode(image, kwargs.get("cv2_read_flag", cv2.IMREAD_UNCHANGED))
+        image = cv2.imdecode(image, cv2.IMREAD_UNCHANGED ^ cv2.IMREAD_IGNORE_ORIENTATION)
         image = image.astype(dtype)
     elif _IMAGE_BACKEND == _IMAGE_BACKENDS.PIL:
         from PIL import Image

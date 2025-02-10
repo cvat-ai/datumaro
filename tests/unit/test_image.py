@@ -3,9 +3,9 @@ from itertools import product
 from unittest import TestCase
 
 import numpy as np
+import PIL
 
 import datumaro.util.image as image_module
-import PIL
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir

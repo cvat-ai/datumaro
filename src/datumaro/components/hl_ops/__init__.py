@@ -65,8 +65,7 @@ class HLOps:
             ValueError: If the method is "distance" and report_dir is not specified.
 
         Example:
-            comparator = Comparator()
-            result = comparator.compare(
+            result = HLOps.compare(
                 first_dataset, second_dataset, report_dir="./comparison_report"
             )
             print(result)

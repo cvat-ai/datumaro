@@ -142,7 +142,7 @@ class HLOps:
     def filter(
         dataset: IDataset,
         expr: str,
-        *,  # pylint: disable=redefined-builtin
+        /,
         filter_annotations: bool = False,
         remove_empty: bool = False,
     ) -> IDataset:
@@ -171,7 +171,7 @@ class HLOps:
         filter_func: Union[
             Callable[[DatasetItem], bool], Callable[[DatasetItem, Annotation], bool]
         ],
-        *,  # pylint: disable=redefined-builtin
+        /,
         filter_annotations: bool = False,
         remove_empty: bool = False,
     ) -> IDataset:
@@ -202,8 +202,8 @@ class HLOps:
                     return h > 1024 or w > 1024
 
                 filtered = HLOps.filter(
-                    dataset=dataset,
-                    filter_func=filter_func,
+                    dataset,
+                    filter_func,
                     filter_annotations=False,
                 )
                 # No items with an image height or width greater than 1024
@@ -228,8 +228,8 @@ class HLOps:
                     return bbox_size < 0.5 * image_size
 
                 filtered = HLOps.filter(
-                    dataset=dataset,
-                    filter_func=filter_func,
+                    dataset,
+                    filter_func,
                     filter_annotations=True,
                 )
                 # No bounding boxes with a size greater than 50% of their image
@@ -241,7 +241,7 @@ class HLOps:
         expr_or_filter_func: Union[
             str, Callable[[DatasetItem], bool], Callable[[DatasetItem, Annotation], bool]
         ],
-        *,  # pylint: disable=redefined-builtin
+        /,
         filter_annotations: bool = False,
         remove_empty: bool = False,
     ):

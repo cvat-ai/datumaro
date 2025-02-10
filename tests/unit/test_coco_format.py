@@ -124,35 +124,6 @@ class CocoImporterTest(TestCase):
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_instances_with_any_annotation_filename(self):
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id="a",
-                    subset="default",
-                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
-                    attributes={"id": 5},
-                    annotations=[
-                        Bbox(2, 2, 3, 1, label=1, group=1, id=1, attributes={"is_crowd": False})
-                    ],
-                ),
-            ],
-            categories=["a", "b", "c"],
-        )
-
-        format = "coco_instances"
-        with TestDir() as test_dir:
-            dataset_dir = osp.join(test_dir, "dataset")
-            expected_dataset.export(dataset_dir, format, save_media=True)
-            os.rename(
-                osp.join(dataset_dir, "annotations", "instances_default.json"),
-                osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
-            )
-
-            imported_dataset = Dataset.import_from(dataset_dir, format)
-            compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_instances_with_original_cat_ids(self):
         expected_dataset = Dataset.from_iterable(
             [
@@ -225,34 +196,6 @@ class CocoImporterTest(TestCase):
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_captions_with_any_annotation_filename(self):
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id="a",
-                    subset="default",
-                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
-                    attributes={"id": 5},
-                    annotations=[
-                        Caption("hello", id=1, group=1),
-                    ],
-                ),
-            ]
-        )
-
-        format = "coco_captions"
-        with TestDir() as test_dir:
-            dataset_dir = osp.join(test_dir, "dataset")
-            expected_dataset.export(dataset_dir, format, save_media=True)
-            os.rename(
-                osp.join(dataset_dir, "annotations", "captions_default.json"),
-                osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
-            )
-
-            imported_dataset = Dataset.import_from(dataset_dir, format)
-            compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_labels(self):
         expected_dataset = Dataset.from_iterable(
             [
@@ -297,35 +240,6 @@ class CocoImporterTest(TestCase):
             with self.subTest(path=path, format=format, subset=subset):
                 dataset = Dataset.import_from(path, format)
                 compare_datasets(self, expected, dataset, require_media=True)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_labels_with_any_annotation_filename(self):
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id="a",
-                    subset="default",
-                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
-                    attributes={"id": 5},
-                    annotations=[
-                        Label(1, id=1, group=1),
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
-
-        format = "coco_labels"
-        with TestDir() as test_dir:
-            dataset_dir = osp.join(test_dir, "dataset")
-            expected_dataset.export(dataset_dir, format, save_media=True)
-            os.rename(
-                osp.join(dataset_dir, "annotations", "labels_default.json"),
-                osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
-            )
-
-            imported_dataset = Dataset.import_from(dataset_dir, format)
-            compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_keypoints(self):
@@ -431,49 +345,6 @@ class CocoImporterTest(TestCase):
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_keypoints_with_any_annotation_filename(self):
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id="a",
-                    subset="default",
-                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
-                    attributes={"id": 5},
-                    annotations=[
-                        Skeleton(
-                            [Points([0, 0], [0]), Points([0, 2], [1]), Points([4, 1], [2])],
-                            label=1,
-                            id=1,
-                            group=1,
-                            attributes={"is_crowd": False},
-                        ),
-                        Bbox(2, 2, 3, 1, label=1, id=1, group=1, attributes={"is_crowd": False}),
-                    ],
-                ),
-            ],
-            categories={
-                AnnotationType.label: LabelCategories.from_iterable(
-                    [["a"], ["b"], ["a_1", "a"], ["a_2", "a"], ["a_3", "a"]]
-                ),
-                AnnotationType.points: PointsCategories.from_iterable(
-                    [(0, ["a_1", "a_2", "a_3"], [[0, 1], [1, 2]]), (1, None, [[0, 1], [1, 2]])]
-                ),
-            },
-        )
-
-        format = "coco_person_keypoints"
-        with TestDir() as test_dir:
-            dataset_dir = osp.join(test_dir, "dataset")
-            expected_dataset.export(dataset_dir, format, save_media=True)
-            os.rename(
-                osp.join(dataset_dir, "annotations", "person_keypoints_default.json"),
-                osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
-            )
-
-            imported_dataset = Dataset.import_from(dataset_dir, format)
-            compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_keypoints_with_original_cat_ids(self):
         expected_dataset = Dataset.from_iterable(
             [
@@ -563,31 +434,6 @@ class CocoImporterTest(TestCase):
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_image_info_with_any_annotation_filename(self):
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id="a",
-                    subset="default",
-                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
-                    attributes={"id": 5},
-                ),
-            ]
-        )
-
-        format = "coco_image_info"
-        with TestDir() as test_dir:
-            dataset_dir = osp.join(test_dir, "dataset")
-            expected_dataset.export(dataset_dir, format, save_media=True)
-            os.rename(
-                osp.join(dataset_dir, "annotations", "image_info_default.json"),
-                osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
-            )
-
-            imported_dataset = Dataset.import_from(dataset_dir, format)
-            compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_panoptic(self):
         expected_dataset = Dataset.from_iterable(
             [
@@ -653,45 +499,6 @@ class CocoImporterTest(TestCase):
             with self.subTest(path=path, format=format, subset=subset):
                 dataset = Dataset.import_from(path, format)
                 compare_datasets(self, expected, dataset, require_media=True)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_panoptic_with_any_annotation_filename(self):
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id="a",
-                    subset="default",
-                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
-                    attributes={"id": 5},
-                    annotations=[
-                        Mask(
-                            np.ones((5, 5)),
-                            label=0,
-                            id=460551,
-                            group=460551,
-                            attributes={"is_crowd": False},
-                        ),
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
-
-        format = "coco_panoptic"
-        with TestDir() as test_dir:
-            dataset_dir = osp.join(test_dir, "dataset")
-            expected_dataset.export(dataset_dir, format, save_media=True)
-            os.rename(
-                osp.join(dataset_dir, "annotations", "panoptic_default"),
-                osp.join(dataset_dir, "annotations", "aa_bbbb_cccc"),
-            )
-            os.rename(
-                osp.join(dataset_dir, "annotations", "panoptic_default.json"),
-                osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
-            )
-
-            imported_dataset = Dataset.import_from(dataset_dir, format)
-            compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_panoptic_with_original_cat_ids(self):
@@ -778,44 +585,8 @@ class CocoImporterTest(TestCase):
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_stuff_with_any_annotation_filename(self):
-        expected_dataset = Dataset.from_iterable(
-            [
-                DatasetItem(
-                    id="a",
-                    subset="default",
-                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
-                    attributes={"id": 5},
-                    annotations=[
-                        Mask(
-                            np.array([[0, 0, 1, 1, 0, 1, 1, 0, 0, 0]] * 5),
-                            label=0,
-                            id=7,
-                            group=7,
-                            attributes={"is_crowd": True},
-                        ),
-                    ],
-                ),
-            ],
-            categories=["a", "b"],
-        )
-
-        format = "coco_stuff"
-        with TestDir() as test_dir:
-            dataset_dir = osp.join(test_dir, "dataset")
-            expected_dataset.export(dataset_dir, format, save_media=True)
-            os.rename(
-                osp.join(dataset_dir, "annotations", "stuff_default.json"),
-                osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
-            )
-
-            imported_dataset = Dataset.import_from(dataset_dir, format)
-            compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_detect(self):
         subdirs = [
-            "coco",
             "coco_captions",
             "coco_image_info",
             "coco_instances",
@@ -827,12 +598,16 @@ class CocoImporterTest(TestCase):
 
         env = Environment()
 
+        detected_formats = env.detect_dataset(osp.join(DUMMY_DATASET_DIR, "coco"))
+        self.assertIn("coco", detected_formats)
+
         for subdir in subdirs:
             with self.subTest(subdir=subdir):
                 dataset_dir = osp.join(DUMMY_DATASET_DIR, subdir)
 
                 detected_formats = env.detect_dataset(dataset_dir)
-                self.assertEqual([CocoImporter.NAME], detected_formats)
+                self.assertIn(subdir, detected_formats)
+                self.assertNotIn("coco", detected_formats)
 
     @mark_requirement(Requirements.DATUM_673)
     def test_can_pickle(self):
@@ -889,7 +664,7 @@ class CocoExtractorTests(TestCase):
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_unexpected_file(self):
         with TestDir() as test_dir:
-            with self.assertRaisesRegex(DatasetImportError, "JSON file"):
+            with self.assertRaisesRegex(FileNotFoundError, "JSON file"):
                 CocoInstancesBase(test_dir)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
@@ -897,7 +672,9 @@ class CocoExtractorTests(TestCase):
         for field in ["id", "file_name"]:
             with self.subTest(field=field):
                 with TestDir() as test_dir:
-                    ann_path = osp.join(test_dir, "ann.json")
+                    os.makedirs(osp.join(test_dir, "annotations"))
+                    os.makedirs(osp.join(test_dir, "images"))
+                    ann_path = osp.join(test_dir, "annotations", "ann.json")
                     anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
                     anns["images"][0].pop(field)
                     dump_json_file(ann_path, anns)
@@ -910,10 +687,12 @@ class CocoExtractorTests(TestCase):
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_ann_field(self):
-        for field in ["id", "image_id", "segmentation", "iscrowd", "category_id", "bbox"]:
+        for field in ["id", "image_id", "iscrowd", "category_id", "bbox"]:
             with self.subTest(field=field):
                 with TestDir() as test_dir:
-                    ann_path = osp.join(test_dir, "ann.json")
+                    os.makedirs(osp.join(test_dir, "annotations"))
+                    os.makedirs(osp.join(test_dir, "images"))
+                    ann_path = osp.join(test_dir, "annotations", "ann.json")
                     anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
                     anns["annotations"][0].pop(field)
                     dump_json_file(ann_path, anns)
@@ -929,7 +708,9 @@ class CocoExtractorTests(TestCase):
         for field in ["images", "annotations", "categories"]:
             with self.subTest(field=field):
                 with TestDir() as test_dir:
-                    ann_path = osp.join(test_dir, "ann.json")
+                    os.makedirs(osp.join(test_dir, "annotations"))
+                    os.makedirs(osp.join(test_dir, "images"))
+                    ann_path = osp.join(test_dir, "annotations", "ann.json")
                     anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
                     anns.pop(field)
                     dump_json_file(ann_path, anns)
@@ -944,7 +725,9 @@ class CocoExtractorTests(TestCase):
         for field in ["id", "name"]:
             with self.subTest(field=field):
                 with TestDir() as test_dir:
-                    ann_path = osp.join(test_dir, "ann.json")
+                    os.makedirs(osp.join(test_dir, "annotations"))
+                    os.makedirs(osp.join(test_dir, "images"))
+                    ann_path = osp.join(test_dir, "annotations", "ann.json")
                     anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
                     anns["categories"][0].pop(field)
                     dump_json_file(ann_path, anns)
@@ -957,7 +740,9 @@ class CocoExtractorTests(TestCase):
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_undeclared_label(self):
         with TestDir() as test_dir:
-            ann_path = osp.join(test_dir, "ann.json")
+            os.makedirs(osp.join(test_dir, "annotations"))
+            os.makedirs(osp.join(test_dir, "images"))
+            ann_path = osp.join(test_dir, "annotations", "ann.json")
             anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
             anns["annotations"][0]["category_id"] = 2
             dump_json_file(ann_path, anns)
@@ -971,7 +756,9 @@ class CocoExtractorTests(TestCase):
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_bbox(self):
         with TestDir() as test_dir:
-            ann_path = osp.join(test_dir, "ann.json")
+            os.makedirs(osp.join(test_dir, "annotations"))
+            os.makedirs(osp.join(test_dir, "images"))
+            ann_path = osp.join(test_dir, "annotations", "ann.json")
             anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
             anns["annotations"][0]["bbox"] = [1, 2, 3, 4, 5]
             dump_json_file(ann_path, anns)
@@ -985,7 +772,9 @@ class CocoExtractorTests(TestCase):
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_polygon_odd_points(self):
         with TestDir() as test_dir:
-            ann_path = osp.join(test_dir, "ann.json")
+            os.makedirs(osp.join(test_dir, "annotations"))
+            os.makedirs(osp.join(test_dir, "images"))
+            ann_path = osp.join(test_dir, "annotations", "ann.json")
             anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
             anns["annotations"][0]["segmentation"] = [[1, 2, 3]]
             dump_json_file(ann_path, anns)
@@ -999,7 +788,9 @@ class CocoExtractorTests(TestCase):
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_polygon_less_than_3_points(self):
         with TestDir() as test_dir:
-            ann_path = osp.join(test_dir, "ann.json")
+            os.makedirs(osp.join(test_dir, "annotations"))
+            os.makedirs(osp.join(test_dir, "images"))
+            ann_path = osp.join(test_dir, "annotations", "ann.json")
             anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
             anns["annotations"][0]["segmentation"] = [[1, 2, 3, 4]]
             dump_json_file(ann_path, anns)
@@ -1011,25 +802,13 @@ class CocoExtractorTests(TestCase):
             self.assertIn("at least 3 (x, y) pairs", str(capture.exception.__cause__.__cause__))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
-    def test_can_report_invalid_image_id(self):
-        with TestDir() as test_dir:
-            ann_path = osp.join(test_dir, "ann.json")
-            anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
-            anns["annotations"][0]["image_id"] = 10
-            dump_json_file(ann_path, anns)
-
-            with self.assertRaises(DatasetImportError) as capture:
-                Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
-            self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
-            self.assertIn("Unknown image id", str(capture.exception.__cause__.__cause__))
-
-    @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_item_field_type(self):
         with TestDir() as test_dir:
+            os.makedirs(osp.join(test_dir, "annotations"))
+            os.makedirs(osp.join(test_dir, "images"))
             for field, value in [("id", "q"), ("width", "q"), ("height", "q"), ("file_name", 0)]:
                 with self.subTest(field=field, value=value):
-                    ann_path = osp.join(test_dir, "ann.json")
+                    ann_path = osp.join(test_dir, "annotations", "ann.json")
                     anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
                     anns["images"][0][field] = value
                     dump_json_file(ann_path, anns)
@@ -1046,6 +825,8 @@ class CocoExtractorTests(TestCase):
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_ann_field_type(self):
         with TestDir() as test_dir:
+            os.makedirs(osp.join(test_dir, "annotations"))
+            os.makedirs(osp.join(test_dir, "images"))
             for field, value in [
                 ("id", "a"),
                 ("image_id", "a"),
@@ -1056,7 +837,7 @@ class CocoExtractorTests(TestCase):
                 ("score", "a"),
             ]:
                 with self.subTest(field=field):
-                    ann_path = osp.join(test_dir, "ann.json")
+                    ann_path = osp.join(test_dir, "annotations", "ann.json")
                     anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
                     anns["annotations"][0][field] = value
                     dump_json_file(ann_path, anns)

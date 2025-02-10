@@ -296,7 +296,7 @@ class Image(MediaElement[np.ndarray]):
 
     def __eq__(self, other):
         # Do not compare `_type`
-        # sicne Image is subclass of RoIImage and MosaicImage
+        # since Image is subclass of RoIImage and MosaicImage
         if not isinstance(other, __class__):
             return False
         return (np.array_equal(self.size, other.size)) and (np.array_equal(self.data, other.data))

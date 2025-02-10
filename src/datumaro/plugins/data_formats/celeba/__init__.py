@@ -2,5 +2,5 @@
 #
 # SPDX-License-Identifier: MIT
 
-from .align_celeba import AlignCelebaImporter
-from .celeba import CelebaImporter
+from .align_celeba import AlignCelebaBase, AlignCelebaImporter
+from .celeba import CelebaBase, CelebaImporter

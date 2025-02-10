@@ -5,6 +5,7 @@ from unittest import TestCase
 import numpy as np
 
 import datumaro.util.image as image_module
+import PIL
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir
@@ -70,3 +71,19 @@ class ImageOperationsTest(TestCase):
             path = osp.join(test_dir, "some", "path.jpg")
             image_module.save_image(path, np.ones((5, 4, 3)), create_dir=True)
             self.assertTrue(osp.isfile(path))
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_load_image_with_exif_info(self):
+        with TestDir() as test_dir:
+            image_path = osp.join(test_dir, "1.jpg")
+            image_module.save_image(image_path, np.ones((15, 10, 3)))
+
+            img = PIL.Image.open(image_path)
+            exif = img.getexif()
+            exif.update([(PIL.ExifTags.Base.Orientation, 6)])
+            img.save(image_path, exif=exif)
+
+            for load_backend in image_module._IMAGE_BACKENDS:
+                image_module._IMAGE_BACKEND = load_backend
+                img = image_module.load_image(image_path)
+                assert img.shape == (10, 15, 3)

@@ -298,6 +298,10 @@ class YoloExporter(Exporter):
             if osp.isfile(ann_path):
                 os.remove(ann_path)
 
+    @property
+    def can_stream(self) -> bool:
+        return True
+
 
 class YoloUltralyticsDetectionExporter(YoloExporter):
     RESERVED_CONFIG_KEYS = YoloUltralyticsPath.RESERVED_CONFIG_KEYS
@@ -535,3 +539,7 @@ class YoloUltralyticsClassificationExporter(Exporter):
             return osp.relpath(image_fpath, subset_path)
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
+
+    @property
+    def can_stream(self) -> bool:
+        return True

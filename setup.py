@@ -46,9 +46,9 @@ def parse_requirements(filename=CORE_REQUIREMENTS_FILE):
 
 CORE_REQUIREMENTS = parse_requirements(CORE_REQUIREMENTS_FILE)
 if strtobool(os.getenv("DATUMARO_HEADLESS", "0").lower()):
-    CORE_REQUIREMENTS.append("opencv-python-headless")
+    CORE_REQUIREMENTS.append("opencv-python-headless<4.11")
 else:
-    CORE_REQUIREMENTS.append("opencv-python")
+    CORE_REQUIREMENTS.append("opencv-python<4.11")
 
 DEFAULT_REQUIREMENTS = parse_requirements(DEFAULT_REQUIREMENTS_FILE)
 

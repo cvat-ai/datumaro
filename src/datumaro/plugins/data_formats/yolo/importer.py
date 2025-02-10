@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 
 import yaml
 
-from datumaro.components.format_detection import FormatDetectionContext
+from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
 from datumaro.components.importer import Importer
 from datumaro.plugins.data_formats.yolo.base import (
     YoloUltralyticsClassificationBase,
@@ -24,6 +24,8 @@ from datumaro.plugins.data_formats.yolo.format import YoloUltralyticsPath, YoloU
 
 
 class YoloImporter(Importer):
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
+
     @classmethod
     def detect(cls, context: FormatDetectionContext) -> None:
         context.require_file("obj.data")
@@ -112,6 +114,8 @@ class YoloUltralyticsPoseImporter(YoloUltralyticsDetectionImporter):
 
 
 class YoloUltralyticsClassificationImporter(Importer):
+    DETECT_CONFIDENCE = FormatDetectionConfidence.EXTREME_LOW
+
     @classmethod
     def find_sources(cls, path):
         if not osp.isdir(path):

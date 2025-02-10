@@ -52,6 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/71>)
 - Support for tracks in Ultralytics YOLO formats
   (<https://github.com/cvat-ai/datumaro/pull/70>)
+- Support for tracks in Ultralytics YOLO formats
+  (<https://github.com/cvat-ai/datumaro/pull/70>)
 
 ### Changed
 - `env.detect_dataset()` now returns a list of detected formats at all recursion levels
@@ -109,8 +111,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/41>)
 - `Dataset.get()` could ignore existing transforms in the dataset
   (<https://github.com/cvat-ai/datumaro/pull/45>)
-- Failing `resize` transform for RLE masks
-  (<https://github.com/cvat-ai/datumaro/pull/46>)
+- Always use exif orientation info when loading images
+  (<https://github.com/cvat-ai/datumaro/pull/82>)
 
 ### Security
 - TBD

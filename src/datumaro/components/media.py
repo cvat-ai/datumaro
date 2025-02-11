@@ -515,7 +515,7 @@ class VideoFrame(ImageFromNumpy):
     def __setstate__(self, state):
         # Restore the objects' state.
         self.__dict__.update(state)
-        # Reinitialize unpichlable attributes
+        # Reinitialize unpicklable attributes
         self._data = lambda: self._video.get_frame_data(self._index)
 
 

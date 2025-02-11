@@ -6,8 +6,6 @@ from __future__ import annotations
 
 import os
 import os.path as osp
-from contextlib import contextmanager
-from functools import wraps
 from glob import iglob
 from typing import Callable, Dict, List, Optional, Type, TypeVar
 
@@ -22,7 +20,6 @@ from datumaro.components.contexts.importer import (
 from datumaro.components.errors import DatasetImportError, DatasetNotFoundError
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
 from datumaro.components.merge.extractor_merger import ExtractorMerger
-from datumaro.util.definitions import SUBSET_NAME_WHITELIST
 
 T = TypeVar("T")
 

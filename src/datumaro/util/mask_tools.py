@@ -4,7 +4,18 @@
 
 from functools import partial
 from itertools import chain, repeat
-from typing import TYPE_CHECKING, Dict, List, NamedTuple, NewType, Optional, Sequence, Tuple, TypedDict, Union
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    List,
+    NamedTuple,
+    NewType,
+    Optional,
+    Sequence,
+    Tuple,
+    TypedDict,
+    Union,
+)
 
 import numpy as np
 

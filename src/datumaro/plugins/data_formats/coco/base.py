@@ -65,20 +65,10 @@ class DirPathExtracter:
     def find_images_dir(rootpath: str, subset: str) -> str:
         """Find images directory from the root path."""
 
-        if rootpath and osp.isdir(osp.join(rootpath, CocoPath.IMAGES_DIR)):
-            images_dir = osp.join(rootpath, CocoPath.IMAGES_DIR)
-            if osp.isdir(osp.join(images_dir, subset or DEFAULT_SUBSET_NAME)):
-                images_dir = osp.join(images_dir, subset or DEFAULT_SUBSET_NAME)
-            return images_dir
-
-        raise DatasetImportError(
-            f"We found the rootpath ({rootpath}) for this dataset. "
-            f"However, there should exist a directory for "
-            f"images as {osp.join(rootpath, CocoPath.IMAGES_DIR)}. "
-            "If not, Datumaro fails to find the image directory path. "
-            "Please follow this instruction, "
-            "https://github.com/cocodataset/cocoapi/blob/master/README.txt"
-        )
+        images_dir = osp.join(rootpath, CocoPath.IMAGES_DIR)
+        if osp.isdir(osp.join(images_dir, subset or DEFAULT_SUBSET_NAME)):
+            images_dir = osp.join(images_dir, subset or DEFAULT_SUBSET_NAME)
+        return images_dir
 
 
 class RoboflowDirPathExtracter(DirPathExtracter):

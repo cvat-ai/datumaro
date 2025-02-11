@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import os
 from os import path as osp
-from typing import Any, Dict, List
+from pathlib import Path
+from typing import Any, Dict, List, Union
 
 import yaml
 
@@ -20,7 +21,13 @@ from datumaro.plugins.data_formats.yolo.base import (
     YoloUltralyticsPoseBase,
     YoloUltralyticsSegmentationBase,
 )
-from datumaro.plugins.data_formats.yolo.format import YoloUltralyticsPath, YoloUltralyticsPoseFormat
+from datumaro.plugins.data_formats.yolo.format import (
+    YoloUltralyticsClassificationFormat,
+    YoloUltralyticsPath,
+    YoloUltralyticsPoseFormat,
+)
+from datumaro.util.image import IMAGE_EXTENSIONS
+from datumaro.util.meta_file_util import DATASET_META_FILE
 
 
 class YoloImporter(Importer):
@@ -114,14 +121,35 @@ class YoloUltralyticsPoseImporter(YoloUltralyticsDetectionImporter):
 
 
 class YoloUltralyticsClassificationImporter(Importer):
-    DETECT_CONFIDENCE = FormatDetectionConfidence.EXTREME_LOW
+    _FORMAT = YoloUltralyticsClassificationBase.NAME
+    DETECT_CONFIDENCE = FormatDetectionConfidence.LOW
+
+    @classmethod
+    def contains_only_images(cls, path: Union[str, Path]):
+        for _, dirnames, filenames in os.walk(path):
+            if filenames:
+                for filename in filenames:
+                    if Path(filename).suffix.lower() not in IMAGE_EXTENSIONS:
+                        return False
+            elif not dirnames:
+                return False
+        return True
 
     @classmethod
     def find_sources(cls, path):
         if not osp.isdir(path):
             return []
-        if not [
+        subfolders = [
             subfolder for name in os.listdir(path) if osp.isdir(subfolder := osp.join(path, name))
-        ]:
+        ]
+        if not subfolders:
             return []
+        for subset_folder in subfolders:
+            for name in os.listdir(subset_folder):
+                if name in [YoloUltralyticsClassificationFormat.LABELS_FILE, DATASET_META_FILE]:
+                    continue
+                label_folder = osp.join(subset_folder, name)
+                if not osp.isdir(label_folder) or not cls.contains_only_images(label_folder):
+                    return []
+
         return [{"url": path, "format": YoloUltralyticsClassificationBase.NAME}]

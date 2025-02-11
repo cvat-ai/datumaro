@@ -21,12 +21,12 @@ class ImagenetFormatTest(TestCase):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="label_0/1",
+                    id="label_0:1",
                     media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[Label(0)],
                 ),
                 DatasetItem(
-                    id="label_1/2",
+                    id="label_1:2",
                     media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[Label(1)],
                 ),
@@ -66,16 +66,16 @@ class ImagenetFormatTest(TestCase):
         excepted_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="label_0/1",
+                    id="label_0:1",
                     media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[Label(0)],
                 ),
                 DatasetItem(
-                    id="label_1/1",
+                    id="label_1:1",
                     media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[Label(1)],
                 ),
-                DatasetItem(id="no_label/2", media=Image.from_numpy(data=np.ones((8, 8, 3)))),
+                DatasetItem(id="no_label:2", media=Image.from_numpy(data=np.ones((8, 8, 3)))),
             ],
             categories=["label_0", "label_1"],
         )
@@ -92,7 +92,7 @@ class ImagenetFormatTest(TestCase):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="label_0/кириллица с пробелом",
+                    id="label_0:кириллица с пробелом",
                     media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[Label(0)],
                 ),
@@ -112,10 +112,10 @@ class ImagenetFormatTest(TestCase):
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="no_label/a", media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG")
+                    id="no_label:a", media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG")
                 ),
                 DatasetItem(
-                    id="no_label/b", media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp")
+                    id="no_label:b", media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp")
                 ),
             ],
             categories=[],
@@ -138,17 +138,17 @@ class ImagenetImporterTest(TestCase):
         expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="label_0/label_0_1",
+                    id="label_0:label_0_1",
                     media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[Label(0)],
                 ),
                 DatasetItem(
-                    id="label_0/label_0_2",
+                    id="label_0:label_0_2",
                     media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[Label(0)],
                 ),
                 DatasetItem(
-                    id="label_1/label_1_1",
+                    id="label_1:label_1_1",
                     media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[Label(1)],
                 ),

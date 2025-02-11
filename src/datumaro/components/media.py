@@ -747,7 +747,7 @@ class Video(MediaElement, Iterable[VideoFrame]):
         return frame_size
 
     def _get_end_frame(self):
-        # Note that end_frame could less than the last frame of the video
+        # Note that end_frame could be less than the last frame of the video
         if self._end_frame is not None and self._frame_count is not None:
             end_frame = min(self._end_frame, self._frame_count)
         elif self._end_frame is not None:

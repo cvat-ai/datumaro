@@ -618,6 +618,15 @@ class Video(MediaElement, Iterable[VideoFrame]):
         *args,
         **kwargs,
     ) -> None:
+        """
+        Parameters:
+            path: the video file path
+            step: frame step
+            start_frame: the first included frame index
+            end_frame: the last included frame index. If 'step' is also specified,
+                'end_frame' is only included if it belongs to the sequence,
+                starting from the 'start_frame'.
+        """
         super().__init__(*args, **kwargs)
         self._path = path
 

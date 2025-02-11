@@ -4,11 +4,12 @@
 
 import os
 import re
+from enum import Enum
 from typing import Optional, Tuple
 
 from datumaro.cli.util.errors import WrongRevpathError
 from datumaro.components.dataset import Dataset
-from datumaro.components.environment import Environment
+from datumaro.components.environment import DEFAULT_ENVIRONMENT, Environment
 from datumaro.components.errors import DatumaroError, ProjectNotFoundError
 from datumaro.components.project import Project, Revision
 from datumaro.util.os_util import generate_next_name
@@ -16,6 +17,7 @@ from datumaro.util.scope import on_error_do, scoped
 
 
 def load_project(project_dir, readonly=False):
+    """load a Project."""
     return Project(project_dir, readonly=readonly)
 
 
@@ -129,7 +131,7 @@ def parse_full_revpath(
     if ctx_project:
         env = ctx_project.env
     else:
-        env = Environment()
+        env = DEFAULT_ENVIRONMENT
 
     errors = []
     try:
@@ -166,3 +168,41 @@ def split_local_revpath(revpath: str) -> Tuple[Revision, str]:
         target = revpath
 
     return rev, target
+
+
+class FilterModes(Enum):
+    # primary
+    items = 1
+    annotations = 2
+    items_annotations = 3
+
+    # shortcuts
+    i = 1
+    a = 2
+    i_a = 3
+    a_i = 3
+    annotations_items = 3
+
+    @staticmethod
+    def parse(s):
+        s = s.lower()
+        s = s.replace("+", "_")
+        return FilterModes[s]
+
+    @classmethod
+    def make_filter_args(cls, mode):
+        if mode == cls.items:
+            return {}
+        elif mode == cls.annotations:
+            return {"filter_annotations": True}
+        elif mode == cls.items_annotations:
+            return {
+                "filter_annotations": True,
+                "remove_empty": True,
+            }
+        else:
+            raise NotImplementedError()
+
+    @classmethod
+    def list_options(cls):
+        return [m.name.replace("_", "+") for m in cls]

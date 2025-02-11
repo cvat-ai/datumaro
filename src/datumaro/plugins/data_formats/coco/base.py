@@ -53,13 +53,7 @@ class DirPathExtracter:
         path = osp.abspath(path)
         if osp.dirname(path).endswith(CocoPath.ANNOTATIONS_DIR):
             return path.rsplit(CocoPath.ANNOTATIONS_DIR, maxsplit=1)[0]
-        raise DatasetImportError(
-            f"Annotation path ({path}) should be under "
-            f"the directory which is named {CocoPath.ANNOTATIONS_DIR}. "
-            "If not, Datumaro fails to find the root path for this dataset. "
-            "Please follow this instruction, "
-            "https://github.com/cocodataset/cocoapi/blob/master/README.txt"
-        )
+        return ""
 
     @staticmethod
     def find_images_dir(rootpath: str, subset: str) -> str:

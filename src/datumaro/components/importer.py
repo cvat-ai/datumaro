@@ -227,8 +227,7 @@ def with_subset_dirs(input_cls: Importer):
 
                     if "subset" in source[0]:
                         raise DatasetImportError(
-                            f"@with_subset_dirs does not allows "
-                            f"a subset key in source: {source[0]}."
+                            f"@with_subset_dirs does not allow a subset key in source: {source[0]}."
                         )
 
                     source[0]["options"]["subset"] = sub_dir

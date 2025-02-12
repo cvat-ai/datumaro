@@ -4,13 +4,30 @@
 
 from functools import partial
 from itertools import chain, repeat
-from typing import Dict, List, NamedTuple, NewType, Optional, Sequence, Tuple, TypedDict, Union
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    List,
+    NamedTuple,
+    NewType,
+    Optional,
+    Sequence,
+    Tuple,
+    TypedDict,
+    Union,
+)
 
 import numpy as np
-from pycocotools import mask as pycocotools_mask
 
 from datumaro._capi import encode
 from datumaro.util.image import lazy_image, load_image
+
+if TYPE_CHECKING:
+    from pycocotools import mask as pycocotools_mask
+else:
+    from datumaro.util.import_util import lazy_import
+
+    pycocotools_mask = lazy_import("pycocotools.mask")
 
 
 class UncompressedRle(TypedDict):
@@ -316,15 +333,12 @@ def _group_contours_with_children(hierarchy: np.ndarray) -> Dict[int, List[int]]
     return parent_to_children
 
 
-def extract_contours(mask: np.ndarray) -> List[np.ndarray]:
+def extract_contours(mask: BinaryMask) -> List[Polygon]:
     """
     Convert an instance mask to polygons
 
     Args:
         mask: a 2d binary mask
-        tolerance: maximum distance from original points of
-            a polygon to the approximated ones
-        area_threshold: minimal area of generated polygons
 
     Returns:
         A list of polygons like [[x1,y1, x2,y2 ...], [...]]
@@ -368,8 +382,6 @@ def mask_to_polygons(mask: BinaryMask, area_threshold=1) -> List[Polygon]:
 
     Args:
         mask: a 2d binary mask
-        tolerance: maximum distance from original points of
-            a polygon to the approximated ones
         area_threshold: minimal area of generated polygons
 
     Returns:
@@ -407,7 +419,7 @@ def to_uncompressed_rle(rle: Rle, *, width: int, height: int) -> UncompressedRle
     return pycocotools_mask.frPyObjects(rle, height, width)
 
 
-def mask_to_bboxes(mask):
+def mask_to_bboxes(mask: BinaryMask) -> List[List[int]]:
     """
     Convert an instance mask to bboxes
 
@@ -532,7 +544,7 @@ def rles_to_mask(rles: Sequence[Union[CompressedRle, Polygon]], width, height) -
     return mask
 
 
-def rle_to_mask(rle_uncompressed: Dict[str, np.ndarray]) -> np.ndarray:
+def rle_to_mask(rle_uncompressed: UncompressedRle) -> BinaryMask:
     """Decode the uncompressed RLE string to the binary mask (2D np.ndarray)
 
     The uncompressed RLE string can be obtained by

@@ -515,7 +515,7 @@ class VideoFrame(ImageFromNumpy):
     def __setstate__(self, state):
         # Restore the objects' state.
         self.__dict__.update(state)
-        # Reinitialize unpichlable attributes
+        # Reinitialize unpicklable attributes
         self._data = lambda: self._video.get_frame_data(self._index)
 
 
@@ -618,6 +618,15 @@ class Video(MediaElement, Iterable[VideoFrame]):
         *args,
         **kwargs,
     ) -> None:
+        """
+        Parameters:
+            path: the video file path
+            step: frame step
+            start_frame: the first included frame index
+            end_frame: the last included frame index. If 'step' is also specified,
+                'end_frame' is only included if it belongs to the sequence,
+                starting from the 'start_frame'.
+        """
         super().__init__(*args, **kwargs)
         self._path = path
 
@@ -738,7 +747,7 @@ class Video(MediaElement, Iterable[VideoFrame]):
         return frame_size
 
     def _get_end_frame(self):
-        # Note that end_frame could less than the last frame of the video
+        # Note that end_frame could be less than the last frame of the video
         if self._end_frame is not None and self._frame_count is not None:
             end_frame = min(self._end_frame, self._frame_count)
         elif self._end_frame is not None:

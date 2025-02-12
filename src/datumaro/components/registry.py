@@ -1,3 +1,7 @@
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+
 from typing import Callable, Dict, Generic, Iterable, Iterator, Optional, Type, TypeVar
 
 from datumaro.components.cli_plugin import CliPlugin

@@ -1,10 +1,13 @@
 # Copyright (C) 2023 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
+import json
+import os
 
+import numpy as np
 import pytest
 
-from datumaro import Dataset, DatasetItem, HLOps
+from datumaro import Dataset, DatasetItem, HLOps, Image
 from datumaro.components.annotation import Bbox, Ellipse, Label, Polygon
 
 from tests.requirements import Requirements, mark_requirement
@@ -176,3 +179,92 @@ class HLOpsTest:
         )
 
         compare_datasets(self, expected, actual)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_compare_equality(self):
+        dataset1 = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=100,
+                    subset="train",
+                    annotations=[
+                        Bbox(1, 2, 3, 4, label=0),
+                    ],
+                ),
+                DatasetItem(id=200, subset="train"),
+            ],
+            categories=["a", "b"],
+        )
+
+        dataset2 = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=100,
+                    subset="train",
+                    annotations=[
+                        Bbox(1, 2, 3, 4, label=1),
+                        Bbox(5, 6, 7, 8, label=2),
+                    ],
+                ),
+            ],
+            categories=["a", "b", "c"],
+        )
+        with TestDir() as test_dir:
+            HLOps.compare(dataset1, dataset2, method="equality", report_dir=test_dir)
+            report_file = os.path.join(test_dir, "equality_compare.json")
+            assert os.path.exists(report_file)
+            with open(report_file, "r") as f:
+                report = json.load(f)
+            assert report["a_extra_items"] == [["200", "train"]]
+            assert report["b_extra_items"] == []
+            assert report["mismatches"] == []
+            assert len(report["errors"]) == 1
+            assert report["errors"][0]["type"] == "labels"
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_compare_table(self):
+        dataset1 = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=100,
+                    subset="train",
+                    media=Image.from_numpy(np.ones((10, 15, 3))),
+                    annotations=[
+                        Bbox(1, 2, 3, 4, label=0),
+                    ],
+                ),
+                DatasetItem(id=200, media=Image.from_numpy(np.ones((10, 15, 3))), subset="train"),
+            ],
+            categories=["a", "b"],
+        )
+
+        dataset2 = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=100,
+                    subset="train",
+                    media=Image.from_numpy(np.ones((10, 15, 3))),
+                    annotations=[
+                        Bbox(1, 2, 3, 4, label=1),
+                        Bbox(5, 6, 7, 8, label=2),
+                    ],
+                ),
+            ],
+            categories=["a", "b", "c"],
+        )
+        with TestDir() as test_dir:
+            HLOps.compare(dataset1, dataset2, method="table", report_dir=test_dir)
+            assert os.path.exists(os.path.join(test_dir, "table_compare.json"))
+            assert os.path.exists(os.path.join(test_dir, "table_compare.txt"))
+            with open(os.path.join(test_dir, "table_compare.json"), "r") as f:
+                report = json.load(f)
+            assert report["high_level"] == {
+                "Number of classes": ["2", "3"],
+                "Common classes": ["a, b", "a, b"],
+                "Classes": ["a, b", "a, b, c"],
+                "Images count": ["2", "1"],
+                "Unique images count": ["1", "1"],
+                "Repeated images count": ["1", "0"],
+                "Annotations count": ["1", "2"],
+                "Unannotated images count": ["1", "0"],
+            }

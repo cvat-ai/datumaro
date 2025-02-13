@@ -53,7 +53,7 @@ class ImageColorChannel(Enum):
     """Image color channel
 
     - UNCHANGED: Use the original image's channel (default).
-        Note that image reading by different backends can result in different results. 
+        Note that image reading by different backends can result in different results.
         For instance, if an image has more than 1-channel (grayscale),
         OpenCV will read it as BGR(A), while PIL will read it as RGB(A).
     - COLOR_BGR: Use BGR 3 channels

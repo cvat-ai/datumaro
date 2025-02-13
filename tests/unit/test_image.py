@@ -116,17 +116,20 @@ class ImageOperationsTest(TestCase):
 
 
 class ImageDecodeTest:
-    @pytest.fixture
-    def fxt_img_four_channels(self) -> np.ndarray:
-        return np.random.randint(low=0, high=256, size=(5, 4, 4), dtype=np.uint8)
+    def generate_test_img(self, channels) -> np.ndarray:
+        return np.random.randint(low=0, high=256, size=(5, 4, channels), dtype=np.uint8)
 
     @pytest.mark.parametrize(
         "image_backend", [image_module.ImageBackend.cv2, image_module.ImageBackend.PIL]
     )
-    def test_decode_image_context(
-        self, fxt_img_four_channels: np.ndarray, image_backend: image_module.ImageBackend
-    ):
-        img_bytes = image_module.encode_image(fxt_img_four_channels, ".png")
+    @pytest.mark.parametrize("channels", [1, 3, 4])
+    def test_decode_image_context(self, image_backend: image_module.ImageBackend, channels: int):
+        original_image = self.generate_test_img(channels)
+        img_bytes = image_module.encode_image(original_image, ".png")
+
+        expected_bgr_image = (
+            original_image[:, :, :3] if channels >= 3 else np.repeat(original_image, 3, axis=2)
+        )
 
         # 3 channels from ImageColorScale.COLOR_BGR
         with image_module.decode_image_context(
@@ -134,7 +137,7 @@ class ImageDecodeTest:
         ):
             img_decoded = image_module.decode_image(img_bytes)
             assert img_decoded.shape[-1] == 3
-            assert np.allclose(fxt_img_four_channels[:, :, :3], img_decoded)
+            assert np.allclose(expected_bgr_image, img_decoded)
 
         # 3 channels from ImageColorScale.COLOR_RGB
         with image_module.decode_image_context(
@@ -142,23 +145,22 @@ class ImageDecodeTest:
         ):
             img_decoded = image_module.decode_image(img_bytes)
             assert img_decoded.shape[-1] == 3
-            assert np.allclose(
-                fxt_img_four_channels[:, :, :3][:, :, ::-1],  # Flip color channels of the fixture
-                img_decoded,
-            )
+            assert np.allclose(expected_bgr_image[:, :, ::-1], img_decoded)
 
         # 4 channels from ImageColorScale.UNCHANGED
         with image_module.decode_image_context(
             image_backend, image_module.ImageColorChannel.UNCHANGED
         ):
             img_decoded = image_module.decode_image(img_bytes)
-            assert img_decoded.shape[-1] == 4
+            if len(img_decoded.shape) == 2:
+                img_decoded = img_decoded[:, :, np.newaxis]
+            assert img_decoded.shape[-1] == channels
 
-            if image_backend == image_module.ImageBackend.cv2:
-                assert np.allclose(fxt_img_four_channels, img_decoded)
+            if image_backend == image_module.ImageBackend.cv2 or channels == 1:
+                assert np.allclose(original_image, img_decoded)
             else:
                 # PIL will return RGBA, thus we need to correct the fixture
-                to_rgb = fxt_img_four_channels[:, :, :3][:, :, ::-1]
-                fxt_img_four_channels[:, :, :3] = to_rgb
+                to_rgb = original_image[:, :, :3][:, :, ::-1]
+                original_image[:, :, :3] = to_rgb
 
-                assert np.allclose(fxt_img_four_channels, img_decoded)
+                assert np.allclose(original_image, img_decoded)

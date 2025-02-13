@@ -67,10 +67,7 @@ class ImageColorChannel(Enum):
         """Convert image color channel for OpenCV image (np.ndarray)."""
         image_buffer = np.frombuffer(image_bytes, dtype=dtype)
 
-        try:
-            from cv2 import IMREAD_COLOR_RGB
-        except ImportError:
-            IMREAD_COLOR_RGB = 0
+        IMREAD_COLOR_RGB = getattr(cv2, "IMREAD_COLOR_RGB", 0)
 
         if self == ImageColorChannel.UNCHANGED:
             return cv2.imdecode(

@@ -25,7 +25,7 @@ class YoloIntegrationScenarios(TestCase):
                 DatasetItem(
                     id="1",
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[
                         Bbox(3.0, 3.0, 2.0, 3.0, label=4),
                         Bbox(0.0, 2.0, 4.0, 2.0, label=2),
@@ -110,7 +110,7 @@ class YoloIntegrationScenarios(TestCase):
                 DatasetItem(
                     id="2007_000001",
                     subset="train",
-                    media=Image(data=np.ones((10, 20, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 20, 3))),
                     annotations=[
                         Bbox(1.0, 2.0, 2.0, 2.0, label=8),
                         Bbox(4.0, 5.0, 2.0, 2.0, label=15),
@@ -118,7 +118,9 @@ class YoloIntegrationScenarios(TestCase):
                     ],
                 ),
                 DatasetItem(
-                    id="2007_000002", subset="test", media=Image(data=np.ones((10, 20, 3)))
+                    id="2007_000002",
+                    subset="test",
+                    media=Image.from_numpy(data=np.ones((10, 20, 3))),
                 ),
             ],
             categories=[label.name for label in VOC.make_voc_categories()[AnnotationType.label]],
@@ -159,7 +161,7 @@ class YoloIntegrationScenarios(TestCase):
                 DatasetItem(
                     id="1",
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[Bbox(0.0, 2.0, 4.0, 2.0, label=0)],
                 )
             ],
@@ -213,7 +215,7 @@ class YoloIntegrationScenarios(TestCase):
                 "-f",
                 self.FORMAT_NAME,
                 "--",
-                "--save-image",
+                "--save-media",
             )
 
             parsed_dataset = Dataset.import_from(export_dir, format=self.FORMAT_NAME)

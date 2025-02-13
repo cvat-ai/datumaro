@@ -5,7 +5,6 @@ from unittest import TestCase, mock
 
 import numpy as np
 
-import datumaro.components.hl_ops as hl_ops
 from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
@@ -45,6 +44,7 @@ from datumaro.components.filter import (
     XPathAnnotationsFilter,
     XPathDatasetFilter,
 )
+from datumaro.components.hl_ops import HLOps
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement, Video
 from datumaro.components.progress_reporting import NullProgressReporter
@@ -262,7 +262,9 @@ class DatasetTest(TestCase):
     def test_can_detect_with_nested_folder_and_multiply_matches(self):
         dataset = Dataset.from_iterable(
             [
-                DatasetItem(id=1, media=Image(data=np.ones((3, 3, 3))), annotations=[Label(2)]),
+                DatasetItem(
+                    id=1, media=Image.from_numpy(data=np.ones((3, 3, 3))), annotations=[Label(2)]
+                ),
             ],
             categories=["a", "b", "c"],
         )
@@ -384,7 +386,7 @@ class DatasetTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_export_by_string_format_name(self):
         env = Environment()
-        env.converters.items = {"qq": env.converters[DEFAULT_FORMAT]}
+        env.exporters.items = {"qq": env.exporters[DEFAULT_FORMAT]}
 
         dataset = Dataset.from_iterable(
             [
@@ -401,7 +403,7 @@ class DatasetTest(TestCase):
     def test_can_remember_export_options(self):
         dataset = Dataset.from_iterable(
             [
-                DatasetItem(id=1, media=Image(data=np.ones((1, 2, 3)))),
+                DatasetItem(id=1, media=Image.from_numpy(data=np.ones((1, 2, 3)))),
             ],
             categories=["a"],
         )
@@ -556,16 +558,20 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_cant_join_different_image_info(self):
-        s1 = Dataset.from_iterable([DatasetItem(1, media=Image(path="1.png", size=(2, 4)))])
-        s2 = Dataset.from_iterable([DatasetItem(1, media=Image(path="1.png", size=(4, 2)))])
+        s1 = Dataset.from_iterable(
+            [DatasetItem(1, media=Image.from_file(path="1.png", size=(2, 4)))]
+        )
+        s2 = Dataset.from_iterable(
+            [DatasetItem(1, media=Image.from_file(path="1.png", size=(4, 2)))]
+        )
 
         with self.assertRaises(MismatchingImageInfoError):
             Dataset.from_extractors(s1, s2)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_cant_join_different_images(self):
-        s1 = Dataset.from_iterable([DatasetItem(1, media=Image(path="1.png"))])
-        s2 = Dataset.from_iterable([DatasetItem(1, media=Image(path="2.png"))])
+        s1 = Dataset.from_iterable([DatasetItem(1, media=Image.from_file(path="1.png"))])
+        s2 = Dataset.from_iterable([DatasetItem(1, media=Image.from_file(path="2.png"))])
 
         with self.assertRaises(MismatchingMediaPathError):
             Dataset.from_extractors(s1, s2)
@@ -1524,7 +1530,7 @@ class DatasetTest(TestCase):
             nonlocal called
             called = True
 
-        dataset = Dataset.from_iterable([DatasetItem(1, media=Image(data=test_loader))])
+        dataset = Dataset.from_iterable([DatasetItem(1, media=Image.from_numpy(data=test_loader))])
 
         with TestDir() as test_dir:
             dataset.save(test_dir)
@@ -1543,7 +1549,7 @@ class DatasetTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_run_model(self):
         dataset = Dataset.from_iterable(
-            [DatasetItem(i, media=Image(data=np.array([i]))) for i in range(5)],
+            [DatasetItem(i, media=Image.from_numpy(data=np.ones((i, i, 3)))) for i in range(5)],
             categories=["label"],
         )
 
@@ -1553,7 +1559,7 @@ class DatasetTest(TestCase):
             [
                 DatasetItem(
                     i,
-                    media=Image(data=np.array([i])),
+                    media=Image.from_numpy(data=np.ones((i, i, 3))),
                     annotations=[Label(0, attributes={"idx": i % batch_size, "data": i})],
                 )
                 for i in range(5)
@@ -1569,8 +1575,8 @@ class DatasetTest(TestCase):
                 calls += 1
 
                 return [
-                    [Label(0, attributes={"idx": i, "data": item.media.data[0]})]
-                    for i, item in enumerate(batch)
+                    [Label(0, attributes={"idx": i, "data": inp.media.data.shape[0]})]
+                    for i, inp in enumerate(batch)
                 ]
 
         model = TestLauncher()
@@ -1682,21 +1688,25 @@ class DatasetTest(TestCase):
                         self._save_image(item, name=name)
 
         env = Environment()
-        env.converters.items = {"test": CustomExporter}
+        env.exporters.items = {"test": CustomExporter}
 
         with TestDir() as path:
             dataset = Dataset.from_iterable(
                 [
-                    DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
-                    DatasetItem(2, subset="train", media=Image(path="2.jpg", size=(3, 2))),
-                    DatasetItem(3, subset="valid", media=Image(data=np.ones((2, 2, 3)))),
+                    DatasetItem(1, subset="train", media=Image.from_numpy(data=np.ones((2, 4, 3)))),
+                    DatasetItem(
+                        2, subset="train", media=Image.from_file(path="2.jpg", size=(3, 2))
+                    ),
+                    DatasetItem(3, subset="valid", media=Image.from_numpy(data=np.ones((2, 2, 3)))),
                 ],
                 categories=[],
                 env=env,
             )
             dataset.export(path, "test", save_media=True)
 
-            dataset.put(DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))))
+            dataset.put(
+                DatasetItem(2, subset="train", media=Image.from_numpy(data=np.ones((3, 2, 3))))
+            )
             dataset.remove(3, "valid")
             dataset.save(save_media=True)
 
@@ -1997,7 +2007,7 @@ class DatasetTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="subset",
-                    media=Image(data=np.ones((5, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
                     annotations=[
                         Label(0, attributes={"a1": 1, "a2": "2"}, id=1, group=2),
                         Caption("hello", id=1, group=5),
@@ -2024,7 +2034,7 @@ class DatasetTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERIC_MEDIA)
     def test_can_specify_media_type_in_ctor(self):
         dataset = Dataset.from_iterable(
-            [DatasetItem(id=1, media=Image(data=np.ones((5, 4, 3))))], media_type=Video
+            [DatasetItem(id=1, media=Image.from_numpy(data=np.ones((5, 4, 3))))], media_type=Video
         )
 
         self.assertTrue(dataset.media_type() is Video)
@@ -2034,7 +2044,7 @@ class DatasetTest(TestCase):
         dataset = Dataset(media_type=Video)
 
         with self.assertRaises(MediaTypeError):
-            dataset.put(DatasetItem(id=1, media=Image(data=np.ones((5, 4, 3)))))
+            dataset.put(DatasetItem(id=1, media=Image.from_numpy(data=np.ones((5, 4, 3)))))
 
     @mark_requirement(Requirements.DATUM_GENERIC_MEDIA)
     def test_cant_change_media_type_with_transform(self):
@@ -2061,7 +2071,7 @@ class DatasetTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERIC_MEDIA)
     def test_can_check_media_type_on_caching(self):
         dataset = Dataset.from_iterable(
-            [DatasetItem(id=1, media=Image(data=np.ones((5, 4, 3))))], media_type=Video
+            [DatasetItem(id=1, media=Image.from_numpy(data=np.ones((5, 4, 3))))], media_type=Video
         )
 
         with self.assertRaises(MediaTypeError):
@@ -2081,10 +2091,10 @@ class DatasetItemTest(TestCase):
     def test_ctors_with_image():
         for args in [
             {"id": 0, "media": None},
-            {"id": 0, "media": Image(path="path.jpg")},
-            {"id": 0, "media": Image(data=np.array([1, 2, 3]))},
-            {"id": 0, "media": Image(data=lambda f: np.array([1, 2, 3]))},
-            {"id": 0, "media": Image(data=np.array([1, 2, 3]))},
+            {"id": 0, "media": Image.from_file(path="path.jpg")},
+            {"id": 0, "media": Image.from_numpy(data=np.array([1, 2, 3]))},
+            {"id": 0, "media": Image.from_numpy(data=lambda f: np.array([1, 2, 3]))},
+            {"id": 0, "media": Image.from_numpy(data=np.array([1, 2, 3]))},
         ]:
             DatasetItem(**args)
 
@@ -2096,7 +2106,7 @@ class DatasetFilterTest(TestCase):
         item = DatasetItem(
             id=1,
             subset="subset",
-            media=Image(data=np.ones((5, 4, 3))),
+            media=Image.from_numpy(data=np.ones((5, 4, 3))),
             annotations=[
                 Label(0, attributes={"a1": 1, "a2": "2"}, id=1, group=2),
                 Caption("hello", id=1),
@@ -2225,7 +2235,7 @@ class TestHLOps(TestCase):
             [DatasetItem(10, subset="train")], categories=["cat", "dog"]
         )
 
-        actual = hl_ops.transform(dataset, "reindex", start=0)
+        actual = HLOps.transform(dataset, "reindex", start=0)
 
         compare_datasets(self, expected, actual)
 
@@ -2239,7 +2249,7 @@ class TestHLOps(TestCase):
             categories=["cat", "dog"],
         )
 
-        actual = hl_ops.filter(dataset, "/item[id=0]")
+        actual = HLOps.filter(dataset, "/item[id=0]")
 
         compare_datasets(self, expected, actual)
 
@@ -2264,7 +2274,7 @@ class TestHLOps(TestCase):
             categories=["cat", "dog"],
         )
 
-        actual = hl_ops.filter(
+        actual = HLOps.filter(
             dataset, "/item/annotation[id=1]", filter_annotations=True, remove_empty=True
         )
 
@@ -2287,7 +2297,7 @@ class TestHLOps(TestCase):
             [DatasetItem(1, subset="train")], categories=["cat", "dog"]
         )
 
-        actual = hl_ops.merge(dataset_a, dataset_b)
+        actual = HLOps.merge(dataset_a, dataset_b)
 
         compare_datasets(self, expected, actual)
 
@@ -2303,7 +2313,7 @@ class TestHLOps(TestCase):
         )
 
         with TestDir() as test_dir:
-            hl_ops.export(dataset, test_dir, "datumaro")
+            HLOps.export(dataset, test_dir, "datumaro")
             actual = Dataset.load(test_dir)
 
             compare_datasets(self, expected, actual)

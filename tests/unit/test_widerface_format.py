@@ -24,7 +24,7 @@ class WiderFaceFormatTest(TestCase):
                 DatasetItem(
                     id="1",
                     subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(0, 2, 4, 2, label=0),
                         Bbox(
@@ -48,7 +48,7 @@ class WiderFaceFormatTest(TestCase):
                 DatasetItem(
                     id="2",
                     subset="train",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -101,7 +101,7 @@ class WiderFaceFormatTest(TestCase):
                 DatasetItem(
                     id="3",
                     subset="val",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -138,7 +138,7 @@ class WiderFaceFormatTest(TestCase):
                         ),
                     ],
                 ),
-                DatasetItem(id="4", subset="val", media=Image(data=np.ones((8, 8, 3)))),
+                DatasetItem(id="4", subset="val", media=Image.from_numpy(data=np.ones((8, 8, 3)))),
             ],
             categories=["face", "label_0", "label_1"],
         )
@@ -156,7 +156,7 @@ class WiderFaceFormatTest(TestCase):
                 DatasetItem(
                     id="1",
                     subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(0, 2, 4, 2, label=1),
                         Bbox(
@@ -193,7 +193,7 @@ class WiderFaceFormatTest(TestCase):
             [
                 DatasetItem(
                     id="a/b/1",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(0, 2, 4, 2, label=2),
                         Bbox(
@@ -230,7 +230,7 @@ class WiderFaceFormatTest(TestCase):
                 DatasetItem(
                     id="a/b/1",
                     subset="train",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(0, 2, 4, 2, label=2),
                         Bbox(
@@ -269,7 +269,7 @@ class WiderFaceFormatTest(TestCase):
             [
                 DatasetItem(
                     id="кириллица с пробелом",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -304,7 +304,7 @@ class WiderFaceFormatTest(TestCase):
             [
                 DatasetItem(
                     id="a/b/1",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(0, 2, 4, 2, label=0),
                         Bbox(
@@ -326,7 +326,7 @@ class WiderFaceFormatTest(TestCase):
             [
                 DatasetItem(
                     id="a/b/1",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(0, 2, 4, 2, label=0),
                         Bbox(0, 1, 2, 3, label=0, attributes={"blur": "1", "invalid": "1"}),
@@ -347,8 +347,10 @@ class WiderFaceFormatTest(TestCase):
     def test_can_save_and_load_image_with_arbitrary_extension(self):
         dataset = Dataset.from_iterable(
             [
-                DatasetItem("q/1", media=Image(path="q/1.JPEG", data=np.zeros((4, 3, 3)))),
-                DatasetItem("a/b/c/2", media=Image(path="a/b/c/2.bmp", data=np.zeros((3, 4, 3)))),
+                DatasetItem("q/1", media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG")),
+                DatasetItem(
+                    "a/b/c/2", media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp")
+                ),
             ],
             categories=[],
         )
@@ -363,8 +365,8 @@ class WiderFaceFormatTest(TestCase):
     def test_inplace_save_writes_only_updated_data(self):
         expected = Dataset.from_iterable(
             [
-                DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
-                DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))),
+                DatasetItem(1, subset="train", media=Image.from_numpy(data=np.ones((2, 4, 3)))),
+                DatasetItem(2, subset="train", media=Image.from_numpy(data=np.ones((3, 2, 3)))),
             ],
             categories=[],
         )
@@ -372,15 +374,19 @@ class WiderFaceFormatTest(TestCase):
         with TestDir() as path:
             dataset = Dataset.from_iterable(
                 [
-                    DatasetItem(1, subset="train", media=Image(data=np.ones((2, 4, 3)))),
-                    DatasetItem(2, subset="train", media=Image(path="2.jpg", size=(3, 2))),
-                    DatasetItem(3, subset="valid", media=Image(data=np.ones((2, 2, 3)))),
+                    DatasetItem(1, subset="train", media=Image.from_numpy(data=np.ones((2, 4, 3)))),
+                    DatasetItem(
+                        2, subset="train", media=Image.from_file(path="2.jpg", size=(3, 2))
+                    ),
+                    DatasetItem(3, subset="valid", media=Image.from_numpy(data=np.ones((2, 2, 3)))),
                 ],
                 categories=[],
             )
             dataset.export(path, "wider_face", save_media=True)
 
-            dataset.put(DatasetItem(2, subset="train", media=Image(data=np.ones((3, 2, 3)))))
+            dataset.put(
+                DatasetItem(2, subset="train", media=Image.from_numpy(data=np.ones((3, 2, 3))))
+            )
             dataset.remove(3, "valid")
             dataset.save(save_media=True)
 
@@ -416,7 +422,7 @@ class WiderFaceImporterTest(TestCase):
                 DatasetItem(
                     id="0_Parade_image_01",
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[
                         Bbox(
                             1,
@@ -438,7 +444,7 @@ class WiderFaceImporterTest(TestCase):
                 DatasetItem(
                     id="1_Handshaking_image_02",
                     subset="train",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[
                         Bbox(
                             1,
@@ -475,7 +481,7 @@ class WiderFaceImporterTest(TestCase):
                 DatasetItem(
                     id="0_Parade_image_03",
                     subset="val",
-                    media=Image(data=np.ones((10, 15, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 15, 3))),
                     annotations=[
                         Bbox(
                             0,

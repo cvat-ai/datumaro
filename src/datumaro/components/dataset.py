@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2020-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -10,39 +10,69 @@ import os
 import os.path as osp
 import warnings
 from contextlib import contextmanager
-from copy import copy
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Type, Union
+from copy import copy, deepcopy
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    overload,
+)
 
-from datumaro.components.annotation import AnnotationType, LabelCategories
+from datumaro.components.annotation import (
+    Annotation,
+    AnnotationType,
+    LabelCategories,
+    TabularCategories,
+)
 from datumaro.components.config_model import Source
-from datumaro.components.contexts.importer import ImportErrorPolicy, _ImportFail
 from datumaro.components.dataset_base import (
+    DEFAULT_SUBSET_NAME,
     CategoriesInfo,
     DatasetBase,
     DatasetInfo,
     DatasetItem,
     IDataset,
-    ImportContext,
 )
-from datumaro.components.dataset_storage import DatasetPatch, DatasetStorage
-from datumaro.components.environment import Environment
+from datumaro.components.dataset_item_storage import DatasetItemStorageDatasetView
+from datumaro.components.dataset_storage import DatasetPatch, DatasetStorage, StreamDatasetStorage
+from datumaro.components.environment import DEFAULT_ENVIRONMENT, Environment
 from datumaro.components.errors import (
+    DatasetImportError,
+    DatumaroError,
     MultipleFormatsMatchError,
     NoMatchingFormatsError,
+    StreamedItemError,
     UnknownFormatError,
 )
 from datumaro.components.exporter import ExportContext, Exporter, ExportErrorPolicy, _ExportFail
-from datumaro.components.filter import XPathAnnotationsFilter, XPathDatasetFilter
+from datumaro.components.filter import (
+    UserFunctionAnnotationsFilter,
+    UserFunctionDatasetFilter,
+    XPathAnnotationsFilter,
+    XPathDatasetFilter,
+)
+from datumaro.components.importer import ImportContext, ImportErrorPolicy, _ImportFail
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement
+from datumaro.components.merge import DEFAULT_MERGE_POLICY
 from datumaro.components.progress_reporting import NullProgressReporter, ProgressReporter
 from datumaro.components.transformer import ItemTransform, ModelTransform, Transform
-from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 from datumaro.util.log_utils import logging_disabled
+from datumaro.util.meta_file_util import load_hash_key
 from datumaro.util.os_util import rmtree
 from datumaro.util.scope import on_error_do, scoped
 
 DEFAULT_FORMAT = "datumaro"
+
+__all__ = ["Dataset", "eager_mode"]
 
 
 class DatasetSubset(IDataset):  # non-owning view
@@ -55,7 +85,9 @@ class DatasetSubset(IDataset):  # non-owning view
         yield from self.parent._data.get_subset(self.name)
 
     def __len__(self):
-        return len(self.parent._data.get_subset(self.name))
+        subset: DatasetItemStorageDatasetView.Subset = self.parent._data.get_subset(self.name)
+
+        return len(subset)
 
     def put(self, item):
         return self.parent.put(item, subset=self.name)
@@ -78,7 +110,7 @@ class DatasetSubset(IDataset):  # non-owning view
         return {self.name: self}
 
     def infos(self) -> DatasetInfo:
-        return {}
+        return self.parent.infos()
 
     def categories(self):
         return self.parent.categories()
@@ -87,10 +119,23 @@ class DatasetSubset(IDataset):  # non-owning view
         return self.parent.media_type()
 
     def ann_types(self):
-        return set()
+        return self.parent.ann_types()
+
+    def get_annotated_items(self):
+        return sum(bool(s.annotations) for s in self.parent._data.get_subset(self.name))
+
+    def get_annotations(self):
+        annotations_by_type = {t.name: {"count": 0} for t in AnnotationType}
+        for item in self.parent._data.get_subset(self.name):
+            for ann in item.annotations:
+                annotations_by_type[ann.type.name]["count"] += 1
+        return sum(t["count"] for t in annotations_by_type.values())
 
     def as_dataset(self) -> Dataset:
-        return Dataset.from_extractors(self, env=self.parent.env)
+        dataset = Dataset.from_extractors(self, env=self.parent.env)
+        dataset._format = self.parent._format
+        dataset._source_path = self.parent._source_path
+        return dataset
 
 
 class Dataset(IDataset):
@@ -108,15 +153,18 @@ class Dataset(IDataset):
     """
 
     _global_eager: bool = False
+    _stream = False
 
     @classmethod
     def from_iterable(
         cls,
         iterable: Iterable[DatasetItem],
+        infos: Optional[DatasetInfo] = None,
         categories: Union[CategoriesInfo, List[str], None] = None,
         *,
         env: Optional[Environment] = None,
         media_type: Type[MediaElement] = Image,
+        ann_types: Optional[Set[AnnotationType]] = [],
     ) -> Dataset:
         """
         Creates a new dataset from an iterable object producing dataset items -
@@ -125,6 +173,7 @@ class Dataset(IDataset):
 
         Parameters:
             iterable: An iterable which returns dataset items
+            infos: A dictionary of the dataset specific information
             categories: A simple list of labels or complete information
                 about labels. If not specified, an empty list of labels
                 is assumed.
@@ -137,6 +186,9 @@ class Dataset(IDataset):
         Returns:
             dataset: A new dataset with specified contents
         """
+
+        if infos is None:
+            infos = {}
 
         # TODO: remove the default value for media_type
         # https://github.com/openvinotoolkit/datumaro/issues/675
@@ -152,18 +204,27 @@ class Dataset(IDataset):
                 super().__init__(
                     length=len(iterable) if hasattr(iterable, "__len__") else None,
                     media_type=media_type,
+                    ann_types=ann_types,
                 )
 
             def __iter__(self):
                 return iter(iterable)
+
+            def infos(self):
+                return infos
 
             def categories(self):
                 return categories
 
         return cls.from_extractors(_extractor(), env=env)
 
-    @staticmethod
-    def from_extractors(*sources: IDataset, env: Optional[Environment] = None) -> Dataset:
+    @classmethod
+    def from_extractors(
+        cls,
+        *sources: IDataset,
+        env: Optional[Environment] = None,
+        merge_policy: str = DEFAULT_MERGE_POLICY,
+    ) -> Dataset:
         """
         Creates a new dataset from one or several `Extractor`s.
 
@@ -175,6 +236,8 @@ class Dataset(IDataset):
             sources: one or many input extractors
             env: A context for plugins, which will be used for this dataset.
                 If not specified, the builtin plugins will be used.
+            merge_policy: Policy on how to merge multiple datasets.
+                Possible options are "exact", "intersect", and "union".
 
         Returns:
             dataset: A new dataset with contents produced by input extractors
@@ -182,22 +245,22 @@ class Dataset(IDataset):
 
         if len(sources) == 1:
             source = sources[0]
-            dataset = Dataset(source=source, env=env)
+            dataset = cls(source=source, env=env)
         else:
-            from datumaro.components.merge.exact_merge import ExactMerge
+            from datumaro.components.hl_ops import HLOps
 
-            media_type = ExactMerge.merge_media_types(sources)
-            source = ExactMerge.merge(sources)
-            categories = ExactMerge.merge_categories(s.categories() for s in sources)
-            dataset = Dataset(source=source, categories=categories, media_type=media_type, env=env)
+            return HLOps.merge(*sources, merge_policy=merge_policy)
+
         return dataset
 
     def __init__(
         self,
         source: Optional[IDataset] = None,
         *,
+        infos: Optional[DatasetInfo] = None,
         categories: Optional[CategoriesInfo] = None,
         media_type: Optional[Type[MediaElement]] = None,
+        ann_types: Optional[Set[AnnotationType]] = None,
         env: Optional[Environment] = None,
     ) -> None:
         super().__init__()
@@ -206,13 +269,40 @@ class Dataset(IDataset):
         self._env = env
 
         self.eager = None
-        self._data = DatasetStorage(source, categories=categories, media_type=media_type)
+        self._data = DatasetStorage(
+            source=source,
+            infos=infos,
+            categories=categories,
+            media_type=media_type,
+            ann_types=ann_types,
+        )
         if self.is_eager:
             self.init_cache()
 
         self._format = DEFAULT_FORMAT
         self._source_path = None
         self._options = {}
+
+    def __repr__(self) -> str:
+        separator = "\t"
+        return (
+            f"Dataset\n"
+            f"\tsize={len(self._data)}\n"
+            f"\tsource_path={self._source_path}\n"
+            f"\tmedia_type={self.media_type()}\n"
+            f"\tann_types={self.ann_types()}\n"
+            f"\tannotated_items_count={self.get_annotated_items()}\n"
+            f"\tannotations_count={self.get_annotations()}\n"
+            f"subsets\n"
+            f"\t{separator.join(self.get_subset_info())}"
+            f"infos\n"
+            f"\t{separator.join(self.get_infos())}"
+            f"categories\n"
+            f"\t{separator.join(self.get_categories_info())}"
+        )
+
+    def define_infos(self, infos: DatasetInfo) -> None:
+        self._data.define_infos(infos)
 
     def define_categories(self, categories: CategoriesInfo) -> None:
         self._data.define_categories(categories)
@@ -233,19 +323,67 @@ class Dataset(IDataset):
         return {k: self.get_subset(k) for k in self._data.subsets()}
 
     def infos(self) -> DatasetInfo:
-        return {}
+        return self._data.infos()
 
     def categories(self) -> CategoriesInfo:
         return self._data.categories()
 
-    def media_type(self):
+    def media_type(self) -> Type[MediaElement]:
         return self._data.media_type()
 
-    def ann_types(self):
-        return set()
+    def ann_types(self) -> Set[AnnotationType]:
+        return self._data.ann_types()
 
     def get(self, id: str, subset: Optional[str] = None) -> Optional[DatasetItem]:
         return self._data.get(id, subset)
+
+    def get_annotated_items(self):
+        return self._data.get_annotated_items()
+
+    def get_annotations(self):
+        return self._data.get_annotations()
+
+    def get_datasetitem_by_path(self, path):
+        if self._source_path not in path:
+            path = osp.join(self._source_path, path)
+        return self._data.get_datasetitem_by_path(path)
+
+    def get_label_cat_names(self):
+        return [
+            label.name
+            for label in self._data.categories().get(AnnotationType.label, LabelCategories())
+        ]
+
+    def get_subset_info(self) -> str:
+        return (
+            f"{subset_name}: # of items={len(self.get_subset(subset_name))}, "
+            f"# of annotated items={self.get_subset(subset_name).get_annotated_items()}, "
+            f"# of annotations={self.get_subset(subset_name).get_annotations()}\n"
+            for subset_name in sorted(self.subsets().keys())
+        )
+
+    def get_infos(self) -> Tuple[str]:
+        if self.infos() is not None:
+            return (f"{k}: {v}\n" for k, v in self.infos().items())
+        else:
+            return ("\n",)
+
+    def get_categories_info(self) -> Tuple[str]:
+        category_dict = {}
+        for annotation_type, category in self.categories().items():
+            if isinstance(category, LabelCategories):
+                category_names = list(category._indices.keys())
+                category_dict[annotation_type] = category_names
+            if isinstance(category, TabularCategories):
+                category_names = list(category._indices_by_name.keys())
+                category_dict[annotation_type] = category_names
+        return (
+            (
+                f"{str(annotation_type).split('.')[-1]}: "
+                f"{list(category_dict.get(annotation_type, []))}\n"
+            )
+            for annotation_type in self.categories().keys()
+        )
 
     def __contains__(self, x: Union[DatasetItem, str, Tuple[str, str]]) -> bool:
         if isinstance(x, DatasetItem):
@@ -270,8 +408,13 @@ class Dataset(IDataset):
     def remove(self, id: str, subset: Optional[str] = None) -> None:
         self._data.remove(id, subset)
 
+    @overload
     def filter(
-        self, expr: str, filter_annotations: bool = False, remove_empty: bool = False
+        self,
+        expr: str,
+        *,
+        filter_annotations: bool = False,
+        remove_empty: bool = False,
     ) -> Dataset:
         """
         Filters out some dataset items or annotations, using a custom filter
@@ -290,11 +433,99 @@ class Dataset(IDataset):
 
         Returns: self
         """
+        ...
 
-        if filter_annotations:
-            return self.transform(XPathAnnotationsFilter, xpath=expr, remove_empty=remove_empty)
-        else:
-            return self.transform(XPathDatasetFilter, xpath=expr)
+    @overload
+    def filter(
+        self,
+        filter_func: Union[
+            Callable[[DatasetItem], bool], Callable[[DatasetItem, Annotation], bool]
+        ],
+        *,
+        filter_annotations: bool = False,
+        remove_empty: bool = False,
+    ) -> Dataset:
+        """
+        Filters out some dataset items or annotations, using a user-provided filter
+        Python function.
+
+        Results are stored in-place. Modifications are applied lazily.
+
+        Args:
+            filter_func: User-provided Python function for filtering
+            filter_annotations: Indicates if the filter should be
+                applied to items or annotations
+            remove_empty: When filtering annotations, allows to
+                exclude empty items from the resulting dataset
+
+        Returns: self
+
+        Example:
+            - (`filter_annotations=False`) This is an example of filtering
+                dataset items with images larger than 1024 pixels::
+
+                from datumaro.components.media import Image
+
+                def filter_func(item: DatasetItem) -> bool:
+                    h, w = item.media_as(Image).size
+                    return h > 1024 or w > 1024
+
+                filtered = dataset.filter(filter_func=filter_func, filter_annotations=False)
+                # No items with an image height or width greater than 1024
+                filtered_items = [item for item in filtered]
+
+            - (`filter_annotations=True`) This is an example of removing bounding boxes
+                sized greater than 50% of the image size::
+
+                from datumaro.components.media import Image
+                from datumaro.components.annotation import Annotation, Bbox
+
+                def filter_func(item: DatasetItem, ann: Annotation) -> bool:
+                    # If the annotation is not a Bbox, do not filter
+                    if not isinstance(ann, Bbox):
+                        return False
+
+                    h, w = item.media_as(Image).size
+                    image_size = h * w
+                    bbox_size = ann.h * ann.w
+
+                    # Accept Bboxes smaller than 50% of the image size
+                    return bbox_size < 0.5 * image_size
+
+                filtered = dataset.filter(filter_func=filter_func, filter_annotations=True)
+                # No bounding boxes with a size greater than 50% of their image
+                filtered_items = [item for item in filtered]
+        """
+        ...
+
+    def filter(
+        self,
+        expr_or_filter_func: Union[
+            str, Callable[[DatasetItem], bool], Callable[[DatasetItem, Annotation], bool]
+        ],
+        *,
+        filter_annotations: bool = False,
+        remove_empty: bool = False,
+    ) -> Dataset:
+        if isinstance(expr_or_filter_func, str):
+            expr = expr_or_filter_func
+            return (
+                self.transform(XPathAnnotationsFilter, xpath=expr, remove_empty=remove_empty)
+                if filter_annotations
+                else self.transform(XPathDatasetFilter, xpath=expr)
+            )
+        elif callable(expr_or_filter_func):
+            filter_func = expr_or_filter_func
+            return (
+                self.transform(
+                    UserFunctionAnnotationsFilter,
+                    filter_func=filter_func,
+                    remove_empty=remove_empty,
+                )
+                if filter_annotations
+                else self.transform(UserFunctionDatasetFilter, filter_func=filter_func)
+            )
+        raise TypeError(expr_or_filter_func)
 
     def update(self, source: Union[DatasetPatch, IDataset, Iterable[DatasetItem]]) -> Dataset:
         """
@@ -344,7 +575,13 @@ class Dataset(IDataset):
         return self
 
     def run_model(
-        self, model: Union[Launcher, Type[ModelTransform]], *, batch_size: int = 1, **kwargs
+        self,
+        model: Union[Launcher, Type[ModelTransform]],
+        *,
+        batch_size: int = 1,
+        append_annotation: bool = False,
+        num_workers: int = 0,
+        **kwargs,
     ) -> Dataset:
         """
         Applies a model to dataset items' media and produces a dataset with
@@ -354,15 +591,31 @@ class Dataset(IDataset):
             model: The model to be applied to the dataset
             batch_size: The number of dataset items processed
                 simultaneously by the model
+            append_annotation: Whether append new annotation to existed annotations
+            num_workers: The number of worker threads to use for parallel inference.
+                Set to 0 for single-process mode. Default is 0.
             **kwargs: Parameters for the model
 
         Returns: self
         """
 
         if isinstance(model, Launcher):
-            return self.transform(ModelTransform, launcher=model, batch_size=batch_size, **kwargs)
+            return self.transform(
+                ModelTransform,
+                launcher=model,
+                batch_size=batch_size,
+                append_annotation=append_annotation,
+                num_workers=num_workers,
+                **kwargs,
+            )
         elif inspect.isclass(model) and isinstance(model, ModelTransform):
-            return self.transform(model, batch_size=batch_size, **kwargs)
+            return self.transform(
+                model,
+                batch_size=batch_size,
+                append_annotation=append_annotation,
+                num_workers=num_workers,
+                **kwargs,
+            )
         else:
             raise TypeError("Unexpected 'model' argument type: %s" % type(model))
 
@@ -396,8 +649,8 @@ class Dataset(IDataset):
 
     @property
     def env(self) -> Environment:
-        if not self._env:
-            self._env = Environment()
+        if self._env is None:
+            return DEFAULT_ENVIRONMENT
         return self._env
 
     @property
@@ -459,12 +712,12 @@ class Dataset(IDataset):
         inplace = save_dir == self._source_path and format == self._format
 
         if isinstance(format, str):
-            converter = self.env.converters[format]
+            exporter = self.env.exporters[format]
         else:
-            converter = format
+            exporter = format
 
-        if not (inspect.isclass(converter) and issubclass(converter, Exporter)):
-            raise TypeError("Unexpected 'format' argument type: %s" % type(converter))
+        if not (inspect.isclass(exporter) and issubclass(exporter, Exporter)):
+            raise TypeError("Unexpected 'format' argument type: %s" % type(exporter))
 
         save_dir = osp.abspath(save_dir)
         if not osp.exists(save_dir):
@@ -478,15 +731,16 @@ class Dataset(IDataset):
             progress_reporter = NullProgressReporter()
 
         assert "ctx" not in kwargs
-        converter_kwargs = copy(kwargs)
-        converter_kwargs["ctx"] = ExportContext(
+        exporter_kwargs = copy(kwargs)
+        exporter_kwargs["stream"] = self._stream
+        exporter_kwargs["ctx"] = ExportContext(
             progress_reporter=progress_reporter, error_policy=error_policy
         )
 
         try:
             if not inplace:
                 try:
-                    converter.convert(self, save_dir=save_dir, **converter_kwargs)
+                    exporter.convert(self, save_dir=save_dir, **exporter_kwargs)
                 except TypeError as e:
                     # TODO: for backward compatibility. To be removed after 0.3
                     if "unexpected keyword argument 'ctx'" not in str(e):
@@ -494,17 +748,17 @@ class Dataset(IDataset):
 
                     if has_ctx_args:
                         warnings.warn(
-                            "It seems that '%s' converter "
+                            f"It seems that '{format}' exporter "
                             "does not support progress and error reporting, "
-                            "it will be disabled" % format,
+                            "It will be disabled in datumaro==1.5.0.",
                             DeprecationWarning,
                         )
-                    converter_kwargs.pop("ctx")
+                    exporter_kwargs.pop("ctx")
 
-                    converter.convert(self, save_dir=save_dir, **converter_kwargs)
+                    exporter.convert(self, save_dir=save_dir, **exporter_kwargs)
             else:
                 try:
-                    converter.patch(self, self.get_patch(), save_dir=save_dir, **converter_kwargs)
+                    exporter.patch(self, self.get_patch(), save_dir=save_dir, **exporter_kwargs)
                 except TypeError as e:
                     # TODO: for backward compatibility. To be removed after 0.3
                     if "unexpected keyword argument 'ctx'" not in str(e):
@@ -512,19 +766,20 @@ class Dataset(IDataset):
 
                     if has_ctx_args:
                         warnings.warn(
-                            "It seems that '%s' converter "
+                            f"It seems that '{format}' exporter "
                             "does not support progress and error reporting, "
-                            "it will be disabled" % format,
+                            "It will be disabled in datumaro==1.5.0.",
                             DeprecationWarning,
                         )
-                    converter_kwargs.pop("ctx")
+                    exporter_kwargs.pop("ctx")
 
-                    converter.patch(self, self.get_patch(), save_dir=save_dir, **converter_kwargs)
+                    exporter.patch(self, self.get_patch(), save_dir=save_dir, **exporter_kwargs)
         except _ExportFail as e:
             raise e.__cause__
 
         self.bind(save_dir, format, options=copy(kwargs))
-        self.flush_changes()
+        if not self._stream:
+            self.flush_changes()
 
     def save(self, save_dir: Optional[str] = None, **kwargs) -> None:
         options = dict(self._options)
@@ -566,16 +821,22 @@ class Dataset(IDataset):
         """
 
         if env is None:
-            env = Environment()
+            env = DEFAULT_ENVIRONMENT
 
         if not format:
             format = cls.detect(path, env=env)
 
+        extractor_merger = None
         # TODO: remove importers, put this logic into extractors
         if format in env.importers:
             importer = env.make_importer(format)
             with logging_disabled(log.INFO):
-                detected_sources = importer(path, **kwargs)
+                detected_sources = (
+                    importer(path, stream=cls._stream, **kwargs)
+                    if importer.can_stream
+                    else importer(path, **kwargs)
+                )
+            extractor_merger = importer.get_extractor_merger()
         elif format in env.extractors:
             detected_sources = [{"url": path, "format": format, "options": kwargs}]
         else:
@@ -605,6 +866,8 @@ class Dataset(IDataset):
                     progress_reporter=pbar, error_policy=error_policy
                 )
 
+                merge_policy = extractor_kwargs.get("merge_policy", DEFAULT_MERGE_POLICY)
+
                 try:
                     extractors.append(
                         env.make_extractor(src_conf.format, src_conf.url, **extractor_kwargs)
@@ -616,9 +879,9 @@ class Dataset(IDataset):
 
                     if has_ctx_args:
                         warnings.warn(
-                            "It seems that '%s' extractor "
-                            "does not support progress and error reporting, "
-                            "it will be disabled" % src_conf.format,
+                            f"It seems that '{src_conf.format}' extractor "
+                            "does not support progress and error reporting. "
+                            "It will be disabled in datumaro==1.5.0.",
                             DeprecationWarning,
                         )
                     extractor_kwargs.pop("ctx")
@@ -626,16 +889,28 @@ class Dataset(IDataset):
                     extractors.append(
                         env.make_extractor(src_conf.format, src_conf.url, **extractor_kwargs)
                     )
-
-            dataset = cls.from_extractors(*extractors, env=env)
+            dataset = (
+                cls(source=extractor_merger(extractors), env=env)
+                if extractor_merger is not None
+                else cls.from_extractors(*extractors, env=env, merge_policy=merge_policy)
+            )
             if eager:
                 dataset.init_cache()
         except _ImportFail as e:
-            raise e.__cause__
+            cause = e.__cause__ if getattr(e, "__cause__", None) is not None else e
+            cause.__traceback__ = e.__traceback__
+            raise DatasetImportError(f"Failed to import dataset '{format}' at '{path}'.") from cause
+        except DatumaroError as e:
+            cause = e.__cause__ if getattr(e, "__cause__", None) is not None else e
+            cause.__traceback__ = e.__traceback__
+            raise DatasetImportError(f"Failed to import dataset '{format}' at '{path}'.") from cause
+        except Exception as e:
+            raise DatasetImportError(f"Failed to import dataset '{format}' at '{path}'.") from e
 
         dataset._source_path = path
         dataset._format = format
 
+        dataset = load_hash_key(path, dataset)
         return dataset
 
     @staticmethod
@@ -666,6 +941,111 @@ class Dataset(IDataset):
             raise MultipleFormatsMatchError(matches)
         else:
             return matches[0]
+
+    @property
+    def is_stream(self) -> bool:
+        return self._data.is_stream
+
+    def clone(self) -> "Dataset":
+        """Create a deep copy of this dataset.
+
+        Returns:
+            A cloned instance of the `Dataset`.
+        """
+        return deepcopy(self)
+
+    def __getitem__(self, idx: int) -> DatasetItem:
+        if not self._data.is_stream:
+            return self._data[idx]
+        raise StreamedItemError()
+
+
+class StreamDataset(Dataset):
+    _stream = True
+
+    def __init__(
+        self,
+        source: Optional[IDataset] = None,
+        *,
+        infos: Optional[DatasetInfo] = None,
+        categories: Optional[CategoriesInfo] = None,
+        media_type: Optional[Type[MediaElement]] = None,
+        ann_types: Optional[Set[AnnotationType]] = None,
+        env: Optional[Environment] = None,
+    ) -> None:
+        assert env is None or isinstance(env, Environment), env
+        self._env = env
+
+        self._data = StreamDatasetStorage(
+            source,
+            infos=infos,
+            categories=categories,
+            media_type=media_type,
+            ann_types=ann_types,
+        )
+
+        self._format = DEFAULT_FORMAT
+        self._source_path = None
+        self._options = {}
+
+    @property
+    def is_eager(self) -> bool:
+        return False
+
+    @classmethod
+    def from_extractors(
+        cls,
+        *sources: IDataset,
+        env: Optional[Environment] = None,
+        merge_policy: str = DEFAULT_MERGE_POLICY,
+    ) -> Dataset:
+        """
+        Creates a new dataset from one or several `Extractor`s.
+
+        In case of a single input, creates a lazy wrapper around the input.
+        In case of several inputs, unifies them and caches the resulting
+        dataset. We cannot apply regular dataset merge, since items list cannot be accessed.
+
+        Parameters:
+            sources: one or many input extractors
+            env: A context for plugins, which will be used for this dataset.
+                If not specified, the builtin plugins will be used.
+            merge_policy: Policy on how to merge multiple datasets.
+                Possible options are "exact", "intersect", and "union".
+
+        Returns:
+            dataset: A new dataset with contents produced by input extractors
+        """
+
+        if len(sources) == 1:
+            source = sources[0]
+            dataset = cls(source=source, env=env)
+        else:
+
+            class _MergedStreamDataset(cls):
+                def __init__(self, *sources: IDataset):
+                    from datumaro.components.hl_ops import HLOps
+
+                    self._merged = HLOps.merge(*sources, merge_policy=merge_policy)
+                    self._data = self._merged._data
+                    self._env = env
+                    self._format = DEFAULT_FORMAT
+                    self._source_path = None
+                    self._options = {}
+
+                def __iter__(self):
+                    yield from self._merged
+
+                @property
+                def is_stream(self):
+                    return True
+
+                def subsets(self) -> Dict[str, DatasetSubset]:
+                    return self._merged.subsets()
+
+            return _MergedStreamDataset(*sources)
+
+        return dataset
 
 
 @contextmanager

@@ -67,7 +67,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Bbox(2, 2, 3, 1, label=1, group=1, id=1, attributes={"is_crowd": False})
@@ -76,7 +76,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="b",
                     subset="val",
-                    media=Image(data=np.ones((10, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 5, 3))),
                     attributes={"id": 40},
                     annotations=[
                         Polygon(
@@ -130,7 +130,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="default",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Bbox(2, 2, 3, 1, label=1, group=1, id=1, attributes={"is_crowd": False})
@@ -159,7 +159,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Bbox(2, 2, 3, 1, label=2, group=1, id=1, attributes={"is_crowd": False})
@@ -183,7 +183,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Caption("hello", id=1, group=1),
@@ -192,7 +192,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="b",
                     subset="val",
-                    media=Image(data=np.ones((10, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 5, 3))),
                     attributes={"id": 40},
                     annotations=[
                         Caption("world", id=1, group=1),
@@ -231,7 +231,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="default",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Caption("hello", id=1, group=1),
@@ -259,7 +259,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Label(1, id=1, group=1),
@@ -268,7 +268,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="b",
                     subset="val",
-                    media=Image(data=np.ones((10, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 5, 3))),
                     attributes={"id": 40},
                     annotations=[
                         Label(0, id=1, group=1),
@@ -305,7 +305,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="default",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Label(1, id=1, group=1),
@@ -334,7 +334,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Skeleton(
@@ -350,7 +350,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="b",
                     subset="val",
-                    media=Image(data=np.ones((10, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 5, 3))),
                     attributes={"id": 40},
                     annotations=[
                         Skeleton(
@@ -437,7 +437,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="default",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Skeleton(
@@ -480,7 +480,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Skeleton(
@@ -524,13 +524,13 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                 ),
                 DatasetItem(
                     id="b",
                     subset="val",
-                    media=Image(data=np.ones((10, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 5, 3))),
                     attributes={"id": 40},
                 ),
             ]
@@ -569,7 +569,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="default",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                 ),
             ]
@@ -594,7 +594,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Mask(
@@ -609,7 +609,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="b",
                     subset="val",
-                    media=Image(data=np.ones((10, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 5, 3))),
                     attributes={"id": 40},
                     annotations=[
                         Mask(
@@ -661,7 +661,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="default",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Mask(
@@ -700,7 +700,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Mask(
@@ -730,7 +730,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="train",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Mask(
@@ -745,7 +745,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="b",
                     subset="val",
-                    media=Image(data=np.ones((10, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 5, 3))),
                     attributes={"id": 40},
                     annotations=[
                         Mask(
@@ -784,7 +784,7 @@ class CocoImporterTest(TestCase):
                 DatasetItem(
                     id="a",
                     subset="default",
-                    media=Image(data=np.ones((5, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
                     attributes={"id": 5},
                     annotations=[
                         Mask(
@@ -902,10 +902,11 @@ class CocoExtractorTests(TestCase):
                     anns["images"][0].pop(field)
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(ItemImportError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertIsInstance(capture.exception.__cause__, MissingFieldError)
-                    self.assertEqual(capture.exception.__cause__.name, field)
+                    self.assertIsInstance(capture.exception.__cause__, ItemImportError)
+                    self.assertIsInstance(capture.exception.__cause__.__cause__, MissingFieldError)
+                    self.assertEqual(capture.exception.__cause__.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_ann_field(self):
@@ -917,10 +918,11 @@ class CocoExtractorTests(TestCase):
                     anns["annotations"][0].pop(field)
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(AnnotationImportError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertIsInstance(capture.exception.__cause__, MissingFieldError)
-                    self.assertEqual(capture.exception.__cause__.name, field)
+                    self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+                    self.assertIsInstance(capture.exception.__cause__.__cause__, MissingFieldError)
+                    self.assertEqual(capture.exception.__cause__.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_global_field(self):
@@ -932,9 +934,10 @@ class CocoExtractorTests(TestCase):
                     anns.pop(field)
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(MissingFieldError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertEqual(capture.exception.name, field)
+                    self.assertIsInstance(capture.exception.__cause__, MissingFieldError)
+                    self.assertEqual(capture.exception.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_category_field(self):
@@ -946,9 +949,10 @@ class CocoExtractorTests(TestCase):
                     anns["categories"][0].pop(field)
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(MissingFieldError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertEqual(capture.exception.name, field)
+                    self.assertIsInstance(capture.exception.__cause__, MissingFieldError)
+                    self.assertEqual(capture.exception.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_undeclared_label(self):
@@ -958,10 +962,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["category_id"] = 2
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, UndeclaredLabelError)
-            self.assertEqual(capture.exception.__cause__.id, "2")
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, UndeclaredLabelError)
+            self.assertEqual(capture.exception.__cause__.__cause__.id, "2")
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_bbox(self):
@@ -971,10 +976,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["bbox"] = [1, 2, 3, 4, 5]
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, InvalidAnnotationError)
-            self.assertIn("Bbox has wrong value count", str(capture.exception.__cause__))
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
+            self.assertIn("Bbox has wrong value count", str(capture.exception.__cause__.__cause__))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_polygon_odd_points(self):
@@ -984,10 +990,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["segmentation"] = [[1, 2, 3]]
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, InvalidAnnotationError)
-            self.assertIn("not divisible by 2", str(capture.exception.__cause__))
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
+            self.assertIn("not divisible by 2", str(capture.exception.__cause__.__cause__))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_polygon_less_than_3_points(self):
@@ -997,10 +1004,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["segmentation"] = [[1, 2, 3, 4]]
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, InvalidAnnotationError)
-            self.assertIn("at least 3 (x, y) pairs", str(capture.exception.__cause__))
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
+            self.assertIn("at least 3 (x, y) pairs", str(capture.exception.__cause__.__cause__))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_image_id(self):
@@ -1010,10 +1018,11 @@ class CocoExtractorTests(TestCase):
             anns["annotations"][0]["image_id"] = 10
             dump_json_file(ann_path, anns)
 
-            with self.assertRaises(AnnotationImportError) as capture:
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(ann_path, "coco_instances")
-            self.assertIsInstance(capture.exception.__cause__, InvalidAnnotationError)
-            self.assertIn("Unknown image id", str(capture.exception.__cause__))
+            self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+            self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
+            self.assertIn("Unknown image id", str(capture.exception.__cause__.__cause__))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_item_field_type(self):
@@ -1025,11 +1034,14 @@ class CocoExtractorTests(TestCase):
                     anns["images"][0][field] = value
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(ItemImportError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertIsInstance(capture.exception.__cause__, InvalidFieldTypeError)
-                    self.assertEqual(capture.exception.__cause__.name, field)
-                    self.assertEqual(capture.exception.__cause__.actual, str(type(value)))
+                    self.assertIsInstance(capture.exception.__cause__, ItemImportError)
+                    self.assertIsInstance(
+                        capture.exception.__cause__.__cause__, InvalidFieldTypeError
+                    )
+                    self.assertEqual(capture.exception.__cause__.__cause__.name, field)
+                    self.assertEqual(capture.exception.__cause__.__cause__.actual, str(type(value)))
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_invalid_ann_field_type(self):
@@ -1049,11 +1061,14 @@ class CocoExtractorTests(TestCase):
                     anns["annotations"][0][field] = value
                     dump_json_file(ann_path, anns)
 
-                    with self.assertRaises(AnnotationImportError) as capture:
+                    with self.assertRaises(DatasetImportError) as capture:
                         Dataset.import_from(ann_path, "coco_instances")
-                    self.assertIsInstance(capture.exception.__cause__, InvalidFieldTypeError)
-                    self.assertEqual(capture.exception.__cause__.name, field)
-                    self.assertEqual(capture.exception.__cause__.actual, str(type(value)))
+                    self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
+                    self.assertIsInstance(
+                        capture.exception.__cause__.__cause__, InvalidFieldTypeError
+                    )
+                    self.assertEqual(capture.exception.__cause__.__cause__.name, field)
+                    self.assertEqual(capture.exception.__cause__.__cause__.actual, str(type(value)))
 
 
 class CocoExporterTest(TestCase):
@@ -1113,7 +1128,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         # Bbox + single polygon
                         Bbox(0, 1, 2, 2, label=2, group=1, id=1, attributes={"is_crowd": False}),
@@ -1130,7 +1145,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=2,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         # Mask + bbox
                         Mask(
@@ -1149,7 +1164,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=3,
                     subset="val",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         # Bbox + mask
                         Bbox(0, 1, 2, 2, label=4, group=3, id=3, attributes={"is_crowd": True}),
@@ -1174,7 +1189,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Polygon(
                             [0, 1, 2, 1, 2, 3, 0, 3],
@@ -1189,7 +1204,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=2,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -1206,7 +1221,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=3,
                     subset="val",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -1239,7 +1254,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Mask(
                             image=np.array(
@@ -1256,7 +1271,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=2,
                     subset="val",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array(
@@ -1310,7 +1325,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -1327,7 +1342,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=2,
                     subset="val",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -1354,7 +1369,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((6, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((6, 10, 3))),
                     annotations=[
                         Polygon([0, 0, 4, 0, 4, 4], label=3, id=4, group=4),
                         Polygon([5, 0, 9, 0, 5, 5], label=3, id=4, group=4),
@@ -1368,7 +1383,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((6, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((6, 10, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -1410,7 +1425,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -1437,7 +1452,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -1498,7 +1513,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((6, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((6, 10, 3))),
                     annotations=[
                         Polygon([0, 0, 4, 0, 4, 4], label=3, id=4, group=4),
                         Polygon([5, 0, 9, 0, 5, 5], label=3, id=4, group=4),
@@ -1513,7 +1528,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((6, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((6, 10, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -1556,7 +1571,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 10, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 10, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -1582,7 +1597,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 10, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 10, 3))),
                     annotations=[
                         Polygon(
                             [1, 0, 3, 2, 3, 0, 1, 0],
@@ -1636,7 +1651,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Bbox(0, 1, 2, 2, label=0, group=1, id=1, attributes={"is_crowd": False}),
                     ],
@@ -1645,7 +1660,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=2,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Bbox(1, 0, 2, 2, label=1, group=2, id=2, attributes={"is_crowd": False}),
                     ],
@@ -1654,7 +1669,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=3,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Bbox(0, 1, 2, 2, label=2, group=3, id=3, attributes={"is_crowd": False}),
                     ],
@@ -1705,7 +1720,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         # Full instance annotations: polygon + keypoints
                         Skeleton(
@@ -1746,7 +1761,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Skeleton(
                             [Points([0, 0], [0]), Points([0, 2], [1]), Points([4, 1], [2])],
@@ -1819,7 +1834,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Skeleton(
                             [
@@ -1859,7 +1874,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Skeleton(
                             [
@@ -1922,7 +1937,9 @@ class CocoExporterTest(TestCase):
     def test_can_save_dataset_with_image_info(self):
         expected_dataset = Dataset.from_iterable(
             [
-                DatasetItem(id=1, media=Image(path="1.jpg", size=(10, 15)), attributes={"id": 1}),
+                DatasetItem(
+                    id=1, media=Image.from_file(path="1.jpg", size=(10, 15)), attributes={"id": 1}
+                ),
             ]
         )
 
@@ -1933,12 +1950,18 @@ class CocoExporterTest(TestCase):
     def test_relative_paths(self):
         expected_dataset = Dataset.from_iterable(
             [
-                DatasetItem(id="1", media=Image(data=np.ones((4, 2, 3))), attributes={"id": 1}),
                 DatasetItem(
-                    id="subdir1/1", media=Image(data=np.ones((2, 6, 3))), attributes={"id": 2}
+                    id="1", media=Image.from_numpy(data=np.ones((4, 2, 3))), attributes={"id": 1}
                 ),
                 DatasetItem(
-                    id="subdir2/1", media=Image(data=np.ones((5, 4, 3))), attributes={"id": 3}
+                    id="subdir1/1",
+                    media=Image.from_numpy(data=np.ones((2, 6, 3))),
+                    attributes={"id": 2},
+                ),
+                DatasetItem(
+                    id="subdir2/1",
+                    media=Image.from_numpy(data=np.ones((5, 4, 3))),
+                    attributes={"id": 3},
                 ),
             ]
         )
@@ -1957,12 +1980,12 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id="q/1",
-                    media=Image(path="q/1.JPEG", data=np.zeros((4, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG"),
                     attributes={"id": 1},
                 ),
                 DatasetItem(
                     id="a/b/c/2",
-                    media=Image(path="a/b/c/2.bmp", data=np.zeros((3, 4, 3))),
+                    media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp"),
                     attributes={"id": 2},
                 ),
             ]
@@ -1981,7 +2004,9 @@ class CocoExporterTest(TestCase):
         expected_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="some/name1", media=Image(data=np.ones((4, 2, 3))), attributes={"id": 40}
+                    id="some/name1",
+                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
+                    attributes={"id": 40},
                 ),
             ]
         )
@@ -2000,7 +2025,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((4, 2, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
                     annotations=[
                         Polygon(
                             [0, 0, 4, 0, 4, 4],
@@ -2025,7 +2050,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=2,
-                    media=Image(data=np.ones((4, 2, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
                     annotations=[
                         Polygon([0, 0, 4, 0, 4, 4], label=0),
                     ],
@@ -2038,7 +2063,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=2,
-                    media=Image(data=np.ones((4, 2, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
                     annotations=[
                         Polygon(
                             [0, 0, 4, 0, 4, 4],
@@ -2066,7 +2091,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=2,
                     subset="subset_1",
-                    media=Image(data=np.ones((4, 2, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
                     annotations=[
                         Polygon(
                             [0, 0, 4, 0, 4, 4],
@@ -2091,7 +2116,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=2,
-                    media=Image(data=np.ones((4, 2, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
                     annotations=[
                         Polygon([0, 0, 4, 0, 4, 4], label=0, id=5),
                     ],
@@ -2105,7 +2130,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=2,
-                    media=Image(data=np.ones((4, 2, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
                     annotations=[
                         Polygon(
                             [0, 0, 4, 0, 4, 4],
@@ -2134,7 +2159,10 @@ class CocoExporterTest(TestCase):
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id=1, subset="train", media=Image(data=np.ones((2, 4, 3))), attributes={"id": 1}
+                    id=1,
+                    subset="train",
+                    media=Image.from_numpy(data=np.ones((2, 4, 3))),
+                    attributes={"id": 1},
                 ),
             ]
         )
@@ -2153,7 +2181,10 @@ class CocoExporterTest(TestCase):
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id=1, subset="train", media=Image(data=np.ones((2, 4, 3))), attributes={"id": 1}
+                    id=1,
+                    subset="train",
+                    media=Image.from_numpy(data=np.ones((2, 4, 3))),
+                    attributes={"id": 1},
                 ),
             ]
         )
@@ -2172,7 +2203,7 @@ class CocoExporterTest(TestCase):
         expected = Dataset.from_iterable(
             [
                 DatasetItem(1, subset="a"),
-                DatasetItem(2, subset="a", media=Image(data=np.ones((3, 2, 3)))),
+                DatasetItem(2, subset="a", media=Image.from_numpy(data=np.ones((3, 2, 3)))),
                 DatasetItem(2, subset="b"),
             ]
         )
@@ -2182,12 +2213,12 @@ class CocoExporterTest(TestCase):
                 [
                     DatasetItem(1, subset="a"),
                     DatasetItem(2, subset="b"),
-                    DatasetItem(3, subset="c", media=Image(data=np.ones((2, 2, 3)))),
+                    DatasetItem(3, subset="c", media=Image.from_numpy(data=np.ones((2, 2, 3)))),
                 ]
             )
             dataset.export(path, "coco", save_media=True)
 
-            dataset.put(DatasetItem(2, subset="a", media=Image(data=np.ones((3, 2, 3)))))
+            dataset.put(DatasetItem(2, subset="a", media=Image.from_numpy(data=np.ones((3, 2, 3)))))
             dataset.remove(3, "c")
             dataset.save(save_media=True)
 
@@ -2211,7 +2242,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -2239,7 +2270,7 @@ class CocoExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -2278,7 +2309,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Mask(
                             image=np.array(
@@ -2295,7 +2326,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=2,
                     subset="val",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array(
@@ -2335,7 +2366,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -2352,7 +2383,7 @@ class CocoExporterTest(TestCase):
                 DatasetItem(
                     id=2,
                     subset="val",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Mask(
                             np.array(

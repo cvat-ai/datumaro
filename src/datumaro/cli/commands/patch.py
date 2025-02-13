@@ -138,7 +138,7 @@ def patch_command(args):
         scope_add(_project)
 
     try:
-        converter = env.converters[target_dataset.format]
+        converter = env.exporters[target_dataset.format]
     except KeyError:
         raise CliException("Converter for format '%s' is not found" % args.format)
 

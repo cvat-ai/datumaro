@@ -16,7 +16,7 @@ from tests.utils.test_utils import TestDir, compare_datasets
 from tests.utils.video import make_sample_video
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def fxt_sample_video():
     with TestDir() as test_dir:
         video_path = osp.join(test_dir, "video.avi")
@@ -85,8 +85,8 @@ class VideoTest:
         for last_frame in video:
             pass
 
-        assert 2 == video.length
-        assert 1 == last_frame.index
+        assert 3 == video.length
+        assert 2 == last_frame.index
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     @scoped
@@ -120,7 +120,9 @@ class VideoExtractorTest:
         expected = Dataset.from_iterable(
             [
                 DatasetItem(
-                    "frame_%03d" % i, subset="train", media=Image(data=np.ones((4, 6, 3)) * i)
+                    "frame_%03d" % i,
+                    subset="train",
+                    media=Image.from_numpy(data=np.ones((4, 6, 3)) * i),
                 )
                 for i in range(4)
             ]
@@ -140,13 +142,13 @@ class VideoExtractorTest:
 
         expected = Dataset.from_iterable(
             [
-                DatasetItem("frame_%06d" % i, media=Image(data=np.ones((4, 6, 3)) * i))
+                DatasetItem("frame_%06d" % i, media=Image.from_numpy(data=np.ones((4, 6, 3)) * i))
                 for i in range(4)
             ]
         )
 
         dataset = Dataset.import_from(
-            fxt_sample_video, "video_frames", start_frame=0, end_frame=4, name_pattern="frame_%06d"
+            fxt_sample_video, "video_frames", start_frame=0, end_frame=3, name_pattern="frame_%06d"
         )
         dataset.export(format="image_dir", save_dir=test_dir, image_ext=".jpg")
 

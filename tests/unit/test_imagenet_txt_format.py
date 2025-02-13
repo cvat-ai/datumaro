@@ -24,7 +24,7 @@ class ImagenetTxtFormatTest(TestCase):
                 DatasetItem(
                     id="2",
                     subset="train",
-                    media=Image(data=np.zeros((8, 8, 3))),
+                    media=Image.from_numpy(data=np.zeros((8, 8, 3))),
                     annotations=[Label(1)],
                 ),
             ],
@@ -84,7 +84,7 @@ class ImagenetTxtFormatTest(TestCase):
                 DatasetItem(
                     id="2",
                     subset="train",
-                    media=Image(data=np.zeros((2, 8, 3))),
+                    media=Image.from_numpy(data=np.zeros((2, 8, 3))),
                 ),
             ],
             categories={
@@ -106,7 +106,9 @@ class ImagenetTxtFormatTest(TestCase):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="a/b/c", media=Image(data=np.zeros((8, 4, 3))), annotations=[Label(1)]
+                    id="a/b/c",
+                    media=Image.from_numpy(data=np.zeros((8, 4, 3))),
+                    annotations=[Label(1)],
                 ),
             ],
             categories={
@@ -129,7 +131,7 @@ class ImagenetTxtFormatTest(TestCase):
             [
                 DatasetItem(
                     id="кириллица с пробелом",
-                    media=Image(data=np.zeros((8, 8, 3))),
+                    media=Image.from_numpy(data=np.zeros((8, 8, 3))),
                     annotations=[Label(0), Label(1)],
                 ),
             ],
@@ -151,9 +153,11 @@ class ImagenetTxtFormatTest(TestCase):
     def test_can_save_and_load_image_with_arbitrary_extension(self):
         dataset = Dataset.from_iterable(
             [
-                DatasetItem(id="a/1", media=Image(path="a/1.JPEG", data=np.zeros((4, 3, 3)))),
                 DatasetItem(
-                    id="b/c/d/2", media=Image(path="b/c/d/2.bmp", data=np.zeros((3, 4, 3)))
+                    id="a/1", media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG")
+                ),
+                DatasetItem(
+                    id="b/c/d/2", media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp")
                 ),
             ],
             categories=[],
@@ -180,13 +184,13 @@ class ImagenetTxtImporterTest(TestCase):
                 DatasetItem(
                     id="1",
                     subset="train",
-                    media=Image(data=np.zeros((8, 6, 3))),
+                    media=Image.from_numpy(data=np.zeros((8, 6, 3))),
                     annotations=[Label(0)],
                 ),
                 DatasetItem(
                     id="2",
                     subset="train",
-                    media=Image(data=np.zeros((2, 8, 3))),
+                    media=Image.from_numpy(data=np.zeros((2, 8, 3))),
                     annotations=[Label(5)],
                 ),
                 DatasetItem(id="3", subset="train", annotations=[Label(3)]),

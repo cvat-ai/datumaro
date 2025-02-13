@@ -1,106 +1,222 @@
-# Copyright (C) 2019-2021 Intel Corporation
+# Copyright (C) 2019-2024 Intel Corporation
 # Copyright (C) 2023 CVAT.ai Corporation
 #
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: MIT§
+from __future__ import annotations
 
-import importlib
 import os
 import os.path as osp
 import shlex
-import warnings
 import weakref
+from contextlib import ExitStack, contextmanager
+from contextvars import ContextVar
 from enum import Enum, auto
-from io import BytesIO
-from typing import Any, Callable, Dict, Iterable, Iterator, Optional, Tuple, Union
+from functools import partial
+from io import BytesIO, IOBase
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, Optional, Tuple, Union
 
 import numpy as np
 
-try:
-    # Introduced in 1.20
-    from numpy.typing import DTypeLike
-except ImportError:
-    DTypeLike = Any
+from datumaro.components.crypter import NULL_CRYPTER, Crypter
+from datumaro.components.errors import DatumaroError
+
+if TYPE_CHECKING:
+    try:
+        # Introduced in 1.20
+        from numpy.typing import DTypeLike
+    except ImportError:
+        DTypeLike = Any
 
 
-class _IMAGE_BACKENDS(Enum):
+class ImageBackend(Enum):
     cv2 = auto()
     PIL = auto()
 
 
-_IMAGE_BACKEND = None
+IMAGE_BACKEND: ContextVar[ImageBackend] = ContextVar("IMAGE_BACKEND")
 _image_loading_errors = (FileNotFoundError,)
 try:
-    importlib.import_module("cv2")
-    _IMAGE_BACKEND = _IMAGE_BACKENDS.cv2
+    import cv2
+
+    IMAGE_BACKEND.set(ImageBackend.cv2)
 except ModuleNotFoundError:
     import PIL
 
-    _IMAGE_BACKEND = _IMAGE_BACKENDS.PIL
+    IMAGE_BACKEND.set(ImageBackend.PIL)
     _image_loading_errors = (*_image_loading_errors, PIL.UnidentifiedImageError)
 
 from datumaro.util.image_cache import ImageCache
 from datumaro.util.os_util import find_files
 
 
-def __getattr__(name: str):
-    if name in {"Image", "ByteImage"}:
-        warnings.warn(
-            f"Using {name} from 'util.image' is deprecated, "
-            "the class is moved to 'components.media'",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+class ImageColorChannel(Enum):
+    """Image color channel
 
-        import datumaro.components.media as media_module
-
-        return getattr(media_module, name)
-    raise AttributeError(f"module {__name__} has no attribute {name}")
-
-
-def load_image(path: str, dtype: DTypeLike = np.float32, **kwargs):
-    """
-    Reads an image in the HWC Grayscale/BGR(A) float [0; 255] format.
+    - UNCHANGED: Use the original image's channel (default).
+        Note that image reading by different backends can result in different results.
+        For instance, if an image has more than 1-channel (grayscale),
+        OpenCV will read it as BGR(A), while PIL will read it as RGB(A).
+    - COLOR_BGR: Use BGR 3 channels
+        (it can ignore the alpha channel or convert the gray scale image)
+    - COLOR_RGB: Use RGB 3 channels
+        (it can ignore the alpha channel or convert the gray scale image)
     """
 
-    if _IMAGE_BACKEND == _IMAGE_BACKENDS.cv2:
+    UNCHANGED = 0
+    COLOR_BGR = 1
+    COLOR_RGB = 2
+
+    def decode_by_cv2(self, image_bytes: bytes, dtype: DTypeLike = np.uint8) -> np.ndarray:
+        """Convert image color channel for OpenCV image (np.ndarray)."""
+        image_buffer = np.frombuffer(image_bytes, dtype=dtype)
+
+        # OpenCV 4.11 added the new imread flag, so we will use it if available
+        IMREAD_COLOR_RGB = getattr(cv2, "IMREAD_COLOR_RGB", 0)
+
+        if self == ImageColorChannel.UNCHANGED:
+            return cv2.imdecode(
+                image_buffer,
+                cv2.IMREAD_UNCHANGED ^ cv2.IMREAD_IGNORE_ORIENTATION ^ IMREAD_COLOR_RGB,
+            )
+
+        if IMREAD_COLOR_RGB and self == ImageColorChannel.COLOR_RGB:
+            return cv2.imdecode(image_buffer, IMREAD_COLOR_RGB)
+
+        img = cv2.imdecode(image_buffer, cv2.IMREAD_COLOR)
+
+        if self == ImageColorChannel.COLOR_BGR:
+            return img
+
+        if self == ImageColorChannel.COLOR_RGB:
+            return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        raise ValueError
+
+    def decode_by_pil(self, image_bytes: bytes) -> np.ndarray:
+        """Convert image color channel for PIL Image."""
+        from PIL import Image, ImageOps
+
+        img = Image.open(BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img)
+
+        if self == ImageColorChannel.UNCHANGED:
+            return np.asarray(img)
+
+        if self == ImageColorChannel.COLOR_BGR:
+            img = np.asarray(img.convert("RGB"))
+            return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+        if self == ImageColorChannel.COLOR_RGB:
+            return np.asarray(img.convert("RGB"))
+
+        raise ValueError
+
+
+IMAGE_COLOR_CHANNEL: ContextVar[ImageColorChannel] = ContextVar(
+    "IMAGE_COLOR_CHANNEL", default=ImageColorChannel.UNCHANGED
+)
+
+
+@contextmanager
+def decode_image_context(image_backend: ImageBackend, image_color_channel: ImageColorChannel):
+    """Change Datumaro image color channel while decoding.
+
+    For model training, it is recommended to use this context manager
+    to load images in the BGR 3-channel format. For example,
+
+    .. code-block:: python
+
+        import datumaro as dm
+        with decode_image_context(
+            image_backend=ImageBackend.cv2,
+            image_color_channel=ImageColorScale.COLOR,
+        ):
+            item: dm.DatasetItem
+            img_data = item.media_as(dm.Image).data
+            assert img_data.shape[-1] == 3  # It should be a 3-channel image
+    """
+
+    curr_ctx = (IMAGE_BACKEND.get(), IMAGE_COLOR_CHANNEL.get())
+
+    IMAGE_BACKEND.set(image_backend)
+    IMAGE_COLOR_CHANNEL.set(image_color_channel)
+
+    try:
+        yield
+    finally:
+        IMAGE_BACKEND.set(curr_ctx[0])
+        IMAGE_COLOR_CHANNEL.set(curr_ctx[1])
+
+
+def load_image(path: str, dtype: DTypeLike = np.uint8, crypter: Crypter = NULL_CRYPTER):
+    """
+    Reads an image in the HWC Grayscale/BGR(A) [0; 255] format (default dtype is uint8).
+
+    A context manager decode_image_context can be used
+    to specify the color scheme and the image backend with which to read the image.
+    """
+
+    if IMAGE_BACKEND.get() == ImageBackend.cv2:
         # cv2.imread does not support paths that are not representable
         # in the locale encoding on Windows, so we read the image bytes
         # ourselves.
 
         with open(path, "rb") as f:
-            image_bytes = f.read()
+            image_bytes = crypter.decrypt(f.read())
 
         return decode_image(image_bytes, dtype=dtype)
-    elif _IMAGE_BACKEND == _IMAGE_BACKENDS.PIL:
-        from PIL import Image, ImageOps
+    elif IMAGE_BACKEND.get() == ImageBackend.PIL:
+        with open(path, "rb") as f:
+            image_bytes = crypter.decrypt(f.read())
 
-        image = Image.open(path)
+        return decode_image(image_bytes, dtype=dtype)
 
-        image = ImageOps.exif_transpose(image)
+    raise NotImplementedError(IMAGE_BACKEND)
 
-        image = np.asarray(image, dtype=dtype)
-        if len(image.shape) == 3 and image.shape[2] in {3, 4}:
-            image[:, :, :3] = image[:, :, 2::-1]  # RGB to BGR
-    else:
-        raise NotImplementedError()
 
-    assert len(image.shape) in {2, 3}
-    if len(image.shape) == 3:
-        assert image.shape[2] in {3, 4}
-    return image
+def copyto_image(
+    src: Union[str, IOBase], dst: Union[str, IOBase], src_crypter: Crypter, dst_crypter: Crypter
+) -> None:
+    if src_crypter == dst_crypter and src == dst:
+        return
+
+    @contextmanager
+    def _open(fp, mode):
+        with ExitStack() as es:
+            if not isinstance(fp, IOBase):
+                fp = es.enter_context(open(fp, mode))
+
+            yield fp
+
+    with _open(src, "rb") as src_fp:
+        _bytes = src_crypter.decrypt(src_fp.read())
+
+    with _open(dst, "wb") as dst_fp:
+        dst_fp.write(dst_crypter.encrypt(_bytes))
 
 
 def save_image(
-    path: str, image: np.ndarray, create_dir: bool = False, dtype: DTypeLike = np.uint8, **kwargs
+    dst: Union[str, IOBase],
+    image: np.ndarray,
+    ext: Optional[str] = None,
+    create_dir: bool = False,
+    dtype: DTypeLike = np.uint8,
+    crypter: Crypter = NULL_CRYPTER,
+    **kwargs,
 ) -> None:
     # NOTE: Check destination path for existence
     # OpenCV silently fails if target directory does not exist
-    dst_dir = osp.dirname(path)
-    if dst_dir:
-        if create_dir:
-            os.makedirs(dst_dir, exist_ok=True)
-        elif not osp.isdir(dst_dir):
-            raise FileNotFoundError("Directory does not exist: '%s'" % dst_dir)
+    if isinstance(dst, IOBase):
+        ext = ext if ext else ".png"
+    else:
+        dst_dir = osp.dirname(dst)
+        if dst_dir:
+            if create_dir:
+                os.makedirs(dst_dir, exist_ok=True)
+            elif not osp.isdir(dst_dir):
+                raise FileNotFoundError("Directory does not exist: '%s'" % dst_dir)
+        # file extension and actual encoding can be differ
+        ext = ext if ext else osp.splitext(dst)[1]
 
     if not kwargs:
         kwargs = {}
@@ -108,21 +224,29 @@ def save_image(
     # NOTE: OpenCV documentation says "If the image format is not supported,
     # the image will be converted to 8-bit unsigned and saved that way".
     # Conversion from np.int32 to np.uint8 is not working properly
-    backend = _IMAGE_BACKEND
+    backend = IMAGE_BACKEND.get()
     if dtype == np.int32:
-        backend = _IMAGE_BACKENDS.PIL
-    if backend == _IMAGE_BACKENDS.cv2:
+        backend = ImageBackend.PIL
+    if backend == ImageBackend.cv2:
         # cv2.imwrite does not support paths that are not representable
         # in the locale encoding on Windows, so we write the image bytes
         # ourselves.
 
-        ext = osp.splitext(path)[1]
         image_bytes = encode_image(image, ext, dtype=dtype, **kwargs)
 
-        with open(path, "wb") as f:
-            f.write(image_bytes)
-    elif backend == _IMAGE_BACKENDS.PIL:
+        if isinstance(dst, str):
+            with open(dst, "wb") as f:
+                f.write(crypter.encrypt(image_bytes))
+        else:
+            dst.write(crypter.encrypt(image_bytes))
+    elif backend == ImageBackend.PIL:
         from PIL import Image
+
+        if ext.startswith("."):
+            ext = ext[1:]
+
+        if not crypter.is_null_crypter:
+            raise DatumaroError("PIL backend should have crypter=NullCrypter.")
 
         params = {}
         params["quality"] = kwargs.get("jpeg_quality")
@@ -133,7 +257,7 @@ def save_image(
         if len(image.shape) == 3 and image.shape[2] in {3, 4}:
             image[:, :, :3] = image[:, :, 2::-1]  # BGR to RGB
         image = Image.fromarray(image)
-        image.save(path, **params)
+        image.save(dst, format=ext, **params)
     else:
         raise NotImplementedError()
 
@@ -142,7 +266,7 @@ def encode_image(image: np.ndarray, ext: str, dtype: DTypeLike = np.uint8, **kwa
     if not kwargs:
         kwargs = {}
 
-    if _IMAGE_BACKEND == _IMAGE_BACKENDS.cv2:
+    if IMAGE_BACKEND.get() == ImageBackend.cv2:
         import cv2
 
         params = []
@@ -150,7 +274,7 @@ def encode_image(image: np.ndarray, ext: str, dtype: DTypeLike = np.uint8, **kwa
         if not ext.startswith("."):
             ext = "." + ext
 
-        if ext.upper() == ".JPG":
+        if ext.upper() in (".JPG", ".JPEG"):
             params = [int(cv2.IMWRITE_JPEG_QUALITY), kwargs.get("jpeg_quality", 75)]
 
         image = image.astype(dtype)
@@ -158,7 +282,7 @@ def encode_image(image: np.ndarray, ext: str, dtype: DTypeLike = np.uint8, **kwa
         if not success:
             raise Exception("Failed to encode image to '%s' format" % (ext))
         return result.tobytes()
-    elif _IMAGE_BACKEND == _IMAGE_BACKENDS.PIL:
+    elif IMAGE_BACKEND.get() == ImageBackend.PIL:
         from PIL import Image
 
         if ext.startswith("."):
@@ -180,22 +304,31 @@ def encode_image(image: np.ndarray, ext: str, dtype: DTypeLike = np.uint8, **kwa
         raise NotImplementedError()
 
 
-def decode_image(image_bytes: bytes, dtype: DTypeLike = np.float32, **kwargs) -> np.ndarray:
-    if _IMAGE_BACKEND == _IMAGE_BACKENDS.cv2:
-        import cv2
+def decode_image(image_bytes: bytes, dtype: np.dtype = np.uint8) -> np.ndarray:
+    """
+    Reads an image from bytes in the HWC Grayscale/BGR(A) [0; 255] format (default dtype is uint8).
+    """
+    ctx_color_scale = IMAGE_COLOR_CHANNEL.get()
 
-        image = np.frombuffer(image_bytes, dtype=np.uint8)
-        image = cv2.imdecode(image, cv2.IMREAD_UNCHANGED ^ cv2.IMREAD_IGNORE_ORIENTATION)
-        image = image.astype(dtype)
-    elif _IMAGE_BACKEND == _IMAGE_BACKENDS.PIL:
-        from PIL import Image
-
-        image = Image.open(BytesIO(image_bytes))
-        image = np.asarray(image, dtype=dtype)
-        if len(image.shape) == 3 and image.shape[2] in {3, 4}:
-            image[:, :, :3] = image[:, :, 2::-1]  # RGB to BGR
+    if np.issubdtype(dtype, np.floating):
+        # PIL doesn't support floating point image loading
+        # CV doesn't support floating point image with color channel setting (IMREAD_COLOR)
+        with decode_image_context(
+            image_backend=ImageBackend.cv2, image_color_channel=ImageColorChannel.UNCHANGED
+        ):
+            image = ctx_color_scale.decode_by_cv2(image_bytes, dtype=dtype)
+            image = image[..., ::-1]
+        if ctx_color_scale == ImageColorChannel.COLOR_BGR:
+            image = image[..., ::-1]
     else:
-        raise NotImplementedError()
+        if IMAGE_BACKEND.get() == ImageBackend.cv2:
+            image = ctx_color_scale.decode_by_cv2(image_bytes)
+        elif IMAGE_BACKEND.get() == ImageBackend.PIL:
+            image = ctx_color_scale.decode_by_pil(image_bytes)
+        else:
+            raise NotImplementedError()
+
+    image = image.astype(dtype)
 
     assert len(image.shape) in {2, 3}
     if len(image.shape) == 3:
@@ -233,10 +366,15 @@ def find_images(
     dirpath: str,
     exts: Union[str, Iterable[str]] = None,
     recursive: bool = False,
-    max_depth: int = None,
+    max_depth: Optional[int] = None,
+    min_depth: Optional[int] = None,
 ) -> Iterator[str]:
     yield from find_files(
-        dirpath, exts=exts or IMAGE_EXTENSIONS, recursive=recursive, max_depth=max_depth
+        dirpath,
+        exts=exts or IMAGE_EXTENSIONS,
+        recursive=recursive,
+        max_depth=max_depth,
+        min_depth=min_depth,
     )
 
 
@@ -251,6 +389,8 @@ class lazy_image:
         path: str,
         loader: Callable[[str], np.ndarray] = None,
         cache: Union[bool, ImageCache] = True,
+        crypter: Crypter = NULL_CRYPTER,
+        dtype: Optional[DTypeLike] = None,
     ) -> None:
         """
         Cache:
@@ -259,13 +399,19 @@ class lazy_image:
             - ImageCache instance: an object to be used as cache
         """
 
+        self._custom_loader = True
+
         if loader is None:
-            loader = load_image
+            loader = partial(load_image, dtype=dtype) if dtype else load_image
+            self._custom_loader = False
+
         self._path = path
         self._loader = loader
 
         assert isinstance(cache, (ImageCache, bool))
         self._cache = cache
+        self._crypter = crypter
+        self._dtype = dtype
 
     def __call__(self) -> np.ndarray:
         image = None
@@ -276,7 +422,11 @@ class lazy_image:
             image = cache.get(cache_key)
 
         if image is None:
-            image = self._loader(self._path)
+            image = (
+                self._loader(self._path)
+                if self._custom_loader
+                else self._loader(self._path, crypter=self._crypter)
+            )
             if cache is not None:
                 cache.push(cache_key, image)
         return image

@@ -9,6 +9,7 @@ from datumaro.components.annotation import Label
 from datumaro.components.dataset import Dataset
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
+from datumaro.components.errors import DatasetImportError
 from datumaro.components.media import Image
 from datumaro.plugins.data_formats.cifar import CifarExporter, CifarImporter
 
@@ -25,14 +26,16 @@ class CifarFormatTest(TestCase):
                 DatasetItem(
                     id="image_2",
                     subset="test",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(0)],
                 ),
-                DatasetItem(id="image_3", subset="test", media=Image(data=np.ones((32, 32, 3)))),
+                DatasetItem(
+                    id="image_3", subset="test", media=Image.from_numpy(data=np.ones((32, 32, 3)))
+                ),
                 DatasetItem(
                     id="image_4",
                     subset="test",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(1)],
                 ),
             ],
@@ -66,10 +69,14 @@ class CifarFormatTest(TestCase):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    id="image_1", media=Image(data=np.ones((10, 8, 3))), annotations=[Label(0)]
+                    id="image_1",
+                    media=Image.from_numpy(data=np.ones((10, 8, 3))),
+                    annotations=[Label(0)],
                 ),
                 DatasetItem(
-                    id="image_2", media=Image(data=np.ones((32, 32, 3))), annotations=[Label(1)]
+                    id="image_2",
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
+                    annotations=[Label(1)],
                 ),
             ],
             categories=["dog", "cat"],
@@ -87,7 +94,7 @@ class CifarFormatTest(TestCase):
             [
                 DatasetItem(
                     id="кириллица с пробелом",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(0)],
                 ),
             ],
@@ -104,9 +111,11 @@ class CifarFormatTest(TestCase):
     def test_can_save_and_load_image_with_arbitrary_extension(self):
         dataset = Dataset.from_iterable(
             [
-                DatasetItem(id="q/1", media=Image(path="q/1.JPEG", data=np.zeros((32, 32, 3)))),
                 DatasetItem(
-                    id="a/b/c/2", media=Image(path="a/b/c/2.bmp", data=np.zeros((32, 32, 3)))
+                    id="q/1", media=Image.from_numpy(data=np.zeros((32, 32, 3)), ext=".JPEG")
+                ),
+                DatasetItem(
+                    id="a/b/c/2", media=Image.from_numpy(data=np.zeros((32, 32, 3)), ext=".bmp")
                 ),
             ],
             categories=[],
@@ -136,13 +145,22 @@ class CifarFormatTest(TestCase):
         expected = Dataset.from_iterable(
             [
                 DatasetItem(
-                    1, subset="a", media=Image(data=np.ones((2, 1, 3))), annotations=[Label(0)]
+                    1,
+                    subset="a",
+                    media=Image.from_numpy(data=np.ones((2, 1, 3))),
+                    annotations=[Label(0)],
                 ),
                 DatasetItem(
-                    2, subset="a", media=Image(data=np.ones((3, 2, 3))), annotations=[Label(1)]
+                    2,
+                    subset="a",
+                    media=Image.from_numpy(data=np.ones((3, 2, 3))),
+                    annotations=[Label(1)],
                 ),
                 DatasetItem(
-                    2, subset="b", media=Image(data=np.ones((2, 2, 3))), annotations=[Label(1)]
+                    2,
+                    subset="b",
+                    media=Image.from_numpy(data=np.ones((2, 2, 3))),
+                    annotations=[Label(1)],
                 ),
             ],
             categories=["a", "b", "c", "d"],
@@ -151,13 +169,22 @@ class CifarFormatTest(TestCase):
         dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    1, subset="a", media=Image(data=np.ones((2, 1, 3))), annotations=[Label(0)]
+                    1,
+                    subset="a",
+                    media=Image.from_numpy(data=np.ones((2, 1, 3))),
+                    annotations=[Label(0)],
                 ),
                 DatasetItem(
-                    2, subset="b", media=Image(data=np.ones((2, 2, 3))), annotations=[Label(1)]
+                    2,
+                    subset="b",
+                    media=Image.from_numpy(data=np.ones((2, 2, 3))),
+                    annotations=[Label(1)],
                 ),
                 DatasetItem(
-                    3, subset="c", media=Image(data=np.ones((2, 3, 3))), annotations=[Label(2)]
+                    3,
+                    subset="c",
+                    media=Image.from_numpy(data=np.ones((2, 3, 3))),
+                    annotations=[Label(2)],
                 ),
             ],
             categories=["a", "b", "c", "d"],
@@ -168,7 +195,10 @@ class CifarFormatTest(TestCase):
 
             dataset.put(
                 DatasetItem(
-                    2, subset="a", media=Image(data=np.ones((3, 2, 3))), annotations=[Label(1)]
+                    2,
+                    subset="a",
+                    media=Image.from_numpy(data=np.ones((3, 2, 3))),
+                    annotations=[Label(1)],
                 )
             )
             dataset.remove(3, "c")
@@ -184,14 +214,16 @@ class CifarFormatTest(TestCase):
                 DatasetItem(
                     id="image_2",
                     subset="test",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(0)],
                 ),
-                DatasetItem(id="image_3", subset="test", media=Image(data=np.ones((32, 32, 3)))),
+                DatasetItem(
+                    id="image_3", subset="test", media=Image.from_numpy(data=np.ones((32, 32, 3)))
+                ),
                 DatasetItem(
                     id="image_4",
                     subset="test",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(1)],
                 ),
             ],
@@ -226,8 +258,10 @@ class CifarFormatTest(TestCase):
             anno_file = osp.join(test_dir, "test")
             with open(anno_file, "wb") as file:
                 pickle.dump(enumerate([1, 2, 3]), file)
-            with self.assertRaisesRegex(pickle.UnpicklingError, "Global"):
+            with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(test_dir, "cifar")
+            assert isinstance(capture.exception.__cause__, pickle.UnpicklingError)
+            assert "Global" in str(capture.exception.__cause__)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_with_meta_file(self):
@@ -236,14 +270,16 @@ class CifarFormatTest(TestCase):
                 DatasetItem(
                     id="image_2",
                     subset="test",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(0)],
                 ),
-                DatasetItem(id="image_3", subset="test", media=Image(data=np.ones((32, 32, 3)))),
+                DatasetItem(
+                    id="image_3", subset="test", media=Image.from_numpy(data=np.ones((32, 32, 3)))
+                ),
                 DatasetItem(
                     id="image_4",
                     subset="test",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(1)],
                 ),
             ],
@@ -271,31 +307,33 @@ class CifarImporterTest(TestCase):
                 DatasetItem(
                     id="image_1",
                     subset="data_batch_1",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(0)],
                 ),
                 DatasetItem(
                     id="image_2",
                     subset="test_batch",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(1)],
                 ),
                 DatasetItem(
                     id="image_3",
                     subset="test_batch",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(3)],
                 ),
                 DatasetItem(
                     id="image_4",
                     subset="test_batch",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(2)],
                 ),
                 DatasetItem(
                     id="image_5",
                     subset="test_batch",
-                    media=Image(data=np.array([[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]])),
+                    media=Image.from_numpy(
+                        data=np.array([[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]])
+                    ),
                     annotations=[Label(3)],
                 ),
             ],
@@ -321,37 +359,39 @@ class CifarImporterTest(TestCase):
                 DatasetItem(
                     id="image_1",
                     subset="train",
-                    media=Image(data=np.ones((7, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((7, 8, 3))),
                     annotations=[Label(0)],
                 ),
                 DatasetItem(
                     id="image_2",
                     subset="train",
-                    media=Image(data=np.ones((4, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 5, 3))),
                     annotations=[Label(1)],
                 ),
                 DatasetItem(
                     id="image_3",
                     subset="train",
-                    media=Image(data=np.ones((4, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 5, 3))),
                     annotations=[Label(2)],
                 ),
                 DatasetItem(
                     id="image_1",
                     subset="test",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(0)],
                 ),
                 DatasetItem(
                     id="image_2",
                     subset="test",
-                    media=Image(data=np.ones((32, 32, 3))),
+                    media=Image.from_numpy(data=np.ones((32, 32, 3))),
                     annotations=[Label(1)],
                 ),
                 DatasetItem(
                     id="image_3",
                     subset="test",
-                    media=Image(data=np.array([[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]])),
+                    media=Image.from_numpy(
+                        data=np.array([[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]])
+                    ),
                     annotations=[Label(2)],
                 ),
             ],

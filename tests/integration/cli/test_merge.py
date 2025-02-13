@@ -22,7 +22,7 @@ class MergeTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 3, label=0),
                     ],
@@ -36,7 +36,7 @@ class MergeTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4, label=1),
                         Bbox(5, 6, 2, 3, label=2),
@@ -51,7 +51,7 @@ class MergeTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(
                             1,
@@ -114,7 +114,15 @@ class MergeTest(TestCase):
                 project.import_source("source", dataset2_url, "voc")
 
             result_dir = osp.join(test_dir, "result")
-            run(self, "merge", "-o", result_dir, "-p", proj_dir, dataset1_url + ":coco")
+            run(
+                self,
+                "merge",
+                "-o",
+                result_dir,
+                "-p",
+                proj_dir,
+                dataset1_url + ":coco",
+            )
 
             compare_datasets(self, expected, Dataset.load(result_dir), require_media=True)
 
@@ -125,7 +133,7 @@ class MergeTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 3, label=0),
                     ],
@@ -139,7 +147,7 @@ class MergeTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4, label=1),
                         Bbox(5, 6, 2, 3, label=2),
@@ -154,7 +162,7 @@ class MergeTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(
                             1,
@@ -224,7 +232,7 @@ class MergeTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 3, label=0),
                     ],
@@ -238,7 +246,7 @@ class MergeTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4, label=1),
                         Bbox(5, 6, 2, 3, label=2),
@@ -253,7 +261,7 @@ class MergeTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Bbox(1, 2, 3, 4, label=2),
                         Bbox(5, 6, 2, 3, label=3),

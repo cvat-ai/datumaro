@@ -249,11 +249,7 @@ def compare_datasets_3d(
 
         if (require_point_cloud and item_a.media) or (item_a.media and item_b.media):
             test.assertEqual(item_a.media.path, item_b.media.path, item_a.id)
-            test.assertEqual(
-                set(img.path for img in item_a.media.extra_images),
-                set(img.path for img in item_b.media.extra_images),
-                item_a.id,
-            )
+            test.assertEqual(item_a.media.extra_images, item_b.media.extra_images, item_a.id)
         test.assertEqual(len(item_a.annotations), len(item_b.annotations))
         for ann_a in item_a.annotations:
             # We might find few corresponding items, so check them all

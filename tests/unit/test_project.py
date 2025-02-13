@@ -92,8 +92,12 @@ class ProjectTest(TestCase):
 
         expected = Dataset.from_iterable(
             [
-                DatasetItem(0, media=Image(data=np.zeros([2, 2, 3])), annotations=[Label(0)]),
-                DatasetItem(1, media=Image(data=np.ones([2, 2, 3])), annotations=[Label(1)]),
+                DatasetItem(
+                    0, media=Image.from_numpy(data=np.zeros([2, 2, 3])), annotations=[Label(0)]
+                ),
+                DatasetItem(
+                    1, media=Image.from_numpy(data=np.ones([2, 2, 3])), annotations=[Label(1)]
+                ),
             ],
             categories=["a", "b"],
         )
@@ -105,8 +109,8 @@ class ProjectTest(TestCase):
         source_url = osp.join(test_dir, "source")
         source_dataset = Dataset.from_iterable(
             [
-                DatasetItem(0, media=Image(data=np.zeros([2, 2, 3]) * 0)),
-                DatasetItem(1, media=Image(data=np.ones([2, 2, 3]) * 1)),
+                DatasetItem(0, media=Image.from_numpy(data=np.zeros([2, 2, 3]) * 0)),
+                DatasetItem(1, media=Image.from_numpy(data=np.ones([2, 2, 3]) * 1)),
             ],
             categories=["a", "b"],
         )
@@ -178,13 +182,13 @@ class ProjectTest(TestCase):
                 DatasetItem(
                     0,
                     subset="a",
-                    media=Image(data=np.zeros([2, 2, 3])),
+                    media=Image.from_numpy(data=np.zeros([2, 2, 3])),
                     annotations=[Bbox(1, 2, 3, 4, label=0)],
                 ),
                 DatasetItem(
                     1,
                     subset="b",
-                    media=Image(data=np.zeros((10, 20, 3))),
+                    media=Image.from_numpy(data=np.zeros((10, 20, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=1)],
                 ),
             ],
@@ -197,7 +201,7 @@ class ProjectTest(TestCase):
                 DatasetItem(
                     1,
                     subset="b",
-                    media=Image(data=np.zeros((10, 20, 3))),
+                    media=Image.from_numpy(data=np.zeros((10, 20, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=1)],
                 ),
             ],
@@ -426,12 +430,14 @@ class ProjectTest(TestCase):
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
-                    0, media=Image(data=np.ones((2, 3, 3))), annotations=[Bbox(1, 2, 3, 4, label=0)]
+                    0,
+                    media=Image.from_numpy(data=np.ones((2, 3, 3))),
+                    annotations=[Bbox(1, 2, 3, 4, label=0)],
                 ),
                 DatasetItem(
                     1,
                     subset="s",
-                    media=Image(data=np.zeros((10, 20, 3))),
+                    media=Image.from_numpy(data=np.zeros((10, 20, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=1)],
                 ),
             ],
@@ -463,13 +469,13 @@ class ProjectTest(TestCase):
             [
                 DatasetItem(
                     0,
-                    media=Image(data=np.zeros((2, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((2, 3, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=0)],
                 ),
                 DatasetItem(
                     1,
                     subset="s",
-                    media=Image(data=np.zeros((10, 20, 3))),
+                    media=Image.from_numpy(data=np.zeros((10, 20, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=1)],
                 ),
             ],
@@ -501,13 +507,13 @@ class ProjectTest(TestCase):
             [
                 DatasetItem(
                     0,
-                    media=Image(data=np.zeros((2, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((2, 3, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=0)],
                 ),
                 DatasetItem(
                     1,
                     subset="s",
-                    media=Image(data=np.zeros((10, 20, 3))),
+                    media=Image.from_numpy(data=np.zeros((10, 20, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=1)],
                 ),
             ],
@@ -535,13 +541,13 @@ class ProjectTest(TestCase):
             [
                 DatasetItem(
                     0,
-                    media=Image(data=np.zeros((2, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((2, 3, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=0)],
                 ),
                 DatasetItem(
                     1,
                     subset="s",
-                    media=Image(data=np.zeros((10, 20, 3))),
+                    media=Image.from_numpy(data=np.zeros((10, 20, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=1)],
                 ),
             ],
@@ -572,13 +578,13 @@ class ProjectTest(TestCase):
             [
                 DatasetItem(
                     0,
-                    media=Image(data=np.zeros((2, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((2, 3, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=0)],
                 ),
                 DatasetItem(
                     1,
                     subset="s",
-                    media=Image(data=np.zeros((1, 2, 3))),
+                    media=Image.from_numpy(data=np.zeros((1, 2, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=1)],
                 ),
             ],
@@ -603,13 +609,13 @@ class ProjectTest(TestCase):
             [
                 DatasetItem(
                     0,
-                    media=Image(data=np.zeros((2, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((2, 3, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=0)],
                 ),
                 DatasetItem(
                     1,
                     subset="s",
-                    media=Image(data=np.zeros((1, 2, 3))),
+                    media=Image.from_numpy(data=np.zeros((1, 2, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=1)],
                 ),
             ],
@@ -1307,13 +1313,13 @@ class ProjectTest(TestCase):
                 DatasetItem(
                     0,
                     subset="a",
-                    media=Image(data=np.ones((2, 3, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 3, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=0)],
                 ),
                 DatasetItem(
                     1,
                     subset="b",
-                    media=Image(data=np.zeros((10, 20, 3))),
+                    media=Image.from_numpy(data=np.zeros((10, 20, 3))),
                     annotations=[Bbox(1, 2, 3, 4, label=1)],
                 ),
             ],

@@ -58,7 +58,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 10, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 10, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -80,7 +80,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 10, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 10, 3))),
                     annotations=[
                         Polygon([1, 0, 3, 2, 3, 0, 1, 0]),
                         Polygon([5, 0, 5, 3, 8, 0, 5, 0]),
@@ -98,7 +98,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 10, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 10, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -116,7 +116,7 @@ class TransformsTest(TestCase):
 
         target_dataset = Dataset.from_iterable(
             [
-                DatasetItem(id=1, media=Image(data=np.zeros((5, 10, 3)))),
+                DatasetItem(id=1, media=Image.from_numpy(data=np.zeros((5, 10, 3)))),
             ]
         )
 
@@ -132,7 +132,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 10, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 10, 3))),
                     annotations=[
                         Polygon([0, 0, 4, 0, 4, 4]),
                         Polygon([5, 0, 9, 0, 5, 5]),
@@ -145,7 +145,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 10, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 10, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -183,7 +183,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         # The mask is partially covered by the polygon
                         Mask(
@@ -208,7 +208,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -237,7 +237,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -263,7 +263,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -325,7 +325,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -351,7 +351,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Bbox(0, 0, 5, 5, id=1),
                         Bbox(1, 1, 3, 3, id=2),
@@ -369,13 +369,13 @@ class TransformsTest(TestCase):
     def test_id_from_image(self):
         source_dataset = Dataset.from_iterable(
             [
-                DatasetItem(id=1, media=Image(path="path.jpg")),
+                DatasetItem(id=1, media=Image.from_file(path="path.jpg")),
                 DatasetItem(id=2),
             ]
         )
         target_dataset = Dataset.from_iterable(
             [
-                DatasetItem(id="path", media=Image(path="path.jpg")),
+                DatasetItem(id="path", media=Image.from_file(path="path.jpg")),
                 DatasetItem(id=2),
             ]
         )
@@ -389,7 +389,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Bbox(0, 0, 3, 3, z_order=1),
                         Bbox(0, 0, 3, 1, z_order=2),
@@ -403,7 +403,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         Mask(
                             np.array(
@@ -802,7 +802,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=i,
-                    media=Image(data=np.ones((4, 4)) * i),
+                    media=Image.from_numpy(data=np.ones((4, 4)) * i),
                     annotations=[
                         Label(1),
                         Bbox(1, 1, 2, 2, label=2),
@@ -848,7 +848,7 @@ class TransformsTest(TestCase):
             [
                 DatasetItem(
                     id=i,
-                    media=Image(data=np.ones((8, 8)) * i),
+                    media=Image.from_numpy(data=np.ones((8, 8)) * i),
                     annotations=[
                         Label(1),
                         Bbox(2, 2, 4, 4, label=2),
@@ -908,8 +908,12 @@ class TransformsTest(TestCase):
         absolute_params = {"width": 6, "height": 2}
         relative_params = {"scale_x": 3, "scale_y": 0.2}
 
-        input_dataset = Dataset.from_iterable([DatasetItem(id=1, media=Image(np.ones((10, 2))))])
-        expected = Dataset.from_iterable([DatasetItem(id=1, media=Image(np.ones((2, 6))))])
+        input_dataset = Dataset.from_iterable(
+            [DatasetItem(id=1, media=Image.from_numpy(np.ones((10, 2))))]
+        )
+        expected = Dataset.from_iterable(
+            [DatasetItem(id=1, media=Image.from_numpy(np.ones((2, 6))))]
+        )
 
         with self.subTest(params=absolute_params):
             actual = transforms.ResizeTransform(input_dataset, **absolute_params)
@@ -926,10 +930,10 @@ class TransformsTest(TestCase):
 
     @mark_bug(Requirements.DATUM_BUG_606)
     def test_can_keep_image_ext_on_resize(self):
-        expected = Image(np.ones((8, 4)), ext="jpg")
+        expected = Image.from_numpy(np.ones((8, 4)), ext="jpg")
 
         dataset = Dataset.from_iterable(
-            [DatasetItem(id=1, media=Image(np.ones((4, 2)), ext="jpg"))]
+            [DatasetItem(id=1, media=Image.from_numpy(np.ones((4, 2)), ext="jpg"))]
         )
 
         dataset.transform("resize", width=4, height=8)
@@ -1110,7 +1114,7 @@ class CropCoveredSegmentsTest:
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.zeros((5, 5, 3))),
+                    media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                     annotations=[
                         lower_shape,
                         Polygon([1, 1, 4, 1, 4, 4, 1, 4], z_order=1),
@@ -1126,7 +1130,7 @@ class CropCoveredSegmentsTest:
                 [
                     DatasetItem(
                         id=1,
-                        media=Image(data=np.zeros((5, 5, 3))),
+                        media=Image.from_numpy(data=np.zeros((5, 5, 3))),
                         annotations=[
                             Polygon([1, 1, 4, 1, 4, 4, 1, 4], z_order=1),
                         ],

@@ -496,9 +496,9 @@ class CvatBase(SubsetBase):
             image = osp.join(self._images_dir, name)
             image_size = (item_desc.get("height"), item_desc.get("width"))
             if all(image_size):
-                image = Image(path=image, size=tuple(map(int, image_size)))
+                image = Image.from_file(path=image, size=tuple(map(int, image_size)))
             else:
-                image = Image(path=image)
+                image = Image.from_file(path=image)
 
             parsed[frame_id] = DatasetItem(
                 id=osp.splitext(name)[0],

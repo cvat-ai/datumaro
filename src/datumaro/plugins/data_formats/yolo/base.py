@@ -116,7 +116,7 @@ class _YoloBase(SubsetBase):
                 image_size = self._image_info.get(item_id)
                 image_path = osp.join(self._path, item)
 
-                image = Image(path=image_path, size=image_size)
+                image = Image.from_file(path=image_path, size=image_size)
 
                 annotations = self._parse_annotations(image, item_id=(item_id, subset_name))
 

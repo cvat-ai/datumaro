@@ -29,10 +29,10 @@ class SuperviselyPointcloudImporterTest(TestCase):
         pcd1 = osp.join(DUMMY_DATASET_DIR, "ds0", "pointcloud", "frame1.pcd")
         pcd2 = osp.join(DUMMY_DATASET_DIR, "ds0", "pointcloud", "frame2.pcd")
 
-        image1 = Image(
+        image1 = Image.from_file(
             path=osp.join(DUMMY_DATASET_DIR, "ds0", "related_images", "frame1_pcd", "img2.png")
         )
-        image2 = Image(
+        image2 = Image.from_file(
             path=osp.join(DUMMY_DATASET_DIR, "ds0", "related_images", "frame2_pcd", "img1.png")
         )
 
@@ -60,7 +60,7 @@ class SuperviselyPointcloudImporterTest(TestCase):
                             attributes={"track_id": 231831, "tag1": "v12", "tag3": ""},
                         ),
                     ],
-                    media=PointCloud(pcd1, extra_images=[image1]),
+                    media=PointCloud.from_file(pcd1, extra_images=[image1]),
                     attributes={"frame": 0, "description": "", "tag1": "25dsd", "tag2": 65},
                 ),
                 DatasetItem(
@@ -73,7 +73,7 @@ class SuperviselyPointcloudImporterTest(TestCase):
                             attributes={"track_id": 36, "tag1": "", "tag3": ""},
                         )
                     ],
-                    media=PointCloud(pcd2, extra_images=[image2]),
+                    media=PointCloud.from_file(pcd2, extra_images=[image2]),
                     attributes={"frame": 1, "description": ""},
                 ),
             ],
@@ -90,10 +90,10 @@ class PointCloudExporterTest(TestCase):
     pcd1 = osp.join(DUMMY_DATASET_DIR, "ds0", "pointcloud", "frame1.pcd")
     pcd2 = osp.join(DUMMY_DATASET_DIR, "ds0", "pointcloud", "frame2.pcd")
 
-    image1 = Image(
+    image1 = Image.from_file(
         path=osp.join(DUMMY_DATASET_DIR, "ds0", "related_images", "frame1_pcd", "img2.png")
     )
-    image2 = Image(
+    image2 = Image.from_file(
         path=osp.join(DUMMY_DATASET_DIR, "ds0", "related_images", "frame2_pcd", "img1.png")
     )
 
@@ -137,7 +137,7 @@ class PointCloudExporterTest(TestCase):
                             attributes={"occluded": True, "track_id": 2},
                         ),
                     ],
-                    media=PointCloud(self.pcd1),
+                    media=PointCloud.from_file(self.pcd1),
                     attributes={"frame": 0, "description": "zzz"},
                 ),
                 DatasetItem(
@@ -150,7 +150,7 @@ class PointCloudExporterTest(TestCase):
                             attributes={"occluded": False, "track_id": 2},
                         )
                     ],
-                    media=PointCloud(self.pcd2, extra_images=[self.image2]),
+                    media=PointCloud.from_file(self.pcd2, extra_images=[self.image2]),
                     attributes={"frame": 1},
                 ),
             ],
@@ -181,7 +181,9 @@ class PointCloudExporterTest(TestCase):
                                 attributes={"occluded": True, "track_id": 2},
                             ),
                         ],
-                        media=PointCloud(osp.join(test_dir, "ds0", "pointcloud", "frame_1.pcd")),
+                        media=PointCloud.from_file(
+                            osp.join(test_dir, "ds0", "pointcloud", "frame_1.pcd")
+                        ),
                         attributes={"frame": 0, "description": "zzz"},
                     ),
                     DatasetItem(
@@ -194,10 +196,10 @@ class PointCloudExporterTest(TestCase):
                                 attributes={"occluded": False, "track_id": 2},
                             ),
                         ],
-                        media=PointCloud(
+                        media=PointCloud.from_file(
                             osp.join(test_dir, "ds0", "pointcloud", "frm2.pcd"),
                             extra_images=[
-                                Image(
+                                Image.from_file(
                                     path=osp.join(
                                         test_dir, "ds0", "related_images", "frm2_pcd", "img1.png"
                                     )
@@ -357,7 +359,7 @@ class PointCloudExporterTest(TestCase):
             [
                 DatasetItem(
                     id="a/b/c235",
-                    media=PointCloud(self.pcd1, extra_images=[self.image1]),
+                    media=PointCloud.from_file(self.pcd1, extra_images=[self.image1]),
                     attributes={"frame": 20},
                 ),
             ],
@@ -371,7 +373,9 @@ class PointCloudExporterTest(TestCase):
                 [
                     DatasetItem(
                         id="a/b/c235",
-                        media=PointCloud(pcd_path, extra_images=[Image(path=img_path)]),
+                        media=PointCloud.from_file(
+                            pcd_path, extra_images=[Image.from_file(path=img_path)]
+                        ),
                         attributes={"frame": 20},
                     ),
                 ],
@@ -403,7 +407,7 @@ class PointCloudExporterTest(TestCase):
                     DatasetItem(
                         id="frame1",
                         annotations=[Cuboid3d(id=215, position=[320.59, 979.48, 1.03], label=0)],
-                        media=PointCloud(self.pcd1, extra_images=[self.image1]),
+                        media=PointCloud.from_file(self.pcd1, extra_images=[self.image1]),
                         attributes={"frame": 0},
                     )
                 ],
@@ -416,7 +420,7 @@ class PointCloudExporterTest(TestCase):
                 DatasetItem(
                     id="frame2",
                     annotations=[Cuboid3d(id=216, position=[0.59, 14.41, -0.61], label=1)],
-                    media=PointCloud(self.pcd2, extra_images=[self.image2]),
+                    media=PointCloud.from_file(self.pcd2, extra_images=[self.image2]),
                     attributes={"frame": 1},
                 )
             )

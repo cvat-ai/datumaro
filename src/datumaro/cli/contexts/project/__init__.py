@@ -62,7 +62,7 @@ class FilterModes(Enum):
 
 
 def build_export_parser(parser_ctor=argparse.ArgumentParser):
-    builtins = sorted(Environment().converters)
+    builtins = sorted(Environment().exporters)
 
     parser = parser_ctor(
         help="Export project",
@@ -184,7 +184,7 @@ def export_command(args):
         env = Environment()
 
     try:
-        converter = env.converters[args.format]
+        converter = env.exporters[args.format]
     except KeyError:
         raise CliException("Converter for format '%s' is not found" % args.format)
 
@@ -798,7 +798,7 @@ def info_command(args):
     print("  location:", project._root_dir)
     print("Plugins:")
     print("  extractors:", ", ".join(sorted(set(env.extractors) | set(env.importers))))
-    print("  converters:", ", ".join(env.converters))
+    print("  converters:", ", ".join(env.exporters))
     print("  launchers:", ", ".join(env.launchers))
 
     print("Models:")

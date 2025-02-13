@@ -1,35 +1,64 @@
+# Copyright (C) 2019-2022 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+
 from __future__ import annotations
 
 import os
+import os.path as osp
 from glob import iglob
-from os import path as osp
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Type, TypeVar
 
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.errors import DatasetNotFoundError
+from datumaro.components.contexts.importer import (
+    FailingImportErrorPolicy,
+    ImportContext,
+    ImportErrorPolicy,
+    NullImportContext,
+    _ImportFail,
+)
+from datumaro.components.errors import DatasetImportError, DatasetNotFoundError
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
+from datumaro.components.merge.extractor_merger import ExtractorMerger
+
+T = TypeVar("T")
+
+__all__ = [
+    "ImportContext",
+    "NullImportContext",
+    "_ImportFail",
+    "Importer",
+    "ImportErrorPolicy",
+    "FailingImportErrorPolicy",
+]
 
 
 class Importer(CliPlugin):
+    DETECT_CONFIDENCE = FormatDetectionConfidence.LOW
+
     @classmethod
     def detect(
         cls,
         context: FormatDetectionContext,
-    ) -> Optional[FormatDetectionConfidence]:
+    ) -> FormatDetectionConfidence:
         if not cls.find_sources_with_params(context.root_path):
             context.fail("specific requirement information unavailable")
 
-        return FormatDetectionConfidence.LOW
+        return cls.DETECT_CONFIDENCE
 
     @classmethod
-    def find_sources(cls, path) -> List[Dict]:
+    def get_file_extensions(cls) -> List[str]:
         raise NotImplementedError()
 
     @classmethod
-    def find_sources_with_params(cls, path, **extra_params) -> List[Dict]:
+    def find_sources(cls, path: str) -> List[Dict]:
+        raise NotImplementedError()
+
+    @classmethod
+    def find_sources_with_params(cls, path: str, **extra_params) -> List[Dict]:
         return cls.find_sources(path)
 
-    def __call__(self, path, **extra_params):
+    def __call__(self, path, stream: bool = False, **extra_params):
         if not path or not osp.exists(path):
             raise DatasetNotFoundError(path, self.NAME)
 
@@ -41,6 +70,14 @@ class Importer(CliPlugin):
         for desc in found_sources:
             params = dict(extra_params)
             params.update(desc.get("options", {}))
+
+            if stream and self.can_stream:
+                params.update({"stream": True})
+            elif stream and not self.can_stream:
+                raise DatasetImportError(
+                    f"{self.__class__.__name__} cannot stream, but stream=True."
+                )
+
             desc["options"] = params
             sources.append(desc)
 
@@ -56,6 +93,7 @@ class Importer(CliPlugin):
         dirname: str = "",
         file_filter: Optional[Callable[[str], bool]] = None,
         max_depth: int = 3,
+        recursive: bool = False,
     ):
         """
         Finds sources in the specified location, using the matching pattern
@@ -72,6 +110,8 @@ class Importer(CliPlugin):
             dirname: a glob pattern for filename prefixes
             file_filter: a callable (abspath: str) -> bool, to filter paths found
             max_depth: the maximum depth for recursive search.
+            recursive: If recursive is true, the pattern '**' will match any files and
+                zero or more directories and subdirectories.
 
         Returns: a list of source configurations
             (i.e. Extractor type names and c-tor parameters)
@@ -95,9 +135,33 @@ class Importer(CliPlugin):
             for d in range(max_depth + 1):
                 sources.extend(
                     {"url": p, "format": extractor_name}
-                    for p in iglob(osp.join(path, *("*" * d), dirname, filename + ext))
+                    for p in iglob(
+                        osp.join(path, *("*" * d), dirname, filename + ext), recursive=recursive
+                    )
                     if (callable(file_filter) and file_filter(p)) or (not callable(file_filter))
                 )
                 if sources:
                     break
         return sources
+
+    @property
+    def can_stream(self) -> bool:
+        """Flag to indicate whether the importer can stream the dataset item or not."""
+        return False
+
+    def get_extractor_merger(self) -> Optional[Type[ExtractorMerger]]:
+        """Extractor merger dedicated for the data format
+
+        Datumaro import process spawns multiple `DatasetBase` for the detected sources.
+        We can find a bunch of the detected sources from the given directory path.
+        It is usually each detected source is corresponded to the subset of dataset
+        in many data formats.
+
+        Parameters:
+            stream: There can exist a branch according to `stream` flag
+
+        Returns:
+            If None, use `Dataset.from_extractors()` to merge the extractors,
+            Otherwise, use the return type to merge the extractors.
+        """
+        return None

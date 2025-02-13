@@ -52,7 +52,7 @@ class _TestValidatorBase(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Label(
                             1,
@@ -92,7 +92,7 @@ class _TestValidatorBase(TestCase):
                 ),
                 DatasetItem(
                     id=2,
-                    media=Image(data=np.ones((2, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 4, 3))),
                     annotations=[
                         Label(
                             2,
@@ -125,7 +125,7 @@ class _TestValidatorBase(TestCase):
                 DatasetItem(id=3),
                 DatasetItem(
                     id=4,
-                    media=Image(data=np.ones((2, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 4, 3))),
                     annotations=[
                         Label(
                             0,
@@ -188,7 +188,7 @@ class _TestValidatorBase(TestCase):
                 ),
                 DatasetItem(
                     id=5,
-                    media=Image(data=np.ones((2, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 4, 3))),
                     annotations=[
                         Label(
                             0,
@@ -223,7 +223,7 @@ class _TestValidatorBase(TestCase):
                 ),
                 DatasetItem(
                     id=6,
-                    media=Image(data=np.ones((2, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 4, 3))),
                     annotations=[
                         Label(
                             1,
@@ -263,7 +263,7 @@ class _TestValidatorBase(TestCase):
                 ),
                 DatasetItem(
                     id=7,
-                    media=Image(data=np.ones((2, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 4, 3))),
                     annotations=[
                         Label(
                             1,
@@ -299,7 +299,7 @@ class _TestValidatorBase(TestCase):
                 ),
                 DatasetItem(
                     id=8,
-                    media=Image(data=np.ones((2, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 4, 3))),
                     annotations=[
                         Label(
                             2,

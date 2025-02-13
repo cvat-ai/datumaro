@@ -64,7 +64,7 @@ class CityscapesImportTest(TestCase):
                 DatasetItem(
                     id="defaultcity/defaultcity_000001_000031",
                     subset="test",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 0, 0, 0]]), label=3, attributes={"is_crowd": True}),
                         Mask(
@@ -84,7 +84,7 @@ class CityscapesImportTest(TestCase):
                 DatasetItem(
                     id="defaultcity/defaultcity_000001_000032",
                     subset="test",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 1, 0, 0, 0]]),
@@ -99,7 +99,7 @@ class CityscapesImportTest(TestCase):
                 DatasetItem(
                     id="defaultcity/defaultcity_000002_000045",
                     subset="train",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 0, 1, 1]]), label=3, attributes={"is_crowd": True}),
                         Mask(
@@ -113,7 +113,7 @@ class CityscapesImportTest(TestCase):
                 DatasetItem(
                     id="defaultcity/defaultcity_000001_000019",
                     subset="val",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 0, 0, 1, 1]]), label=3, attributes={"is_crowd": True}),
                         Mask(
@@ -139,7 +139,7 @@ class CityscapesImportTest(TestCase):
                 DatasetItem(
                     id="defaultcity/defaultcity_000001_000031",
                     subset="test",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 0, 0, 0]]), label=19, attributes={"is_crowd": True}),
                         Mask(np.array([[0, 0, 1, 1, 1]]), label=14, attributes={"is_crowd": True}),
@@ -148,7 +148,7 @@ class CityscapesImportTest(TestCase):
                 DatasetItem(
                     id="defaultcity/defaultcity_000001_000032",
                     subset="test",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 0, 0, 0]]), label=16, attributes={"is_crowd": True}),
                         Mask(np.array([[0, 0, 1, 0, 0]]), label=3, attributes={"is_crowd": True}),
@@ -158,7 +158,7 @@ class CityscapesImportTest(TestCase):
                 DatasetItem(
                     id="defaultcity/defaultcity_000002_000045",
                     subset="train",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 0, 1, 1]]), label=19, attributes={"is_crowd": True}),
                         Mask(np.array([[0, 0, 1, 0, 0]]), label=11, attributes={"is_crowd": True}),
@@ -167,7 +167,7 @@ class CityscapesImportTest(TestCase):
                 DatasetItem(
                     id="defaultcity/defaultcity_000001_000019",
                     subset="val",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 1, 1, 1, 1]]), label=19, attributes={"is_crowd": True}),
                     ],
@@ -218,7 +218,7 @@ class CityscapesExporterTest(TestCase):
                         DatasetItem(
                             id="defaultcity_1_2",
                             subset="test",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     np.array([[0, 0, 0, 1, 0]]),
@@ -241,7 +241,7 @@ class CityscapesExporterTest(TestCase):
                         DatasetItem(
                             id="defaultcity_3",
                             subset="val",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     np.array([[1, 1, 0, 1, 1]]),
@@ -273,7 +273,7 @@ class CityscapesExporterTest(TestCase):
                     [
                         DatasetItem(
                             id="defaultcity_1_2",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     np.array([[1, 0, 0, 1, 0]]),
@@ -289,7 +289,7 @@ class CityscapesExporterTest(TestCase):
                         ),
                         DatasetItem(
                             id="defaultcity_1_3",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     np.array([[1, 1, 0, 1, 0]]),
@@ -321,7 +321,7 @@ class CityscapesExporterTest(TestCase):
                     [
                         DatasetItem(
                             id="кириллица с пробелом",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     np.array([[1, 0, 0, 1, 1]]),
@@ -355,7 +355,7 @@ class CityscapesExporterTest(TestCase):
                         DatasetItem(
                             id="a/b/1",
                             subset="test",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     np.array([[1, 0, 0, 1, 1]]),
@@ -389,7 +389,7 @@ class CityscapesExporterTest(TestCase):
                         DatasetItem(
                             id="city_1_2",
                             subset="test",
-                            media=Image(data=np.ones((2, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((2, 5, 3))),
                         ),
                     ]
                 )
@@ -407,7 +407,7 @@ class CityscapesExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 0, 0, 1, 1]]), label=0),
                         Mask(np.array([[0, 1, 1, 0, 0]]), label=1),
@@ -421,7 +421,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -459,7 +459,7 @@ class CityscapesExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(np.array([[1, 0, 0, 1, 1]]), label=0),
                         Mask(np.array([[0, 1, 1, 0, 0]]), label=1),
@@ -473,7 +473,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -517,7 +517,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -545,7 +545,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -583,7 +583,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -615,7 +615,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -653,7 +653,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -686,7 +686,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -724,7 +724,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -761,7 +761,7 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             np.array([[1, 0, 0, 1, 1]]),
@@ -799,10 +799,12 @@ class CityscapesExporterTest(TestCase):
             def __iter__(self):
                 return iter(
                     [
-                        DatasetItem(id="q", media=Image(path="q.JPEG", data=np.zeros((4, 3, 3)))),
+                        DatasetItem(
+                            id="q", media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG")
+                        ),
                         DatasetItem(
                             id="w",
-                            media=Image(path="w.bmp", data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3)), ext=".bmp"),
                             annotations=[
                                 Mask(
                                     np.array([[1, 0, 0, 1, 0]]),
@@ -842,14 +844,14 @@ class CityscapesExporterTest(TestCase):
                 DatasetItem(
                     1,
                     subset="a",
-                    media=Image(data=np.ones((2, 1, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 1, 3))),
                     annotations=[Mask(np.ones((2, 1)), label=2, id=1)],
                 ),
-                DatasetItem(2, subset="a", media=Image(data=np.ones((3, 2, 3)))),
+                DatasetItem(2, subset="a", media=Image.from_numpy(data=np.ones((3, 2, 3)))),
                 DatasetItem(
                     2,
                     subset="b",
-                    media=Image(data=np.ones((2, 2, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 2, 3))),
                     annotations=[Mask(np.ones((2, 2)), label=1, id=1)],
                 ),
             ],
@@ -870,19 +872,19 @@ class CityscapesExporterTest(TestCase):
                     DatasetItem(
                         1,
                         subset="a",
-                        media=Image(data=np.ones((2, 1, 3))),
+                        media=Image.from_numpy(data=np.ones((2, 1, 3))),
                         annotations=[Mask(np.ones((2, 1)), label=1)],
                     ),
                     DatasetItem(
                         2,
                         subset="b",
-                        media=Image(data=np.ones((2, 2, 3))),
+                        media=Image.from_numpy(data=np.ones((2, 2, 3))),
                         annotations=[Mask(np.ones((2, 2)), label=0)],
                     ),
                     DatasetItem(
                         3,
                         subset="c",
-                        media=Image(data=np.ones((2, 3, 3))),
+                        media=Image.from_numpy(data=np.ones((2, 3, 3))),
                         annotations=[Mask(np.ones((2, 2)), label=0)],
                     ),
                 ],
@@ -893,7 +895,7 @@ class CityscapesExporterTest(TestCase):
             )
             dataset.export(path, "cityscapes", save_media=True)
 
-            dataset.put(DatasetItem(2, subset="a", media=Image(data=np.ones((3, 2, 3)))))
+            dataset.put(DatasetItem(2, subset="a", media=Image.from_numpy(data=np.ones((3, 2, 3)))))
             dataset.remove(3, "c")
             dataset.save(save_media=True)
 
@@ -932,7 +934,7 @@ class CityscapesExporterTest(TestCase):
                         DatasetItem(
                             id="a",
                             subset="test",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     np.array([[0, 1, 1, 1, 0]]),

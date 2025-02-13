@@ -69,7 +69,7 @@ class KittiImportTest(TestCase):
                 DatasetItem(
                     id="000030_10",
                     subset="training",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 1, 0, 0, 0]]),
@@ -94,7 +94,7 @@ class KittiImportTest(TestCase):
                 DatasetItem(
                     id="000030_11",
                     subset="training",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 1, 0, 0, 0]]),
@@ -133,7 +133,7 @@ class KittiImportTest(TestCase):
                 DatasetItem(
                     id="000030_10",
                     subset="training",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -158,7 +158,7 @@ class KittiImportTest(TestCase):
                 DatasetItem(
                     id="000030_11",
                     subset="training",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -257,7 +257,7 @@ class KittiExporterTest(TestCase):
                         DatasetItem(
                             id="1_2",
                             subset="test",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     image=np.array([[0, 0, 0, 1, 0]]),
@@ -282,7 +282,7 @@ class KittiExporterTest(TestCase):
                         DatasetItem(
                             id="3",
                             subset="val",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     image=np.array([[1, 1, 0, 1, 1]]),
@@ -315,7 +315,7 @@ class KittiExporterTest(TestCase):
                 DatasetItem(
                     id="1_2",
                     subset="test",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -331,7 +331,7 @@ class KittiExporterTest(TestCase):
                 DatasetItem(
                     id="1_3",
                     subset="test",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -373,7 +373,7 @@ class KittiExporterTest(TestCase):
                         DatasetItem(
                             id="1_2",
                             subset="test",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     image=np.array([[0, 0, 0, 1, 0]]),
@@ -415,7 +415,7 @@ class KittiExporterTest(TestCase):
                     [
                         DatasetItem(
                             id="1_2",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     image=np.array([[1, 0, 0, 1, 0]]),
@@ -433,7 +433,7 @@ class KittiExporterTest(TestCase):
                         ),
                         DatasetItem(
                             id="1_3",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     image=np.array([[1, 1, 0, 1, 0]]),
@@ -468,7 +468,7 @@ class KittiExporterTest(TestCase):
                         DatasetItem(
                             id="data",
                             subset="test",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     image=np.array([[1, 0, 0, 1, 1]]),
@@ -502,7 +502,7 @@ class KittiExporterTest(TestCase):
                     [
                         DatasetItem(
                             id="кириллица с пробелом",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     image=np.array([[1, 0, 0, 1, 1]]),
@@ -537,7 +537,7 @@ class KittiExporterTest(TestCase):
                         DatasetItem(
                             id="a/b/1",
                             subset="test",
-                            media=Image(data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3))),
                             annotations=[
                                 Mask(
                                     image=np.array([[1, 0, 0, 1, 1]]),
@@ -572,7 +572,7 @@ class KittiExporterTest(TestCase):
                         DatasetItem(
                             id="city_1_2",
                             subset="test",
-                            media=Image(data=np.ones((2, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((2, 5, 3))),
                         ),
                     ]
                 )
@@ -590,7 +590,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -620,7 +620,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -658,7 +658,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -686,7 +686,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -724,7 +724,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -756,7 +756,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -794,7 +794,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -827,7 +827,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -865,7 +865,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -902,7 +902,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -941,11 +941,11 @@ class KittiExporterTest(TestCase):
                 return iter(
                     [
                         DatasetItem(
-                            id="q/1", media=Image(path="q/1.JPEG", data=np.zeros((4, 3, 3)))
+                            id="q/1", media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG")
                         ),
                         DatasetItem(
                             id="a/b/c/2",
-                            media=Image(path="a/b/c/2.bmp", data=np.ones((1, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((1, 5, 3)), ext=".bmp"),
                             annotations=[
                                 Mask(
                                     image=np.array([[1, 0, 0, 1, 0]]),
@@ -982,7 +982,7 @@ class KittiExporterTest(TestCase):
                 osp.isfile(osp.join(test_dir, "default", KittiPath.IMAGES_DIR, "a/b/c/2.bmp"))
             )
             self.assertTrue(
-                osp.isfile(osp.join(test_dir, "default", KittiPath.IMAGES_DIR, "q/1.JPEG"))
+                osp.isfile(osp.join(test_dir, "default", KittiPath.IMAGES_DIR, "q/1.jpeg"))
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -993,7 +993,7 @@ class KittiExporterTest(TestCase):
                     [
                         DatasetItem(
                             id="a",
-                            media=Image(data=np.ones((5, 5, 3))),
+                            media=Image.from_numpy(data=np.ones((5, 5, 3))),
                             annotations=[
                                 Mask(
                                     image=np.array([[1, 0, 0, 0, 0]] * 5),
@@ -1024,7 +1024,7 @@ class KittiExporterTest(TestCase):
                 DatasetItem(
                     id="b",
                     subset="val",
-                    media=Image(data=np.ones((5, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((5, 5, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -1059,7 +1059,7 @@ class KittiExporterTest(TestCase):
             [
                 DatasetItem(
                     id="a",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 0, 0]]),
@@ -1095,7 +1095,7 @@ class KittiExporterTest(TestCase):
             [
                 DatasetItem(
                     id="a",
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 0, 0]]),
@@ -1138,7 +1138,7 @@ class KittiExporterTest(TestCase):
                 DatasetItem(
                     id="1_2",
                     subset="test",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -1154,7 +1154,7 @@ class KittiExporterTest(TestCase):
                 DatasetItem(
                     id="1_3",
                     subset="test",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -1194,7 +1194,7 @@ class KittiExporterTest(TestCase):
                 DatasetItem(
                     id="1_2",
                     subset="test",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -1210,7 +1210,7 @@ class KittiExporterTest(TestCase):
                 DatasetItem(
                     id="1_3",
                     subset="test",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -1254,7 +1254,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),
@@ -1282,7 +1282,7 @@ class KittiExporterTest(TestCase):
             def __iter__(self):
                 yield DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((1, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((1, 5, 3))),
                     annotations=[
                         Mask(
                             image=np.array([[1, 0, 0, 1, 1]]),

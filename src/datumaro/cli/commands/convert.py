@@ -19,7 +19,7 @@ from ..util.project import generate_next_file_name
 
 def build_parser(parser_ctor=argparse.ArgumentParser):
     builtin_readers = sorted(set(Environment().importers) | set(Environment().extractors))
-    builtin_writers = sorted(Environment().converters)
+    builtin_writers = sorted(Environment().exporters)
 
     parser = parser_ctor(
         help="Convert an existing dataset to another format",
@@ -102,7 +102,7 @@ def convert_command(args):
     env = Environment()
 
     try:
-        converter = env.converters[args.output_format]
+        converter = env.exporters[args.output_format]
     except KeyError:
         raise CliException("Converter for format '%s' is not found" % args.output_format)
     extra_args = converter.parse_cmdline(args.extra_args)

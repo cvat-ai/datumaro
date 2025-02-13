@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from datumaro.components.media import ByteImage, Image
+from datumaro.components.media import Image, ImageFromBytes
 from datumaro.util.image import (
     encode_image,
     lazy_image,
@@ -71,7 +71,7 @@ class ImageTest(TestCase):
     def test_can_report_cached_size(self):
         data = np.ones((5, 6, 3))
 
-        image = Image(data=lambda _: data, size=(2, 4))
+        image = Image.from_numpy(data=lambda _: data, size=(2, 4))
 
         self.assertEqual((2, 4), image.size)
 
@@ -84,37 +84,33 @@ class ImageTest(TestCase):
 
             for args in [
                 {"data": image},
-                {"data": image, "path": path},
-                {"data": image, "path": path, "size": (2, 4)},
                 {"data": image, "ext": "png"},
                 {"data": image, "ext": "png", "size": (2, 4)},
-                {"data": lambda p: image},
-                {"data": lambda p: image, "path": "somepath"},
-                {"data": lambda p: image, "ext": "jpg"},
+                {"data": lambda: image},
+                {"data": lambda: image, "ext": "jpg"},
                 {"path": path},
-                {"path": path, "data": load_image},
-                {"path": path, "data": load_image, "size": (2, 4)},
                 {"path": path, "size": (2, 4)},
             ]:
                 with self.subTest(**args):
-                    img = Image(**args)
+                    assert "path" not in args or "data" not in args
+                    if "path" in args:
+                        img = Image.from_file(**args)
+                    else:
+                        img = Image.from_numpy(**args)
+
                     self.assertTrue(img.has_data)
                     np.testing.assert_array_equal(img.data, image)
                     self.assertEqual(img.size, tuple(image.shape[:2]))
 
             with self.subTest():
-                img = Image(size=(2, 4))
+                img = Image.from_file(path="somepath", size=(2, 4))
                 self.assertEqual(img.size, (2, 4))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_ctor_errors(self):
         with self.subTest("no data specified"):
-            with self.assertRaisesRegex(Exception, "can not be empty"):
+            with self.assertRaisesRegex(Exception, "Directly initalizing"):
                 Image(ext="jpg")
-
-        with self.subTest("either path or ext"):
-            with self.assertRaisesRegex(Exception, "both 'path' and 'ext'"):
-                Image(path="somepath", ext="someext")
 
 
 class BytesImageTest(TestCase):
@@ -122,8 +118,8 @@ class BytesImageTest(TestCase):
     def test_lazy_image_shape(self):
         data = encode_image(np.ones((5, 6, 3)), "png")
 
-        image_lazy = ByteImage(data=data, size=(2, 4))
-        image_eager = ByteImage(data=data)
+        image_lazy = ImageFromBytes(data=data, size=(2, 4))
+        image_eager = ImageFromBytes(data=data)
 
         self.assertEqual((2, 4), image_lazy.size)
         self.assertEqual((5, 6), image_eager.size)
@@ -137,22 +133,16 @@ class BytesImageTest(TestCase):
 
             for args in [
                 {"data": image_bytes},
-                {"data": lambda _: image_bytes},
-                {"data": lambda _: image_bytes, "ext": ".jpg"},
-                {"data": image_bytes, "path": path},
-                {"data": image_bytes, "path": path, "size": (2, 4)},
-                {"data": image_bytes, "path": path, "size": (2, 4)},
-                {"path": path},
-                {"path": path, "size": (2, 4)},
+                {"data": lambda: image_bytes},
+                {"data": lambda: image_bytes, "ext": ".jpg"},
             ]:
                 with self.subTest(**args):
-                    img = ByteImage(**args)
+                    img = ImageFromBytes(**args)
                     # pylint: disable=pointless-statement
                     self.assertEqual("data" in args, img.has_data)
                     if img.has_data:
                         np.testing.assert_array_equal(img.data, image)
-                        self.assertEqual(img.get_bytes(), image_bytes)
-                    img.size
+                        self.assertEqual(img.bytes, image_bytes)
                     if "size" in args:
                         self.assertEqual(img.size, args["size"])
                     if "ext" in args or "path" in args:
@@ -165,14 +155,14 @@ class BytesImageTest(TestCase):
 
         for ext in (".bmp", ".jpg", ".png"):
             with self.subTest(ext=ext):
-                image = ByteImage(data=encode_image(image_data, ext))
+                image = ImageFromBytes(data=encode_image(image_data, ext))
                 self.assertEqual(image.ext, ext)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_ext_detection_failure(self):
         image_bytes = b"\xff" * 10  # invalid image
-        image = ByteImage(data=image_bytes)
-        self.assertEqual(image.ext, "")
+        image = ImageFromBytes(data=image_bytes)
+        self.assertEqual(image.ext, None)
 
 
 class ImageMetaTest(TestCase):

@@ -82,7 +82,7 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id=100,
                     subset="train",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Caption("hello", id=1),
                         Caption("world", id=2, group=5),
@@ -174,7 +174,7 @@ class DatumaroExporterTest(TestCase):
                 ),
                 DatasetItem(id=42, subset="test", attributes={"a1": 5, "a2": "42"}),
                 DatasetItem(id=42),
-                DatasetItem(id=43, media=Image(path="1/b/c.qq", size=(2, 4))),
+                DatasetItem(id=43, media=Image.from_file(path="1/b/c.qq", size=(2, 4))),
             ],
             categories={
                 AnnotationType.label: label_categories,
@@ -223,21 +223,21 @@ class DatumaroExporterTest(TestCase):
                             attributes={"occluded": False},
                         )
                     ],
-                    media=PointCloud(
+                    media=PointCloud.from_file(
                         os.path.join(dataset_path, "point_clouds", "default", "0000000000.pcd")
                     ),
                     attributes={"frame": 0},
                 ),
                 DatasetItem(
                     id="0000000001",
-                    media=PointCloud(
+                    media=PointCloud.from_file(
                         os.path.join(dataset_path, "point_clouds", "default", "0000000001.pcd")
                     ),
                     attributes={"frame": 1},
                 ),
                 DatasetItem(
                     id="0000000002",
-                    media=PointCloud(
+                    media=PointCloud.from_file(
                         os.path.join(dataset_path, "point_clouds", "default", "0000000002.pcd")
                     ),
                     attributes={"frame": 2},
@@ -280,7 +280,7 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id="100",
                     subset="default",
-                    media=Image(data=np.ones((10, 6, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 6, 3))),
                     annotations=[
                         Skeleton(
                             [
@@ -325,9 +325,9 @@ class DatumaroExporterTest(TestCase):
     def test_relative_paths(self):
         test_dataset = Dataset.from_iterable(
             [
-                DatasetItem(id="1", media=Image(data=np.ones((4, 2, 3)))),
-                DatasetItem(id="subdir1/1", media=Image(data=np.ones((2, 6, 3)))),
-                DatasetItem(id="subdir2/1", media=Image(data=np.ones((5, 4, 3)))),
+                DatasetItem(id="1", media=Image.from_numpy(data=np.ones((4, 2, 3)))),
+                DatasetItem(id="subdir1/1", media=Image.from_numpy(data=np.ones((2, 6, 3)))),
+                DatasetItem(id="subdir2/1", media=Image.from_numpy(data=np.ones((5, 4, 3)))),
             ]
         )
 
@@ -343,7 +343,7 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Bbox(0, 1, 2, 2, label=0, group=1, id=1, attributes={"is_crowd": False}),
                     ],
@@ -352,7 +352,7 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id=2,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Bbox(1, 0, 2, 2, label=1, group=2, id=2, attributes={"is_crowd": False}),
                     ],
@@ -361,7 +361,7 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id=3,
                     subset="train",
-                    media=Image(data=np.ones((4, 4, 3))),
+                    media=Image.from_numpy(data=np.ones((4, 4, 3))),
                     annotations=[
                         Bbox(0, 1, 2, 2, label=2, group=3, id=3, attributes={"is_crowd": False}),
                     ],
@@ -379,7 +379,11 @@ class DatumaroExporterTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_cyrillic_and_spaces_in_filename(self):
         test_dataset = Dataset.from_iterable(
-            [DatasetItem(id="кириллица с пробелом", media=Image(data=np.ones((4, 2, 3))))]
+            [
+                DatasetItem(
+                    id="кириллица с пробелом", media=Image.from_numpy(data=np.ones((4, 2, 3)))
+                )
+            ]
         )
 
         with TestDir() as test_dir:
@@ -393,12 +397,12 @@ class DatumaroExporterTest(TestCase):
             [
                 DatasetItem(
                     id="q/1",
-                    media=Image(path="q/1.JPEG", data=np.zeros((4, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG"),
                     attributes={"frame": 1},
                 ),
                 DatasetItem(
                     id="a/b/c/2",
-                    media=Image(path="a/b/c/2.bmp", data=np.zeros((3, 4, 3))),
+                    media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp"),
                     attributes={"frame": 2},
                 ),
             ]
@@ -432,7 +436,7 @@ class DatumaroExporterTest(TestCase):
         expected = Dataset.from_iterable(
             [
                 DatasetItem(1, subset="a"),
-                DatasetItem(2, subset="a", media=Image(data=np.ones((3, 2, 3)))),
+                DatasetItem(2, subset="a", media=Image.from_numpy(data=np.ones((3, 2, 3)))),
                 DatasetItem(2, subset="b"),
             ]
         )
@@ -446,12 +450,12 @@ class DatumaroExporterTest(TestCase):
                     # unmodified subset
                     DatasetItem(2, subset="b"),
                     # removed subset
-                    DatasetItem(3, subset="c", media=Image(data=np.ones((2, 2, 3)))),
+                    DatasetItem(3, subset="c", media=Image.from_numpy(data=np.ones((2, 2, 3)))),
                 ]
             )
             dataset.save(path, save_media=True)
 
-            dataset.put(DatasetItem(2, subset="a", media=Image(data=np.ones((3, 2, 3)))))
+            dataset.put(DatasetItem(2, subset="a", media=Image.from_numpy(data=np.ones((3, 2, 3)))))
             dataset.remove(3, "c")
             dataset.save(save_media=True)
 
@@ -465,8 +469,8 @@ class DatumaroExporterTest(TestCase):
             expected = Dataset.from_iterable(
                 [
                     DatasetItem(2, subset="test"),
-                    DatasetItem(3, subset="train", media=Image(data=np.ones((2, 2, 3)))),
-                    DatasetItem(4, subset="test", media=Image(data=np.ones((2, 3, 3)))),
+                    DatasetItem(3, subset="train", media=Image.from_numpy(data=np.ones((2, 2, 3)))),
+                    DatasetItem(4, subset="test", media=Image.from_numpy(data=np.ones((2, 3, 3)))),
                 ],
                 media_type=Image,
             )
@@ -474,8 +478,8 @@ class DatumaroExporterTest(TestCase):
                 [
                     DatasetItem(1, subset="a"),
                     DatasetItem(2, subset="b"),
-                    DatasetItem(3, subset="c", media=Image(data=np.ones((2, 2, 3)))),
-                    DatasetItem(4, subset="d", media=Image(data=np.ones((2, 3, 3)))),
+                    DatasetItem(3, subset="c", media=Image.from_numpy(data=np.ones((2, 2, 3)))),
+                    DatasetItem(4, subset="d", media=Image.from_numpy(data=np.ones((2, 3, 3)))),
                 ],
                 media_type=Image,
             )
@@ -504,12 +508,18 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id=1,
                     subset="test",
-                    media=PointCloud(
-                        "1.pcd",
+                    media=PointCloud.from_file(
+                        path=get_test_asset_path(
+                            "datumaro_dataset",
+                            "with_pcd",
+                            "point_clouds",
+                            "default",
+                            "0000000000.pcd",
+                        ),
                         extra_images=[
-                            Image(data=np.ones((5, 5, 3)), path="1/a.jpg"),
-                            Image(data=np.ones((5, 4, 3)), path="1/b.jpg"),
-                            Image(size=(5, 3), path="1/c.jpg"),
+                            Image.from_numpy(data=np.ones((5, 5, 3)), path="1/a.jpg"),
+                            Image.from_numpy(data=np.ones((5, 4, 3)), path="1/b.jpg"),
+                            Image.from_file(size=(5, 3), path="1/c.jpg"),
                         ],
                     ),
                     annotations=[
@@ -535,22 +545,12 @@ class DatumaroExporterTest(TestCase):
                     DatasetItem(
                         id=1,
                         subset="test",
-                        media=PointCloud(
+                        media=PointCloud.from_file(
                             osp.join(test_dir, "point_clouds", "test", "1.pcd"),
                             extra_images=[
-                                Image(
-                                    data=np.ones((5, 5, 3)),
-                                    path=osp.join(
-                                        test_dir, "related_images", "test", "1", "image_0.jpg"
-                                    ),
-                                ),
-                                Image(
-                                    data=np.ones((5, 4, 3)),
-                                    path=osp.join(
-                                        test_dir, "related_images", "test", "1", "image_1.jpg"
-                                    ),
-                                ),
-                                Image(
+                                Image.from_numpy(data=np.ones((5, 5, 3))),
+                                Image.from_numpy(data=np.ones((5, 4, 3))),
+                                Image.from_file(
                                     size=(5, 3),
                                     path=osp.join(
                                         test_dir, "related_images", "test", "1", "image_2.jpg"
@@ -615,7 +615,7 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id="img1",
                     subset="train",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Skeleton(
                             source_elements,
@@ -638,7 +638,7 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id="img1",
                     subset="train",
-                    media=Image(data=np.ones((10, 10, 3))),
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
                     annotations=[
                         Skeleton(
                             target_elements,

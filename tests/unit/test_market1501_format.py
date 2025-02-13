@@ -21,7 +21,7 @@ class Market1501FormatTest(TestCase):
                 DatasetItem(
                     id="0001_c2s3_000001_00",
                     subset="query",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={
                         "camera_id": 1,
                         "person_id": "0001",
@@ -34,7 +34,7 @@ class Market1501FormatTest(TestCase):
                 DatasetItem(
                     id="0002_c4s2_000002_00",
                     subset="test",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={
                         "camera_id": 3,
                         "person_id": "0002",
@@ -47,7 +47,7 @@ class Market1501FormatTest(TestCase):
                 DatasetItem(
                     id="0001_c1s1_000003_00",
                     subset="test",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={
                         "camera_id": 0,
                         "person_id": "0001",
@@ -72,7 +72,7 @@ class Market1501FormatTest(TestCase):
             [
                 DatasetItem(
                     id="0001_c2s3_000001_00",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={
                         "camera_id": 1,
                         "person_id": "0001",
@@ -97,7 +97,7 @@ class Market1501FormatTest(TestCase):
             [
                 DatasetItem(
                     id="кириллица с пробелом",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={"camera_id": 0, "person_id": "0001", "query": False},
                 ),
             ]
@@ -107,7 +107,7 @@ class Market1501FormatTest(TestCase):
             [
                 DatasetItem(
                     id="0001_c1s1_000000_00",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={
                         "camera_id": 0,
                         "person_id": "0001",
@@ -133,7 +133,7 @@ class Market1501FormatTest(TestCase):
                 DatasetItem(
                     id="0001_c2s3_000001_00",
                     subset="query",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={
                         "camera_id": 1,
                         "person_id": "0001",
@@ -158,7 +158,7 @@ class Market1501FormatTest(TestCase):
             [
                 DatasetItem(
                     id="c/0001_c1s1_000000_00",
-                    media=Image(path="c/0001_c1s1_0000_00.JPEG", data=np.zeros((4, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG"),
                     attributes={
                         "camera_id": 0,
                         "person_id": "0001",
@@ -170,7 +170,7 @@ class Market1501FormatTest(TestCase):
                 ),
                 DatasetItem(
                     id="a/b/0002_c2s2_000001_00",
-                    media=Image(path="a/b/0002_c2s2_0001_00.bmp", data=np.zeros((3, 4, 3))),
+                    media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp"),
                     attributes={
                         "camera_id": 1,
                         "person_id": "0002",
@@ -196,7 +196,7 @@ class Market1501FormatTest(TestCase):
                 DatasetItem(
                     id="test1",
                     subset="test",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                 ),
             ]
         )
@@ -224,7 +224,7 @@ class Market1501ImporterTest(TestCase):
                 DatasetItem(
                     id="0001_c2s3_000111_00",
                     subset="query",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={
                         "camera_id": 1,
                         "person_id": "0001",
@@ -237,7 +237,7 @@ class Market1501ImporterTest(TestCase):
                 DatasetItem(
                     id="0001_c1s1_001051_00",
                     subset="test",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={
                         "camera_id": 0,
                         "person_id": "0001",
@@ -250,7 +250,7 @@ class Market1501ImporterTest(TestCase):
                 DatasetItem(
                     id="0002_c1s3_000151_00",
                     subset="train",
-                    media=Image(data=np.ones((2, 5, 3))),
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
                     attributes={
                         "camera_id": 0,
                         "person_id": "0002",

@@ -38,7 +38,7 @@ class MotExporterTest(TestCase):
                 DatasetItem(
                     id="000001",
                     subset="train",
-                    media=Image(data=np.ones((16, 16, 3))),
+                    media=Image.from_numpy(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -66,7 +66,7 @@ class MotExporterTest(TestCase):
                 DatasetItem(
                     id="000002",
                     subset="val",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(1, 2, 4, 2, label=3),
                     ],
@@ -74,7 +74,7 @@ class MotExporterTest(TestCase):
                 DatasetItem(
                     id="000003",
                     subset="test",
-                    media=Image(data=np.ones((5, 4, 3)) * 3),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3)) * 3),
                 ),
             ],
             categories={
@@ -88,7 +88,7 @@ class MotExporterTest(TestCase):
             [
                 DatasetItem(
                     id="000001",
-                    media=Image(data=np.ones((16, 16, 3))),
+                    media=Image.from_numpy(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -129,7 +129,7 @@ class MotExporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="000002",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(
                             1,
@@ -147,7 +147,7 @@ class MotExporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="000003",
-                    media=Image(data=np.ones((5, 4, 3)) * 3),
+                    media=Image.from_numpy(data=np.ones((5, 4, 3)) * 3),
                 ),
             ],
             categories={
@@ -172,7 +172,7 @@ class MotExporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((16, 16, 3))),
+                    media=Image.from_numpy(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -190,7 +190,7 @@ class MotExporterTest(TestCase):
                 ),
                 DatasetItem(
                     id=2,
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(
                             1,
@@ -221,7 +221,7 @@ class MotExporterTest(TestCase):
             [
                 DatasetItem(
                     "1",
-                    media=Image(path="1.JPEG", data=np.zeros((4, 3, 3))),
+                    media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG"),
                     annotations=[
                         Bbox(
                             0,
@@ -239,7 +239,7 @@ class MotExporterTest(TestCase):
                 ),
                 DatasetItem(
                     "2",
-                    media=Image(path="2.bmp", data=np.zeros((3, 4, 3))),
+                    media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp"),
                 ),
             ],
             categories=["a"],
@@ -259,7 +259,7 @@ class MotExporterTest(TestCase):
             [
                 DatasetItem(
                     id="000001",
-                    media=Image(data=np.ones((16, 16, 3))),
+                    media=Image.from_numpy(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -277,7 +277,7 @@ class MotExporterTest(TestCase):
                 ),
                 DatasetItem(
                     id="000002",
-                    media=Image(data=np.ones((8, 8, 3))),
+                    media=Image.from_numpy(data=np.ones((8, 8, 3))),
                     annotations=[
                         Bbox(
                             1,
@@ -323,7 +323,7 @@ class MotImporterTest(TestCase):
             [
                 DatasetItem(
                     id="000001",
-                    media=Image(data=np.ones((16, 16, 3))),
+                    media=Image.from_numpy(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
                             0,
@@ -353,7 +353,7 @@ class MotImporterTest(TestCase):
             [
                 DatasetItem(
                     id=1,
-                    media=Image(data=np.ones((16, 16, 3))),
+                    media=Image.from_numpy(data=np.ones((16, 16, 3))),
                     annotations=[
                         Bbox(
                             0,

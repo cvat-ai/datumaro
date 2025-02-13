@@ -32,7 +32,7 @@ class ImageOperationsTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_save_and_load_backends(self):
         backends = image_module.ImageBackend
-        for save_backend, load_backend, c in product(backends, backends, [1, 3]):
+        for save_backend, load_backend, c in product(backends, backends, [1, 3, 4]):
             with TestDir() as test_dir:
                 src_image = generate_test_img(c)
                 path = osp.join(test_dir, "img.png")  # lossless
@@ -45,13 +45,14 @@ class ImageOperationsTest(TestCase):
 
                 # If image_module.IMAGE_COLOR_CHANNEL.get() == image_module.ImageColorChannel.UNCHANGED
                 # OpenCV will read an image as BGR(A), but PIL will read an image as RGB(A).
-                if (
-                    c == 3
-                    and load_backend == image_module.ImageBackend.PIL
+                if c in [3, 4] and (
+                    load_backend == image_module.ImageBackend.PIL
                     and image_module.IMAGE_COLOR_CHANNEL.get()
                     == image_module.ImageColorChannel.UNCHANGED
+                    or image_module.IMAGE_COLOR_CHANNEL.get()
+                    == image_module.ImageColorChannel.COLOR_RGB
                 ):
-                    dst_image = np.flip(dst_image, -1)
+                    dst_image[..., :3] = dst_image[..., 2::-1]  # to bgr
 
                 self.assertTrue(
                     np.array_equal(src_image, dst_image),
@@ -61,7 +62,7 @@ class ImageOperationsTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_encode_and_decode_backends(self):
         backends = image_module.ImageBackend
-        for save_backend, load_backend, c in product(backends, backends, [1, 3]):
+        for save_backend, load_backend, c in product(backends, backends, [1, 3, 4]):
             src_image = generate_test_img(c)
 
             image_module.IMAGE_BACKEND.set(save_backend)
@@ -72,13 +73,14 @@ class ImageOperationsTest(TestCase):
 
             # If image_module.IMAGE_COLOR_CHANNEL.get() == image_module.ImageColorChannel.UNCHANGED
             # OpenCV will read an image as BGR(A), but PIL will read an image as RGB(A).
-            if (
-                c == 3
-                and load_backend == image_module.ImageBackend.PIL
+            if c in [3, 4] and (
+                load_backend == image_module.ImageBackend.PIL
                 and image_module.IMAGE_COLOR_CHANNEL.get()
                 == image_module.ImageColorChannel.UNCHANGED
+                or image_module.IMAGE_COLOR_CHANNEL.get()
+                == image_module.ImageColorChannel.COLOR_RGB
             ):
-                dst_image = np.flip(dst_image, -1)
+                dst_image[..., :3] = dst_image[..., 2::-1]  # to bgr
 
             self.assertTrue(
                 np.array_equal(src_image, dst_image),
@@ -142,18 +144,15 @@ class ImageDecodeTest:
             assert img_decoded.shape[-1] == 3
             assert np.allclose(expected_bgr_image[:, :, ::-1], img_decoded)
 
-        # 4 channels from ImageColorScale.UNCHANGED
+        # 1 (without an extra dim), 3 or 4 channels from ImageColorScale.UNCHANGED
         with image_module.decode_image_context(
             image_backend, image_module.ImageColorChannel.UNCHANGED
         ):
             img_decoded = image_module.decode_image(img_bytes)
             assert img_decoded.shape == original_image.shape
 
-            if image_backend == image_module.ImageBackend.cv2 or channels == 1:
-                assert np.allclose(original_image, img_decoded)
-            else:
-                # PIL will return RGBA, thus we need to correct the fixture
-                to_rgb = original_image[:, :, :3][:, :, ::-1]
-                original_image[:, :, :3] = to_rgb
+            if image_backend == image_module.ImageBackend.PIL and channels != 1:
+                # PIL returns RGB(A)
+                img_decoded[:, :, :3] = img_decoded[:, :, 2::-1]  # to bgr
 
-                assert np.allclose(original_image, img_decoded)
+            assert np.allclose(original_image, img_decoded)

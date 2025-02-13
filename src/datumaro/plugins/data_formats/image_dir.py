@@ -4,6 +4,7 @@
 
 import logging as log
 import os
+import os.path as osp
 from pathlib import Path
 from typing import List, Optional
 
@@ -72,6 +73,12 @@ class ImageDirBase(SubsetBase):
                 DatasetItem(id=item_id, subset=self._subset, media=Image.from_file(path=path))
             )
         self._ann_types = set()
+
+        for path in find_images(url, recursive=True):
+            item_id = osp.relpath(osp.splitext(path)[0], url)
+            self._items.append(
+                DatasetItem(id=item_id, subset=self._subset, media=Image.from_file(path=path))
+            )
 
     @property
     def is_stream(self) -> bool:

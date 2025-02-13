@@ -153,6 +153,6 @@ class ImageDecodeTest:
 
             if image_backend == image_module.ImageBackend.PIL and channels != 1:
                 # PIL returns RGB(A)
-                img_decoded[:, :, :3] = img_decoded[:, :, 2::-1] # to bgr
+                img_decoded[:, :, :3] = img_decoded[:, :, 2::-1]  # to bgr
 
             assert np.allclose(original_image, img_decoded)

@@ -17,10 +17,8 @@ from datumaro.components.annotation import (
     RleMask,
     Shape,
 )
+from datumaro.util.definitions import BboxIntCoords
 from datumaro.util.mask_tools import mask_to_rle
-
-BboxCoords = Tuple[float, float, float, float]
-"A tuple of bounding box coordinates, (x, y, w, h)"
 
 SpatialAnnotation = Union[Shape, Mask]
 
@@ -41,7 +39,7 @@ def find_group_leader(group: Sequence[SpatialAnnotation]) -> SpatialAnnotation:
     return max(group, key=lambda x: x.get_area())
 
 
-def get_bbox(ann: Union[Sequence, BboxCoords, SpatialAnnotation]) -> BboxCoords:
+def get_bbox(ann: Union[Sequence, BboxIntCoords, SpatialAnnotation]) -> BboxIntCoords:
     "An utility function to get a bbox of the bbox-like annotation"
 
     if hasattr(ann, "get_bbox"):
@@ -49,12 +47,12 @@ def get_bbox(ann: Union[Sequence, BboxCoords, SpatialAnnotation]) -> BboxCoords:
     elif hasattr(ann, "__len__") and len(ann) == 4:
         return ann
     elif hasattr(ann, "__len__") and len(ann) == 0:
-        return [0, 0, 0, 0]
+        return BboxIntCoords(0, 0, 0, 0)
     else:
         raise ValueError("The value of type '%s' can't be treated as a bounding box" % type(ann))
 
 
-def max_bbox(annotations: Iterable[Union[BboxCoords, SpatialAnnotation]]) -> BboxCoords:
+def max_bbox(annotations: Iterable[Union[BboxIntCoords, SpatialAnnotation]]) -> BboxIntCoords:
     """
     Computes the maximum bbox for the set of spatial annotations and boxes.
 
@@ -67,10 +65,10 @@ def max_bbox(annotations: Iterable[Union[BboxCoords, SpatialAnnotation]]) -> Bbo
     y0 = min((b[1] for b in boxes), default=0)
     x1 = max((b[0] + b[2] for b in boxes), default=0)
     y1 = max((b[1] + b[3] for b in boxes), default=0)
-    return [x0, y0, x1 - x0, y1 - y0]
+    return BboxIntCoords(x0, y0, x1 - x0, y1 - y0)
 
 
-def mean_bbox(annotations: Iterable[Union[BboxCoords, SpatialAnnotation]]) -> BboxCoords:
+def mean_bbox(annotations: Iterable[Union[BboxIntCoords, SpatialAnnotation]]) -> BboxIntCoords:
     """
     Computes the mean bbox for the set of spatial annotations and boxes.
 
@@ -84,7 +82,7 @@ def mean_bbox(annotations: Iterable[Union[BboxCoords, SpatialAnnotation]]) -> Bb
     mtb = sum(b[1] for b in boxes) / le
     mrb = sum(b[0] + b[2] for b in boxes) / le
     mbb = sum(b[1] + b[3] for b in boxes) / le
-    return [mlb, mtb, mrb - mlb, mbb - mtb]
+    return BboxIntCoords(mlb, mtb, mrb - mlb, mbb - mtb)
 
 
 def softmax(x):
@@ -114,8 +112,8 @@ def nms(segments, iou_thresh=0.5):
 
 
 def bbox_iou(
-    a: Union[SpatialAnnotation, BboxCoords],
-    b: Union[SpatialAnnotation, BboxCoords],
+    a: Union[SpatialAnnotation, BboxIntCoords],
+    b: Union[SpatialAnnotation, BboxIntCoords],
 ) -> Union[Literal[-1], float]:
     """
     IoU computations for simple cases with bounding boxes

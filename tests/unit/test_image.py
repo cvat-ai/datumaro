@@ -1,14 +1,25 @@
+# Copyright (C) 2019-2024 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+
 import os.path as osp
 from itertools import product
 from unittest import TestCase
 
 import numpy as np
 import PIL
+import pytest
 
 import datumaro.util.image as image_module
 
-from tests.requirements import Requirements, mark_requirement
+from ..requirements import Requirements, mark_requirement
+
 from tests.utils.test_utils import TestDir
+
+
+def generate_test_img(channels: int) -> np.ndarray:
+    size = (5, 4, channels) if channels > 1 else (5, 4)
+    return np.random.randint(low=0, high=256, size=size, dtype=np.uint8)
 
 
 class ImageOperationsTest(TestCase):
@@ -21,29 +32,27 @@ class ImageOperationsTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_save_and_load_backends(self):
         backends = image_module.ImageBackend
-        for save_backend, load_backend, c in product(backends, backends, [1, 3]):
+        for save_backend, load_backend, c in product(backends, backends, [1, 3, 4]):
             with TestDir() as test_dir:
-                if c == 1:
-                    src_image = np.random.randint(0, 255 + 1, (2, 4))
-                else:
-                    src_image = np.random.randint(0, 255 + 1, (2, 4, c))
+                src_image = generate_test_img(c)
                 path = osp.join(test_dir, "img.png")  # lossless
 
                 image_module.IMAGE_BACKEND.set(save_backend)
-                image_module.save_image(path, src_image, jpeg_quality=100)
+                image_module.save_image(path, src_image)
 
                 image_module.IMAGE_BACKEND.set(load_backend)
                 dst_image = image_module.load_image(path)
 
                 # If image_module.IMAGE_COLOR_CHANNEL.get() == image_module.ImageColorChannel.UNCHANGED
                 # OpenCV will read an image as BGR(A), but PIL will read an image as RGB(A).
-                if (
-                    c == 3
-                    and load_backend == image_module.ImageBackend.PIL
+                if c in [3, 4] and (
+                    load_backend == image_module.ImageBackend.PIL
                     and image_module.IMAGE_COLOR_CHANNEL.get()
                     == image_module.ImageColorChannel.UNCHANGED
+                    or image_module.IMAGE_COLOR_CHANNEL.get()
+                    == image_module.ImageColorChannel.COLOR_RGB
                 ):
-                    dst_image = np.flip(dst_image, -1)
+                    dst_image[..., :3] = dst_image[..., 2::-1]  # to bgr
 
                 self.assertTrue(
                     np.array_equal(src_image, dst_image),
@@ -53,27 +62,25 @@ class ImageOperationsTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_encode_and_decode_backends(self):
         backends = image_module.ImageBackend
-        for save_backend, load_backend, c in product(backends, backends, [1, 3]):
-            if c == 1:
-                src_image = np.random.randint(0, 255 + 1, (2, 4))
-            else:
-                src_image = np.random.randint(0, 255 + 1, (2, 4, c))
+        for save_backend, load_backend, c in product(backends, backends, [1, 3, 4]):
+            src_image = generate_test_img(c)
 
             image_module.IMAGE_BACKEND.set(save_backend)
-            buffer = image_module.encode_image(src_image, ".png", jpeg_quality=100)  # lossless
+            buffer = image_module.encode_image(src_image, ".png")  # lossless
 
             image_module.IMAGE_BACKEND.set(load_backend)
             dst_image = image_module.decode_image(buffer)
 
             # If image_module.IMAGE_COLOR_CHANNEL.get() == image_module.ImageColorChannel.UNCHANGED
             # OpenCV will read an image as BGR(A), but PIL will read an image as RGB(A).
-            if (
-                c == 3
-                and load_backend == image_module.ImageBackend.PIL
+            if c in [3, 4] and (
+                load_backend == image_module.ImageBackend.PIL
                 and image_module.IMAGE_COLOR_CHANNEL.get()
                 == image_module.ImageColorChannel.UNCHANGED
+                or image_module.IMAGE_COLOR_CHANNEL.get()
+                == image_module.ImageColorChannel.COLOR_RGB
             ):
-                dst_image = np.flip(dst_image, -1)
+                dst_image[..., :3] = dst_image[..., 2::-1]  # to bgr
 
             self.assertTrue(
                 np.array_equal(src_image, dst_image),
@@ -107,3 +114,45 @@ class ImageOperationsTest(TestCase):
                 image_module.IMAGE_BACKEND.set(load_backend)
                 img = image_module.load_image(image_path)
                 assert img.shape == (10, 15, 3)
+
+
+class ImageDecodeTest:
+    @pytest.mark.parametrize("image_backend", image_module.ImageBackend)
+    @pytest.mark.parametrize("channels", [1, 3, 4])
+    def test_decode_image_context(self, image_backend: image_module.ImageBackend, channels: int):
+        original_image = generate_test_img(channels)
+        img_bytes = image_module.encode_image(original_image, ".png")
+
+        if channels == 1:
+            expected_bgr_image = np.repeat(original_image[:, :, np.newaxis], 3, axis=2)
+        else:
+            expected_bgr_image = original_image[:, :, :3]
+
+        # 3 channels from ImageColorScale.COLOR_BGR
+        with image_module.decode_image_context(
+            image_backend, image_module.ImageColorChannel.COLOR_BGR
+        ):
+            img_decoded = image_module.decode_image(img_bytes)
+            assert img_decoded.shape[-1] == 3
+            assert np.allclose(expected_bgr_image, img_decoded)
+
+        # 3 channels from ImageColorScale.COLOR_RGB
+        with image_module.decode_image_context(
+            image_backend, image_module.ImageColorChannel.COLOR_RGB
+        ):
+            img_decoded = image_module.decode_image(img_bytes)
+            assert img_decoded.shape[-1] == 3
+            assert np.allclose(expected_bgr_image[:, :, ::-1], img_decoded)
+
+        # 1 (without an extra dim), 3 or 4 channels from ImageColorScale.UNCHANGED
+        with image_module.decode_image_context(
+            image_backend, image_module.ImageColorChannel.UNCHANGED
+        ):
+            img_decoded = image_module.decode_image(img_bytes)
+            assert img_decoded.shape == original_image.shape
+
+            if image_backend == image_module.ImageBackend.PIL and channels != 1:
+                # PIL returns RGB(A)
+                img_decoded[:, :, :3] = img_decoded[:, :, 2::-1]  # to bgr
+
+            assert np.allclose(original_image, img_decoded)

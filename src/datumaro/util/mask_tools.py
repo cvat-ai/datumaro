@@ -4,22 +4,12 @@
 
 from functools import partial
 from itertools import chain, repeat
-from typing import (
-    TYPE_CHECKING,
-    Dict,
-    List,
-    NamedTuple,
-    NewType,
-    Optional,
-    Sequence,
-    Tuple,
-    TypedDict,
-    Union,
-)
+from typing import TYPE_CHECKING, Dict, List, NewType, Optional, Sequence, Tuple, TypedDict, Union
 
 import numpy as np
 
 from datumaro._capi import encode
+from datumaro.util.definitions import BboxIntCoords
 from datumaro.util.image import lazy_image, load_image
 
 if TYPE_CHECKING:
@@ -47,8 +37,6 @@ Polygon = List[int]
 
 PolygonGroup = List[Polygon]
 "A group of polygons, describing a single object"
-
-BboxCoords = NamedTuple("BboxCoords", [("x", int), ("y", int), ("w", int), ("h", int)])
 
 Segment = Union[PolygonGroup, Rle]
 
@@ -261,24 +249,6 @@ def mask_to_rle(binary_mask: BinaryMask) -> CompressedRle:
     return encode(binary_mask)
 
 
-def mask_to_rle_py(binary_mask: BinaryMask) -> CompressedRle:
-    # walk in row-major order as COCO format specifies
-    bounded = binary_mask.ravel(order="F")
-
-    # add borders to sequence
-    # find boundary positions for sequences and compute their lengths
-    difs = np.diff(bounded, prepend=[1 - bounded[0]], append=[1 - bounded[-1]])
-    (counts,) = np.where(difs != 0)
-
-    # start RLE encoding from 0 as COCO format specifies
-    if bounded[0] != 0:
-        counts = np.diff(counts, prepend=[0])
-    else:
-        counts = np.diff(counts)
-
-    return {"counts": counts, "size": list(binary_mask.shape)}
-
-
 def _is_contour_clockwise(contour: np.ndarray) -> bool:
     area = sum(
         (p2[0] - p1[0]) * (p2[1] + p1[1])  # doubled area under the line, (x2-x1)*((y2+y1)/2)
@@ -419,7 +389,7 @@ def to_uncompressed_rle(rle: Rle, *, width: int, height: int) -> UncompressedRle
     return pycocotools_mask.frPyObjects(rle, height, width)
 
 
-def mask_to_bboxes(mask: BinaryMask) -> List[List[int]]:
+def mask_to_bboxes(mask: BinaryMask) -> List[BboxIntCoords]:
     """
     Convert an instance mask to bboxes
 
@@ -544,27 +514,16 @@ def rles_to_mask(rles: Sequence[Union[CompressedRle, Polygon]], width, height) -
     return mask
 
 
-def rle_to_mask(rle_uncompressed: UncompressedRle) -> BinaryMask:
-    """Decode the uncompressed RLE string to the binary mask (2D np.ndarray)
-
-    The uncompressed RLE string can be obtained by
-    the datumaro.util.mask_tools.mask_to_rle() function
-    """
-    resulting_mask = pycocotools_mask.frPyObjects(rle_uncompressed, *rle_uncompressed["size"])
-    resulting_mask = pycocotools_mask.decode(resulting_mask)
-    return resulting_mask
-
-
-def find_mask_bbox(mask: BinaryMask) -> BboxCoords:
+def find_mask_bbox(mask: BinaryMask) -> BboxIntCoords:
     cols = np.any(mask, axis=0)
     rows = np.any(mask, axis=1)
     has_pixels = np.any(cols)
     if not has_pixels:
-        return BboxCoords(0, 0, 0, 0)
+        return BboxIntCoords(0, 0, 0, 0)
 
     x0, x1 = np.where(cols)[0][[0, -1]]
     y0, y1 = np.where(rows)[0][[0, -1]]
-    return BboxCoords(x0, y0, x1 - x0 + 1, y1 - y0 + 1)
+    return BboxIntCoords(x0, y0, x1 - x0 + 1, y1 - y0 + 1)
 
 
 def merge_masks(

@@ -4,6 +4,7 @@
 
 import logging as log
 import os
+import os.path as osp
 from pathlib import Path
 from typing import List, Optional
 
@@ -66,8 +67,8 @@ class ImageDirBase(SubsetBase):
         url = Path(url)
         assert url.is_dir(), url
 
-        for path in find_images(str(url)):
-            item_id = Path(path).stem
+        for path in find_images(str(url), recursive=True):
+            item_id = osp.relpath(osp.splitext(path)[0], url)
             self._items.append(
                 DatasetItem(id=item_id, subset=self._subset, media=Image.from_file(path=path))
             )

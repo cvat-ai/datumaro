@@ -32,26 +32,27 @@ class ImageOperationsTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_save_and_load_backends(self):
         backends = image_module.ImageBackend
-        for save_backend, load_backend, c in product(backends, backends, [1, 3]):
+        for save_backend, load_backend, c in product(backends, backends, [1, 3, 4]):
             with TestDir() as test_dir:
                 src_image = generate_test_img(c)
                 path = osp.join(test_dir, "img.png")  # lossless
 
                 image_module.IMAGE_BACKEND.set(save_backend)
-                image_module.save_image(path, src_image, jpeg_quality=100)
+                image_module.save_image(path, src_image)
 
                 image_module.IMAGE_BACKEND.set(load_backend)
                 dst_image = image_module.load_image(path)
 
                 # If image_module.IMAGE_COLOR_CHANNEL.get() == image_module.ImageColorChannel.UNCHANGED
                 # OpenCV will read an image as BGR(A), but PIL will read an image as RGB(A).
-                if (
-                    c == 3
-                    and load_backend == image_module.ImageBackend.PIL
+                if c in [3, 4] and (
+                    load_backend == image_module.ImageBackend.PIL
                     and image_module.IMAGE_COLOR_CHANNEL.get()
                     == image_module.ImageColorChannel.UNCHANGED
+                    or image_module.IMAGE_COLOR_CHANNEL.get()
+                    == image_module.ImageColorChannel.COLOR_RGB
                 ):
-                    dst_image = np.flip(dst_image, -1)
+                    dst_image[..., :3] = dst_image[..., 2::-1]  # to bgr
 
                 self.assertTrue(
                     np.array_equal(src_image, dst_image),
@@ -61,24 +62,25 @@ class ImageOperationsTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_encode_and_decode_backends(self):
         backends = image_module.ImageBackend
-        for save_backend, load_backend, c in product(backends, backends, [1, 3]):
+        for save_backend, load_backend, c in product(backends, backends, [1, 3, 4]):
             src_image = generate_test_img(c)
 
             image_module.IMAGE_BACKEND.set(save_backend)
-            buffer = image_module.encode_image(src_image, ".png", jpeg_quality=100)  # lossless
+            buffer = image_module.encode_image(src_image, ".png")  # lossless
 
             image_module.IMAGE_BACKEND.set(load_backend)
             dst_image = image_module.decode_image(buffer)
 
             # If image_module.IMAGE_COLOR_CHANNEL.get() == image_module.ImageColorChannel.UNCHANGED
             # OpenCV will read an image as BGR(A), but PIL will read an image as RGB(A).
-            if (
-                c == 3
-                and load_backend == image_module.ImageBackend.PIL
+            if c in [3, 4] and (
+                load_backend == image_module.ImageBackend.PIL
                 and image_module.IMAGE_COLOR_CHANNEL.get()
                 == image_module.ImageColorChannel.UNCHANGED
+                or image_module.IMAGE_COLOR_CHANNEL.get()
+                == image_module.ImageColorChannel.COLOR_RGB
             ):
-                dst_image = np.flip(dst_image, -1)
+                dst_image[..., :3] = dst_image[..., 2::-1]  # to bgr
 
             self.assertTrue(
                 np.array_equal(src_image, dst_image),

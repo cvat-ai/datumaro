@@ -151,11 +151,8 @@ class ImageDecodeTest:
             img_decoded = image_module.decode_image(img_bytes)
             assert img_decoded.shape == original_image.shape
 
-            if image_backend == image_module.ImageBackend.cv2 or channels == 1:
-                assert np.allclose(original_image, img_decoded)
-            else:
-                # PIL will return RGB(A), thus we need to correct the fixture
-                to_rgb = original_image[:, :, :3][:, :, ::-1]
-                original_image[:, :, :3] = to_rgb
+            if image_backend == image_module.ImageBackend.PIL and channels != 1:
+                # PIL returns RGB(A)
+                img_decoded[:, :, :3] = img_decoded[:, :, 2::-1] # to bgr
 
-                assert np.allclose(original_image, img_decoded)
+            assert np.allclose(original_image, img_decoded)

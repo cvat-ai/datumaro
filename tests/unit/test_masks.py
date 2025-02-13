@@ -490,7 +490,45 @@ class ColormapOperationsTest(TestCase):
         self.assertEqual({instance_idx: class_idx}, labels)
 
 
-class MaskTest:
+class MaskToolsTest:
+    """New test implementation based on PyTest framework.
+
+    The other tests in this file should be also migrated into this test class.
+    """
+
+    def test_make_index_mask(self):
+        binary_mask = np.eye(2, dtype=np.bool_)
+
+        def _test(expected, actual):
+            assert np.allclose(expected, actual) and actual.dtype == expected.dtype
+
+        _test(
+            np.array([[10, 0], [0, 10]], dtype=np.uint8),
+            mask_tools.make_index_mask(binary_mask=binary_mask, index=10, ignore_index=0),
+        )
+
+        _test(
+            np.array([[10, 255], [255, 10]], dtype=np.uint8),
+            mask_tools.make_index_mask(binary_mask=binary_mask, index=10, ignore_index=255),
+        )
+
+        _test(
+            np.array([[10, 100], [100, 10]], dtype=np.uint8),
+            mask_tools.make_index_mask(binary_mask=binary_mask, index=10, ignore_index=100),
+        )
+
+        _test(
+            np.array([[200, 100], [100, 200]], dtype=np.uint8),
+            mask_tools.make_index_mask(binary_mask=binary_mask, index=200, ignore_index=100),
+        )
+
+        _test(
+            np.array([[10, 65535], [65535, 10]], dtype=np.uint16),
+            mask_tools.make_index_mask(
+                binary_mask=binary_mask, index=10, ignore_index=65535, dtype=np.uint16
+            ),
+        )
+
     @pytest.mark.parametrize(
         "mask, expected_bbox",
         [

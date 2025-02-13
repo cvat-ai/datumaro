@@ -67,6 +67,7 @@ class ImageColorChannel(Enum):
         """Convert image color channel for OpenCV image (np.ndarray)."""
         image_buffer = np.frombuffer(image_bytes, dtype=dtype)
 
+        # OpenCV 4.11 added the new imread flag, so we will use it if available
         IMREAD_COLOR_RGB = getattr(cv2, "IMREAD_COLOR_RGB", 0)
 
         if self == ImageColorChannel.UNCHANGED:

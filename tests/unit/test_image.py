@@ -142,7 +142,7 @@ class ImageDecodeTest:
             assert img_decoded.shape[-1] == 3
             assert np.allclose(expected_bgr_image[:, :, ::-1], img_decoded)
 
-        # 4 channels from ImageColorScale.UNCHANGED
+        # 1 (without an extra dim), 3 or 4 channels from ImageColorScale.UNCHANGED
         with image_module.decode_image_context(
             image_backend, image_module.ImageColorChannel.UNCHANGED
         ):
@@ -152,7 +152,7 @@ class ImageDecodeTest:
             if image_backend == image_module.ImageBackend.cv2 or channels == 1:
                 assert np.allclose(original_image, img_decoded)
             else:
-                # PIL will return RGBA, thus we need to correct the fixture
+                # PIL will return RGB(A), thus we need to correct the fixture
                 to_rgb = original_image[:, :, :3][:, :, ::-1]
                 original_image[:, :, :3] = to_rgb
 

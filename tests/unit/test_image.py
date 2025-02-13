@@ -1,13 +1,19 @@
+# Copyright (C) 2019-2024 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+
 import os.path as osp
 from itertools import product
 from unittest import TestCase
 
 import numpy as np
 import PIL
+import pytest
 
 import datumaro.util.image as image_module
 
-from tests.requirements import Requirements, mark_requirement
+from ..requirements import Requirements, mark_requirement
+
 from tests.utils.test_utils import TestDir
 
 
@@ -107,3 +113,54 @@ class ImageOperationsTest(TestCase):
                 image_module.IMAGE_BACKEND.set(load_backend)
                 img = image_module.load_image(image_path)
                 assert img.shape == (10, 15, 3)
+
+
+class ImageDecodeTest:
+    def generate_test_img(self, channels) -> np.ndarray:
+        return np.random.randint(low=0, high=256, size=(5, 4, channels), dtype=np.uint8)
+
+    @pytest.mark.parametrize(
+        "image_backend", [image_module.ImageBackend.cv2, image_module.ImageBackend.PIL]
+    )
+    @pytest.mark.parametrize("channels", [1, 3, 4])
+    def test_decode_image_context(self, image_backend: image_module.ImageBackend, channels: int):
+        original_image = self.generate_test_img(channels)
+        img_bytes = image_module.encode_image(original_image, ".png")
+
+        expected_bgr_image = (
+            original_image[:, :, :3] if channels >= 3 else np.repeat(original_image, 3, axis=2)
+        )
+
+        # 3 channels from ImageColorScale.COLOR_BGR
+        with image_module.decode_image_context(
+            image_backend, image_module.ImageColorChannel.COLOR_BGR
+        ):
+            img_decoded = image_module.decode_image(img_bytes)
+            assert img_decoded.shape[-1] == 3
+            assert np.allclose(expected_bgr_image, img_decoded)
+
+        # 3 channels from ImageColorScale.COLOR_RGB
+        with image_module.decode_image_context(
+            image_backend, image_module.ImageColorChannel.COLOR_RGB
+        ):
+            img_decoded = image_module.decode_image(img_bytes)
+            assert img_decoded.shape[-1] == 3
+            assert np.allclose(expected_bgr_image[:, :, ::-1], img_decoded)
+
+        # 4 channels from ImageColorScale.UNCHANGED
+        with image_module.decode_image_context(
+            image_backend, image_module.ImageColorChannel.UNCHANGED
+        ):
+            img_decoded = image_module.decode_image(img_bytes)
+            if len(img_decoded.shape) == 2:
+                img_decoded = img_decoded[:, :, np.newaxis]
+            assert img_decoded.shape[-1] == channels
+
+            if image_backend == image_module.ImageBackend.cv2 or channels == 1:
+                assert np.allclose(original_image, img_decoded)
+            else:
+                # PIL will return RGBA, thus we need to correct the fixture
+                to_rgb = original_image[:, :, :3][:, :, ::-1]
+                original_image[:, :, :3] = to_rgb
+
+                assert np.allclose(original_image, img_decoded)

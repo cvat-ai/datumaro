@@ -5,10 +5,10 @@
 import logging as log
 import os
 import os.path as osp
-from typing import Tuple
+from typing import NamedTuple
 
 DEFAULT_SUBSET_NAME = "default"
-BboxIntCoords = Tuple[int, int, int, int]  # (x, y, w, h)
+BboxIntCoords = NamedTuple("BboxIntCoords", [("x", int), ("y", int), ("w", int), ("h", int)])
 SUBSET_NAME_BLACKLIST = {"labels", "images", "annotations", "instances"}
 SUBSET_NAME_WHITELIST = {"train", "test", "val"}
 

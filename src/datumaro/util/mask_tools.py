@@ -4,18 +4,7 @@
 
 from functools import partial
 from itertools import chain, repeat
-from typing import (
-    TYPE_CHECKING,
-    Dict,
-    List,
-    NamedTuple,
-    NewType,
-    Optional,
-    Sequence,
-    Tuple,
-    TypedDict,
-    Union,
-)
+from typing import TYPE_CHECKING, Dict, List, NewType, Optional, Sequence, Tuple, TypedDict, Union
 
 import numpy as np
 
@@ -48,8 +37,6 @@ Polygon = List[int]
 
 PolygonGroup = List[Polygon]
 "A group of polygons, describing a single object"
-
-BboxCoords = NamedTuple("BboxCoords", [("x", int), ("y", int), ("w", int), ("h", int)])
 
 Segment = Union[PolygonGroup, Rle]
 
@@ -527,16 +514,16 @@ def rles_to_mask(rles: Sequence[Union[CompressedRle, Polygon]], width, height) -
     return mask
 
 
-def find_mask_bbox(mask: BinaryMask) -> BboxCoords:
+def find_mask_bbox(mask: BinaryMask) -> BboxIntCoords:
     cols = np.any(mask, axis=0)
     rows = np.any(mask, axis=1)
     has_pixels = np.any(cols)
     if not has_pixels:
-        return BboxCoords(0, 0, 0, 0)
+        return BboxIntCoords(0, 0, 0, 0)
 
     x0, x1 = np.where(cols)[0][[0, -1]]
     y0, y1 = np.where(rows)[0][[0, -1]]
-    return BboxCoords(x0, y0, x1 - x0 + 1, y1 - y0 + 1)
+    return BboxIntCoords(x0, y0, x1 - x0 + 1, y1 - y0 + 1)
 
 
 def merge_masks(

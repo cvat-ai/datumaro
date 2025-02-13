@@ -5,7 +5,7 @@ import pytest
 
 import datumaro.util.mask_tools as mask_tools
 from datumaro.components.annotation import CompiledMask
-from datumaro.util.annotation_util import BboxCoords
+from datumaro.util.definitions import BboxIntCoords
 
 from tests.requirements import Requirements, mark_requirement
 
@@ -499,5 +499,5 @@ class MaskTest:
         ],
     )
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_find_mask_bbox(self, mask: mask_tools.BinaryMask, expected_bbox: BboxCoords):
+    def test_find_mask_bbox(self, mask: mask_tools.BinaryMask, expected_bbox: BboxIntCoords):
         assert tuple(expected_bbox) == mask_tools.find_mask_bbox(mask)

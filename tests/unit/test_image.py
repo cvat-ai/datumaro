@@ -17,6 +17,11 @@ from ..requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir
 
 
+def generate_test_img(channels: int) -> np.ndarray:
+    size = (5, 4, channels) if channels > 1 else (5, 4)
+    return np.random.randint(low=0, high=256, size=size, dtype=np.uint8)
+
+
 class ImageOperationsTest(TestCase):
     def setUp(self):
         self.default_backend = image_module.IMAGE_BACKEND.get()
@@ -29,10 +34,7 @@ class ImageOperationsTest(TestCase):
         backends = image_module.ImageBackend
         for save_backend, load_backend, c in product(backends, backends, [1, 3]):
             with TestDir() as test_dir:
-                if c == 1:
-                    src_image = np.random.randint(0, 255 + 1, (2, 4))
-                else:
-                    src_image = np.random.randint(0, 255 + 1, (2, 4, c))
+                src_image = generate_test_img(c)
                 path = osp.join(test_dir, "img.png")  # lossless
 
                 image_module.IMAGE_BACKEND.set(save_backend)
@@ -60,10 +62,7 @@ class ImageOperationsTest(TestCase):
     def test_encode_and_decode_backends(self):
         backends = image_module.ImageBackend
         for save_backend, load_backend, c in product(backends, backends, [1, 3]):
-            if c == 1:
-                src_image = np.random.randint(0, 255 + 1, (2, 4))
-            else:
-                src_image = np.random.randint(0, 255 + 1, (2, 4, c))
+            src_image = generate_test_img(c)
 
             image_module.IMAGE_BACKEND.set(save_backend)
             buffer = image_module.encode_image(src_image, ".png", jpeg_quality=100)  # lossless
@@ -116,20 +115,16 @@ class ImageOperationsTest(TestCase):
 
 
 class ImageDecodeTest:
-    def generate_test_img(self, channels) -> np.ndarray:
-        return np.random.randint(low=0, high=256, size=(5, 4, channels), dtype=np.uint8)
-
-    @pytest.mark.parametrize(
-        "image_backend", [image_module.ImageBackend.cv2, image_module.ImageBackend.PIL]
-    )
+    @pytest.mark.parametrize("image_backend", image_module.ImageBackend)
     @pytest.mark.parametrize("channels", [1, 3, 4])
     def test_decode_image_context(self, image_backend: image_module.ImageBackend, channels: int):
-        original_image = self.generate_test_img(channels)
+        original_image = generate_test_img(channels)
         img_bytes = image_module.encode_image(original_image, ".png")
 
-        expected_bgr_image = (
-            original_image[:, :, :3] if channels >= 3 else np.repeat(original_image, 3, axis=2)
-        )
+        if channels == 1:
+            expected_bgr_image = np.repeat(original_image[:, :, np.newaxis], 3, axis=2)
+        else:
+            expected_bgr_image = original_image[:, :, :3]
 
         # 3 channels from ImageColorScale.COLOR_BGR
         with image_module.decode_image_context(
@@ -152,9 +147,7 @@ class ImageDecodeTest:
             image_backend, image_module.ImageColorChannel.UNCHANGED
         ):
             img_decoded = image_module.decode_image(img_bytes)
-            if len(img_decoded.shape) == 2:
-                img_decoded = img_decoded[:, :, np.newaxis]
-            assert img_decoded.shape[-1] == channels
+            assert img_decoded.shape == original_image.shape
 
             if image_backend == image_module.ImageBackend.cv2 or channels == 1:
                 assert np.allclose(original_image, img_decoded)

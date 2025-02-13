@@ -8,7 +8,7 @@ import os
 import os.path as osp
 import shlex
 import weakref
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from contextvars import ContextVar
 from enum import Enum, auto
 from functools import partial
@@ -52,7 +52,9 @@ from datumaro.util.os_util import find_files
 class ImageColorChannel(Enum):
     """Image color channel
 
-    - UNCHANGED: Use the original image's channel (default)
+    - UNCHANGED: Use the original image's channel (default).
+        be aware that if image is not 1-channel (grayscale)
+        OpenCV will read an image as BGR(A), but PIL will read an image as RGB(A).
     - COLOR_BGR: Use BGR 3 channels
         (it can ignore the alpha channel or convert the gray scale image)
     - COLOR_RGB: Use RGB 3 channels
@@ -67,6 +69,7 @@ class ImageColorChannel(Enum):
         """Convert image color channel for OpenCV image (np.ndarray)."""
         image_buffer = np.frombuffer(image_bytes, dtype=dtype)
 
+        # OpenCV 4.11 added the new imread flag, so we will use it if available
         IMREAD_COLOR_RGB = getattr(cv2, "IMREAD_COLOR_RGB", 0)
 
         if self == ImageColorChannel.UNCHANGED:
@@ -137,15 +140,19 @@ def decode_image_context(image_backend: ImageBackend, image_color_channel: Image
     IMAGE_BACKEND.set(image_backend)
     IMAGE_COLOR_CHANNEL.set(image_color_channel)
 
-    yield
-
-    IMAGE_BACKEND.set(curr_ctx[0])
-    IMAGE_COLOR_CHANNEL.set(curr_ctx[1])
+    try:
+        yield
+    finally:
+        IMAGE_BACKEND.set(curr_ctx[0])
+        IMAGE_COLOR_CHANNEL.set(curr_ctx[1])
 
 
 def load_image(path: str, dtype: DTypeLike = np.uint8, crypter: Crypter = NULL_CRYPTER):
     """
     Reads an image in the HWC Grayscale/BGR(A) [0; 255] format (default dtype is uint8).
+
+    A context manager decode_image_context can be used
+    to specify the color scheme and the image backend with which to read the image.
     """
 
     if IMAGE_BACKEND.get() == ImageBackend.cv2:
@@ -174,13 +181,11 @@ def copyto_image(
 
     @contextmanager
     def _open(fp, mode):
-        was_file = False
-        if not isinstance(fp, IOBase):
-            was_file = True
-            fp = open(fp, mode)
-        yield fp
-        if was_file:
-            fp.close()
+        with ExitStack() as es:
+            if not isinstance(fp, IOBase):
+                fp = es.enter_context(open(fp, mode))
+
+            yield fp
 
     with _open(src, "rb") as src_fp:
         _bytes = src_crypter.decrypt(src_fp.read())
@@ -299,6 +304,9 @@ def encode_image(image: np.ndarray, ext: str, dtype: DTypeLike = np.uint8, **kwa
 
 
 def decode_image(image_bytes: bytes, dtype: np.dtype = np.uint8) -> np.ndarray:
+    """
+    Reads an image from bytes in the HWC Grayscale/BGR(A) [0; 255] format (default dtype is uint8).
+    """
     ctx_color_scale = IMAGE_COLOR_CHANNEL.get()
 
     if np.issubdtype(dtype, np.floating):

@@ -45,7 +45,7 @@ class Importer(CliPlugin):
     def detect(
         cls,
         context: FormatDetectionContext,
-    ) -> FormatDetectionConfidence:
+    ) -> Optional[FormatDetectionConfidence]:
         if not cls.find_sources_with_params(context.root_path):
             context.fail("specific requirement information unavailable")
 
@@ -238,7 +238,9 @@ def with_subset_dirs(input_cls: Type[Importer]):
 
                 with _changed_context_root_path(context, str(sub_path)):
                     conf = input_cls.detect(context)
-                if conf is not None:
+                    if conf is None:
+                        conf = input_cls.DETECT_CONFIDENCE
+
                     confs.append(conf)
 
             if not confs:

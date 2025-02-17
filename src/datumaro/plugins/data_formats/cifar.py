@@ -172,14 +172,7 @@ class CifarBase(SubsetBase):
 
 
 class CifarImporter(Importer):
-    @classmethod
-    def detect(
-        cls,
-        context: FormatDetectionContext,
-    ) -> Optional[FormatDetectionConfidence]:
-        super().detect(context)
-
-        return FormatDetectionConfidence.MEDIUM
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
 
     @classmethod
     def find_sources(cls, path: str) -> List[Dict[str, Any]]:

@@ -33,7 +33,7 @@ class ImageDirImporter(Importer):
         return parser
 
     @classmethod
-    def detect(cls, context: FormatDetectionContext) -> FormatDetectionConfidence:
+    def detect(cls, context: FormatDetectionContext) -> Optional[FormatDetectionConfidence]:
         path = Path(context.root_path)
         for item in path.iterdir():
             if item.is_dir():

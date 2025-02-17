@@ -125,7 +125,7 @@ class ImagenetImporter(Importer):
     DETECT_CONFIDENCE = FormatDetectionConfidence.EXTREME_LOW
 
     @classmethod
-    def detect(cls, context: FormatDetectionContext) -> FormatDetectionConfidence:
+    def detect(cls, context: FormatDetectionContext) -> Optional[FormatDetectionConfidence]:
         # Images must not be under a directory whose name is blacklisted.
         for dname, dirnames, filenames in os.walk(context.root_path):
             if dname in SUBSET_NAME_WHITELIST:

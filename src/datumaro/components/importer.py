@@ -39,13 +39,13 @@ __all__ = [
 
 
 class Importer(CliPlugin):
-    DETECT_CONFIDENCE = FormatDetectionConfidence.LOW
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
 
     @classmethod
     def detect(
         cls,
         context: FormatDetectionContext,
-    ) -> Optional[FormatDetectionConfidence]:
+    ) -> Optional[FormatDetectionConfidence]:  # read FormatDetector docs
         if not cls.find_sources_with_params(context.root_path):
             context.fail("specific requirement information unavailable")
 

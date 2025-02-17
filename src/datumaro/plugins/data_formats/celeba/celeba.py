@@ -244,14 +244,14 @@ class CelebaBase(SubsetBase):
 
 class CelebaImporter(Importer):
     PATH_CLS = CelebaPath
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
 
     @classmethod
-    def detect(cls, context: FormatDetectionContext) -> FormatDetectionConfidence:
+    def detect(cls, context: FormatDetectionContext) -> Optional[FormatDetectionConfidence]:
         try:
-            super().detect(context)
+            return super().detect(context)
         except DatasetImportError as e:
             context.fail(str(e))
-        return FormatDetectionConfidence.MEDIUM
 
     @classmethod
     def find_sources(cls, path):

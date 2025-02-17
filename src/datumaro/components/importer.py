@@ -172,6 +172,26 @@ class Importer(CliPlugin):
 
 
 def with_subset_dirs(input_cls: Importer):
+    """
+    Transforms an importer which can not parse several subsets into one which can
+
+    E.g. if you have FooImporter which can parse datasets from root/train or root/valid
+    but not both at once.
+        root
+        ├── train
+        │   └── ....
+        └── valid
+            └── ....
+
+    with_subset_dirs decorator can be used to define a new Importer which can parse both:
+
+    @with_subset_dirs
+    class FooWithSubsetDirsImporter(FooImporter):
+        pass
+
+    Now, FooWithSubsetDirsImporter can import a combined dataset from root folder
+    """
+
     @wraps(input_cls, updated=())
     class WrappedImporter(input_cls):
         NAME = input_cls.NAME

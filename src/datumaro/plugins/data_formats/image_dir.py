@@ -72,7 +72,6 @@ class ImageDirBase(SubsetBase):
             self._items.append(
                 DatasetItem(id=item_id, subset=self._subset, media=Image.from_file(path=path))
             )
-        self._ann_types = set()
 
     @property
     def is_stream(self) -> bool:

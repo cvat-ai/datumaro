@@ -39,7 +39,7 @@ __all__ = [
 
 
 class Importer(CliPlugin):
-    DETECT_CONFIDENCE = FormatDetectionConfidence.LOW
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
 
     @classmethod
     def detect(

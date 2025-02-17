@@ -310,6 +310,8 @@ class BoxesToMasks(ItemTransform, CliPlugin):
 
 
 class MasksToPolygons(ItemTransform, CliPlugin):
+    KEEPS_SUBSETS_INTACT = True
+
     def transform_item(self, item):
         annotations = []
         for ann in item.annotations:

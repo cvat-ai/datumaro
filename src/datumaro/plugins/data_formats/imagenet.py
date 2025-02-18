@@ -86,7 +86,9 @@ class ImagenetBase(SubsetBase):
 
             if label != ImagenetPath.IMAGE_DIR_NO_LABEL:
                 try:
-                    label = self._categories[AnnotationType.label].find(label)[0]
+                    label_path = Path(label)
+                    parent = str(label_path.parent) if len(label_path.parts) > 1 else ""
+                    label = self._categories[AnnotationType.label].find(label, parent)[0]
                     annotations.append(Label(label=label))
                     self._ann_types.add(AnnotationType.label)
                 except Exception as e:

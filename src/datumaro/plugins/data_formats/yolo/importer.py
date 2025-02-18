@@ -152,4 +152,4 @@ class YoloUltralyticsClassificationImporter(Importer):
                 if not osp.isdir(label_folder) or not cls.contains_only_images(label_folder):
                     return []
 
-        return [{"url": path, "format": YoloUltralyticsClassificationBase.NAME}]
+        return [{"url": path, "format": cls._FORMAT}]

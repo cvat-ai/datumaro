@@ -1,4 +1,7 @@
+import os
+import os.path as osp
 import pickle  # nosec B403
+import shutil
 from copy import deepcopy
 from pathlib import Path
 
@@ -111,8 +114,12 @@ def fxt_cyrillic_and_spaces_in_filename():
 def fxt_arbitrary_extension():
     source = Dataset.from_iterable(
         [
-            DatasetItem(id="no_label:a", media=Image.from_numpy(data=np.zeros((4, 3, 3)))),
-            DatasetItem(id="no_label:b", media=Image.from_numpy(data=np.zeros((3, 4, 3)))),
+            DatasetItem(
+                id="no_label:a", media=Image.from_numpy(data=np.zeros((4, 3, 3)), ext=".JPEG")
+            ),
+            DatasetItem(
+                id="no_label:b", media=Image.from_numpy(data=np.zeros((3, 4, 3)), ext=".bmp")
+            ),
         ],
         categories=[],
     )
@@ -235,6 +242,32 @@ class ImagenetImporterTest:
         parsed = pickle.loads(pickle.dumps(source))  # nosec
 
         compare_datasets_strict(helper_tc, source, parsed)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_not_detect_imagenet_if_folders_have_subset_name(self, test_dir):
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(self.DUMMY_DATASET_DIR, dataset_path)
+        if self.IMPORTER_NAME == ImagenetImporter.NAME:
+            folder_with_labels = dataset_path
+        else:
+            folder_with_labels = osp.join(dataset_path, "train")
+        shutil.move(osp.join(folder_with_labels, "label_0"), osp.join(folder_with_labels, "train"))
+
+        detected_formats = Environment().detect_dataset(dataset_path)
+        assert self.IMPORTER_NAME not in detected_formats
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_ignore_special_macos_dirs(self, test_dir):
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(self.DUMMY_DATASET_DIR, dataset_path)
+        if self.IMPORTER_NAME == ImagenetImporter.NAME:
+            folder_with_labels = dataset_path
+        else:
+            folder_with_labels = osp.join(dataset_path, "train")
+        os.mkdir(osp.join(folder_with_labels, "__MACOSX"))
+
+        detected_formats = Environment().detect_dataset(dataset_path)
+        assert self.IMPORTER_NAME in detected_formats
 
 
 class ImagenetWithSubsetDirsImporterTest(ImagenetImporterTest):

@@ -1223,6 +1223,18 @@ class YoloUltralyticsDetectionImporterTest(YoloImporterTest):
                 YoloUltralyticsOrientedBoxesImporter.NAME,
             }
 
+    def test_can_detect_and_import_with_any_yaml_as_config(self, test_dir):
+        expected_dataset = self._asset_dataset()
+        dataset_path = osp.join(test_dir, "dataset")
+        shutil.copytree(get_test_asset_path("yolo_dataset", self.ASSETS[0]), dataset_path)
+        os.rename(
+            osp.join(dataset_path, "data.yaml"), osp.join(dataset_path, "custom_file_name.yaml")
+        )
+
+        self.IMPORTER.detect(FormatDetectionContext(dataset_path))
+        dataset = Dataset.import_from(dataset_path, self.IMPORTER.NAME)
+        self.compare_datasets(expected_dataset, dataset)
+
     def test_can_detect_and_import_if_multiple_yamls_with_default_among_them(self, test_dir):
         expected_dataset = self._asset_dataset()
         dataset_path = osp.join(test_dir, "dataset")

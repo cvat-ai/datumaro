@@ -29,6 +29,8 @@ except (ModuleNotFoundError, ImportError):
 from . import cast
 from .definitions import DEFAULT_SUBSET_NAME
 
+SPECIAL_MACOS_FOLDERS = {"__MSOSX", "__MACOSX"}
+
 DEFAULT_MAX_DEPTH = 10
 DEFAULT_MIN_DEPTH = 0
 

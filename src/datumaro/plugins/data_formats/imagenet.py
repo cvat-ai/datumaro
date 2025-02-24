@@ -6,7 +6,7 @@ import errno
 import logging as log
 import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
 from datumaro.components.dataset_base import DatasetItem, SubsetBase
@@ -16,8 +16,7 @@ from datumaro.components.format_detection import FormatDetectionConfidence, Form
 from datumaro.components.importer import ImportContext, Importer, with_subset_dirs
 from datumaro.components.media import Image
 from datumaro.util.definitions import SUBSET_NAME_BLACKLIST, SUBSET_NAME_WHITELIST
-from datumaro.util.image import IMAGE_EXTENSIONS, find_images
-from datumaro.util.os_util import walk
+from datumaro.util.image import IMAGE_EXTENSIONS, contains_only_images, find_images
 
 
 class ImagenetPath:
@@ -86,7 +85,9 @@ class ImagenetBase(SubsetBase):
 
             if label != ImagenetPath.IMAGE_DIR_NO_LABEL:
                 try:
-                    label = self._categories[AnnotationType.label].find(label)[0]
+                    label_path = Path(label)
+                    parent = str(label_path.parent) if len(label_path.parts) > 1 else ""
+                    label = self._categories[AnnotationType.label].find(label, parent)[0]
                     annotations.append(Label(label=label))
                     self._ann_types.add(AnnotationType.label)
                 except Exception as e:
@@ -125,10 +126,10 @@ class ImagenetImporter(Importer):
     DETECT_CONFIDENCE = FormatDetectionConfidence.EXTREME_LOW
 
     @classmethod
-    def detect(cls, context: FormatDetectionContext) -> FormatDetectionConfidence:
+    def detect(cls, context: FormatDetectionContext) -> Optional[FormatDetectionConfidence]:
         # Images must not be under a directory whose name is blacklisted.
         for dname, dirnames, filenames in os.walk(context.root_path):
-            if dname in SUBSET_NAME_WHITELIST:
+            if dname != context.root_path and Path(dname).name in SUBSET_NAME_WHITELIST:
                 context.fail(
                     f"Following directory names are not permitted: {SUBSET_NAME_WHITELIST}"
                 )
@@ -150,22 +151,15 @@ class ImagenetImporter(Importer):
         return super().detect(context)
 
     @classmethod
-    def contains_only_images(cls, path: Union[str, Path]):
-        for _, dirnames, filenames in walk(path, cls._MAX_DEPTH, cls._MIN_DEPTH):
-            if filenames:
-                for filename in filenames:
-                    if Path(filename).suffix.lower() not in IMAGE_EXTENSIONS:
-                        return False
-            elif not dirnames:
-                return False
-        return True
-
-    @classmethod
     def find_sources(cls, path):
         if not Path(path).is_dir():
             return []
 
-        return [{"url": path, "format": cls._FORMAT}] if cls.contains_only_images(path) else []
+        return (
+            [{"url": path, "format": cls._FORMAT}]
+            if contains_only_images(path, cls._MAX_DEPTH, cls._MIN_DEPTH)
+            else []
+        )
 
     @classmethod
     def get_file_extensions(cls) -> List[str]:

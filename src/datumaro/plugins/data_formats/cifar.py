@@ -16,7 +16,7 @@ from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.errors import InvalidAnnotationError, MediaTypeError
 from datumaro.components.exporter import Exporter
-from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
+from datumaro.components.format_detection import FormatDetectionConfidence
 from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util import cast
@@ -172,14 +172,7 @@ class CifarBase(SubsetBase):
 
 
 class CifarImporter(Importer):
-    @classmethod
-    def detect(
-        cls,
-        context: FormatDetectionContext,
-    ) -> Optional[FormatDetectionConfidence]:
-        super().detect(context)
-
-        return FormatDetectionConfidence.MEDIUM
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
 
     @classmethod
     def find_sources(cls, path: str) -> List[Dict[str, Any]]:

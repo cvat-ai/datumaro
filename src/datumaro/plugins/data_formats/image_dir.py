@@ -14,6 +14,7 @@ from datumaro.components.format_detection import FormatDetectionConfidence, Form
 from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util.image import IMAGE_EXTENSIONS, find_images
+from datumaro.util.os_util import SPECIAL_MACOS_FOLDERS
 
 
 class ImageDirImporter(Importer):
@@ -33,11 +34,12 @@ class ImageDirImporter(Importer):
         return parser
 
     @classmethod
-    def detect(cls, context: FormatDetectionContext) -> FormatDetectionConfidence:
+    def detect(cls, context: FormatDetectionContext) -> Optional[FormatDetectionConfidence]:
         path = Path(context.root_path)
         for item in path.iterdir():
             if item.is_dir():
-                context.fail("Only flat image directories are supported")
+                if item.name not in SPECIAL_MACOS_FOLDERS:
+                    context.fail("Only flat image directories are supported")
             elif item.suffix.lower() not in IMAGE_EXTENSIONS:
                 context.fail(f"File {item} is not an image.")
         return super().detect(context)
@@ -72,7 +74,6 @@ class ImageDirBase(SubsetBase):
             self._items.append(
                 DatasetItem(id=item_id, subset=self._subset, media=Image.from_file(path=path))
             )
-        self._ann_types = set()
 
     @property
     def is_stream(self) -> bool:

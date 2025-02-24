@@ -44,7 +44,6 @@ class DetectFormatTest(TestCase):
         output = self._extract_detect_format_name(output_file)
 
         self.assertEqual([Ade20k2017Importer.NAME], output)
-        self.assertNotEqual([Ade20k2020Importer.NAME], output)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_deep_nested_folders(self):

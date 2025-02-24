@@ -7,8 +7,7 @@ from __future__ import annotations
 
 import os
 from os import path as osp
-from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 import yaml
 
@@ -26,7 +25,7 @@ from datumaro.plugins.data_formats.yolo.format import (
     YoloUltralyticsPath,
     YoloUltralyticsPoseFormat,
 )
-from datumaro.util.image import IMAGE_EXTENSIONS
+from datumaro.util.image import contains_only_images
 from datumaro.util.meta_file_util import DATASET_META_FILE
 
 
@@ -125,17 +124,6 @@ class YoloUltralyticsClassificationImporter(Importer):
     DETECT_CONFIDENCE = FormatDetectionConfidence.LOW
 
     @classmethod
-    def contains_only_images(cls, path: Union[str, Path]):
-        for _, dirnames, filenames in os.walk(path):
-            if filenames:
-                for filename in filenames:
-                    if Path(filename).suffix.lower() not in IMAGE_EXTENSIONS:
-                        return False
-            elif not dirnames:
-                return False
-        return True
-
-    @classmethod
     def find_sources(cls, path):
         if not osp.isdir(path):
             return []
@@ -149,7 +137,7 @@ class YoloUltralyticsClassificationImporter(Importer):
                 if name in [YoloUltralyticsClassificationFormat.LABELS_FILE, DATASET_META_FILE]:
                     continue
                 label_folder = osp.join(subset_folder, name)
-                if not osp.isdir(label_folder) or not cls.contains_only_images(label_folder):
+                if not osp.isdir(label_folder) or not contains_only_images(label_folder):
                     return []
 
-        return [{"url": path, "format": YoloUltralyticsClassificationBase.NAME}]
+        return [{"url": path, "format": cls._FORMAT}]

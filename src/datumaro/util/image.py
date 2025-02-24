@@ -13,6 +13,7 @@ from contextvars import ContextVar
 from enum import Enum, auto
 from functools import partial
 from io import BytesIO, IOBase
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, Optional, Tuple, Union
 
 import numpy as np
@@ -46,7 +47,7 @@ except ModuleNotFoundError:
     _image_loading_errors = (*_image_loading_errors, PIL.UnidentifiedImageError)
 
 from datumaro.util.image_cache import ImageCache
-from datumaro.util.os_util import find_files
+from datumaro.util.os_util import SPECIAL_MACOS_FOLDERS, find_files, walk
 
 
 class ImageColorChannel(Enum):
@@ -497,3 +498,17 @@ def save_image_meta_file(image_meta: ImageMeta, image_meta_path: str) -> None:
 
         for image_name, (height, width) in image_meta.items():
             print(shlex.quote(image_name), height, width, file=f)
+
+
+def contains_only_images(
+    path: Union[str, Path], max_depth: Optional[int] = None, min_depth: Optional[int] = None
+):
+    for _, dirnames, filenames in walk(path=path, max_depth=max_depth, min_depth=min_depth):
+        dirnames[:] = [d for d in dirnames if d not in SPECIAL_MACOS_FOLDERS]
+        if filenames:
+            for filename in filenames:
+                if Path(filename).suffix.lower() not in IMAGE_EXTENSIONS:
+                    return False
+        elif not dirnames:
+            return False
+    return True

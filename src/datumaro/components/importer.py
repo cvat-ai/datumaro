@@ -9,6 +9,7 @@ import os.path as osp
 from contextlib import contextmanager
 from functools import wraps
 from glob import iglob
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Type, TypeVar
 
 from datumaro.components.cli_plugin import CliPlugin
@@ -38,13 +39,13 @@ __all__ = [
 
 
 class Importer(CliPlugin):
-    DETECT_CONFIDENCE = FormatDetectionConfidence.LOW
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
 
     @classmethod
     def detect(
         cls,
         context: FormatDetectionContext,
-    ) -> FormatDetectionConfidence:
+    ) -> Optional[FormatDetectionConfidence]:  # read FormatDetector docs
         if not cls.find_sources_with_params(context.root_path):
             context.fail("specific requirement information unavailable")
 
@@ -171,7 +172,38 @@ class Importer(CliPlugin):
         return None
 
 
-def with_subset_dirs(input_cls: Importer):
+def with_subset_dirs(input_cls: Type[Importer]):
+    """
+    Transforms an importer that can parse just 1 subset into one that can parse several nested
+    directories as subsets.
+
+    This decorator only recognizes directories from SUBSET_NAME_WHITELIST as candidate subsets.
+
+    Example:
+
+    Suppose there is a directory structure like this:
+
+    .. code-block::
+
+        root/
+        ├── train/
+        │   └── ....
+        └── valid/
+            └── ....
+
+    and we have FooImporter that can parse datasets either from root/train/ or root/valid/
+    dirs, but not both at once. with_subset_dirs() decorator can be used to define
+    a new Importer that can parse both subset directories from the root directory:
+
+    .. code-block::
+
+        @with_subset_dirs
+        class FooWithSubsetDirsImporter(FooImporter):
+            pass
+
+    Now, FooWithSubsetDirsImporter can be used to import a combined dataset from root folder.
+    """
+
     @wraps(input_cls, updated=())
     class WrappedImporter(input_cls):
         NAME = input_cls.NAME
@@ -182,33 +214,36 @@ def with_subset_dirs(input_cls: Importer):
             context: FormatDetectionContext,
         ) -> Optional[FormatDetectionConfidence]:
             @contextmanager
-            def _change_context_root_path(context: FormatDetectionContext, path: str):
+            def _changed_context_root_path(context: FormatDetectionContext, path: str):
                 tmp = context.root_path
                 context._root_path = path
-                yield
-                context._root_path = tmp
+
+                try:
+                    yield
+                finally:
+                    context._root_path = tmp
 
             confs = []
-            path = context.root_path
+            path = Path(context.root_path)
 
-            if not osp.isdir(path):
+            if not path.is_dir():
                 context.fail(
                     f"{input_cls.NAME} should require an input as a directory path. "
                     f"However, {path} is not a directory path."
                 )
 
-            for sub_dir in os.listdir(path):
-                if sub_dir.lower() not in SUBSET_NAME_WHITELIST:
+            for sub_path in path.iterdir():
+                if sub_path.name.lower() not in SUBSET_NAME_WHITELIST or not sub_path.is_dir():
                     continue
 
-                sub_path = osp.join(path, sub_dir)
-                if osp.isdir(sub_path):
-                    with _change_context_root_path(context, sub_path):
-                        conf = input_cls.detect(context)
-                    if conf is not None:
-                        confs += [conf]
+                with _changed_context_root_path(context, str(sub_path)):
+                    conf = input_cls.detect(context)
+                    if conf is None:
+                        conf = input_cls.DETECT_CONFIDENCE
 
-            if len(confs) == 0:
+                    confs.append(conf)
+
+            if not confs:
                 context.fail(f"{input_cls.NAME} cannot find its subdirectory structure.")
 
             return max(confs)

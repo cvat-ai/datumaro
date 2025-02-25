@@ -1,8 +1,11 @@
-# Copyright (C) 2021 Intel Corporation
+# Copyright (C) 2023 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
+import errno
+import os
 import os.path as osp
+from typing import List, Optional
 
 from datumaro.components.annotation import (
     AnnotationType,
@@ -13,30 +16,37 @@ from datumaro.components.annotation import (
     PointsCategories,
 )
 from datumaro.components.dataset_base import DatasetItem, SubsetBase
-from datumaro.components.errors import DatasetImportError
-from datumaro.components.importer import Importer
+from datumaro.components.errors import DatasetImportError, InvalidAnnotationError
+from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
+from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util.image import find_images
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
 
 
 class CelebaPath:
-    IMAGES_DIR = "Img/img_celeba"
-    LABELS_FILE = "Anno/identity_CelebA.txt"
-    BBOXES_FILE = "Anno/list_bbox_celeba.txt"
-    ATTRS_FILE = "Anno/list_attr_celeba.txt"
-    LANDMARKS_FILE = "Anno/list_landmarks_celeba.txt"
-    SUBSETS_FILE = "Eval/list_eval_partition.txt"
+    IMAGES_DIR = osp.join("Img", "img_celeba")
+    LABELS_FILE = osp.join("Anno", "identity_CelebA.txt")
+    BBOXES_FILE = osp.join("Anno", "list_bbox_celeba.txt")
+    ATTRS_FILE = osp.join("Anno", "list_attr_celeba.txt")
+    LANDMARKS_FILE = osp.join("Anno", "list_landmarks_celeba.txt")
+    SUBSETS_FILE = osp.join("Eval", "list_eval_partition.txt")
     SUBSETS = {"0": "train", "1": "val", "2": "test"}
     BBOXES_HEADER = "image_id x_1 y_1 width height"
 
 
 class CelebaBase(SubsetBase):
-    def __init__(self, path):
+    def __init__(
+        self,
+        path: str,
+        *,
+        subset: Optional[str] = None,
+        ctx: Optional[ImportContext] = None,
+    ):
         if not osp.isdir(path):
-            raise FileNotFoundError("Can't read dataset directory '%s'" % path)
+            raise NotADirectoryError(errno.ENOTDIR, "Can't find dataset directory", path)
 
-        super().__init__()
+        super().__init__(subset=subset, ctx=ctx)
 
         self._categories = {AnnotationType.label: LabelCategories()}
         if has_meta_file(path):
@@ -63,7 +73,7 @@ class CelebaBase(SubsetBase):
 
         labels_path = osp.join(root_dir, CelebaPath.LABELS_FILE)
         if not osp.isfile(labels_path):
-            raise DatasetImportError("File '%s': was not found" % labels_path)
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), labels_path)
 
         with open(labels_path, encoding="utf-8") as f:
             for line in f:
@@ -74,6 +84,7 @@ class CelebaBase(SubsetBase):
                     while len(label_categories) <= label:
                         label_categories.add("class-%d" % len(label_categories))
                     anno.append(Label(label))
+                    self._ann_types.add(AnnotationType.label)
 
                 image = images.get(item_id)
                 if image:
@@ -97,13 +108,13 @@ class CelebaBase(SubsetBase):
                     landmarks = [float(id) for id in item_ann]
 
                     if len(landmarks) != len(point_cat):
-                        raise DatasetImportError(
+                        raise InvalidAnnotationError(
                             "File '%s', line %s: "
                             "points do not match the header of this file" % (landmark_path, line)
                         )
 
                     if item_id not in items:
-                        raise DatasetImportError(
+                        raise InvalidAnnotationError(
                             "File '%s', line %s: "
                             "for this item are not label in %s "
                             % (landmark_path, line, CelebaPath.LABELS_FILE)
@@ -112,9 +123,10 @@ class CelebaBase(SubsetBase):
                     anno = items[item_id].annotations
                     label = anno[0].label
                     anno.append(Points(landmarks, label=label))
+                    self._ann_types.add(AnnotationType.points)
 
                 if landmarks_number - 1 != counter:
-                    raise DatasetImportError(
+                    raise InvalidAnnotationError(
                         "File '%s': the number of "
                         "landmarks does not match the specified number "
                         "at the beginning of the file " % landmark_path
@@ -126,7 +138,7 @@ class CelebaBase(SubsetBase):
                 bboxes_number = int(f.readline().strip())
 
                 if f.readline().strip() != CelebaPath.BBOXES_HEADER:
-                    raise DatasetImportError(
+                    raise InvalidAnnotationError(
                         "File '%s': the header "
                         "does not match the expected format '%s'"
                         % (bbox_path, CelebaPath.BBOXES_HEADER)
@@ -138,7 +150,7 @@ class CelebaBase(SubsetBase):
                     bbox = [float(id) for id in item_ann]
 
                     if item_id not in items:
-                        raise DatasetImportError(
+                        raise InvalidAnnotationError(
                             "File '%s', line %s: "
                             "for this item are not label in %s "
                             % (bbox_path, line, CelebaPath.LABELS_FILE)
@@ -147,9 +159,10 @@ class CelebaBase(SubsetBase):
                     anno = items[item_id].annotations
                     label = anno[0].label
                     anno.append(Bbox(bbox[0], bbox[1], bbox[2], bbox[3], label=label))
+                    self._ann_types.add(AnnotationType.bbox)
 
                 if bboxes_number - 1 != counter:
-                    raise DatasetImportError(
+                    raise InvalidAnnotationError(
                         "File '%s': the number of bounding "
                         "boxes does not match the specified number "
                         "at the beginning of the file " % bbox_path
@@ -220,7 +233,7 @@ class CelebaBase(SubsetBase):
                 item_id = osp.splitext(item[1])[0]
                 item = item[2].split()
             else:
-                raise DatasetImportError(
+                raise InvalidAnnotationError(
                     "Line %s: unexpected number " "of quotes in filename" % line
                 )
         else:
@@ -230,6 +243,40 @@ class CelebaBase(SubsetBase):
 
 
 class CelebaImporter(Importer):
+    PATH_CLS = CelebaPath
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
+
+    @classmethod
+    def detect(cls, context: FormatDetectionContext) -> Optional[FormatDetectionConfidence]:
+        try:
+            return super().detect(context)
+        except DatasetImportError as e:
+            context.fail(str(e))
+
     @classmethod
     def find_sources(cls, path):
-        return [{"url": path, "format": "celeba"}]
+        dirname = osp.dirname(cls.PATH_CLS.LABELS_FILE)
+        filename, ext = osp.splitext(osp.basename(cls.PATH_CLS.LABELS_FILE))
+        sources = cls._find_sources_recursive(
+            path, ext=ext, extractor_name=cls.NAME, filename=filename, dirname=dirname
+        )
+
+        if len(sources) > 1:
+            raise DatasetImportError(
+                f"{cls.NAME} label file ({cls.PATH_CLS.LABELS_FILE}) must be unique "
+                f"but the found sources have multiple duplicates. sources = {sources}"
+            )
+
+        for source in sources:
+            anno_dir = osp.dirname(source["url"])
+            root_dir = osp.dirname(anno_dir)
+            img_dir = osp.join(root_dir, cls.PATH_CLS.IMAGES_DIR)
+            if not osp.exists(img_dir):
+                raise DatasetImportError(f"Cannot find {cls.NAME}'s images directory at {img_dir}")
+            source["url"] = root_dir
+
+        return sources
+
+    @classmethod
+    def get_file_extensions(cls) -> List[str]:
+        return [osp.splitext(cls.PATH_CLS.LABELS_FILE)[1]]

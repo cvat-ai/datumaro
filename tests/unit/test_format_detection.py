@@ -1,7 +1,12 @@
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+
 import os.path as osp
 from unittest import TestCase
 
 from datumaro.components.format_detection import (
+    DetectedFormat,
     FormatDetectionConfidence,
     FormatDetectionUnsupported,
     FormatRequirementsUnmet,
@@ -265,9 +270,9 @@ class DetectDatasetFormat(FormatDetectionTest):
             formats, self._dataset_root, rejection_callback=rejection_callback
         )
 
-        detected_datasets_names = [format.name for format in detected_datasets]
+        detected_dataset_names = [detected_dataset.name for detected_dataset in detected_datasets]
 
-        self.assertEqual(set(detected_datasets_names), {"bbb", "eee"})
+        self.assertEqual(set(detected_dataset_names), {"bbb", "eee"})
 
         self.assertEqual(rejected_formats.keys(), {"aaa", "ccc", "ddd", "fff"})
 
@@ -288,6 +293,35 @@ class DetectDatasetFormat(FormatDetectionTest):
 
         detected_datasets = detect_dataset_format(formats, self._dataset_root)
 
-        detected_datasets_names = [format.name for format in detected_datasets]
+        detected_dataset_names = [detected_dataset.name for detected_dataset in detected_datasets]
 
-        self.assertEqual(detected_datasets_names, ["bbb"])
+        self.assertEqual(detected_dataset_names, ["bbb"])
+
+
+class DetectedFormatTest:
+    def test_compare(self):
+        # Comparison should be decided by the confidence
+        decr_confs = [
+            FormatDetectionConfidence.MEDIUM,
+            FormatDetectionConfidence.LOW,
+            FormatDetectionConfidence.EXTREME_LOW,
+            FormatDetectionConfidence.NONE,
+        ]
+        incr_confs = decr_confs[::-1]
+
+        detects = [DetectedFormat(conf, f"{[0] * idx}") for idx, conf in enumerate(decr_confs)]
+
+        assert [detect.confidence for detect in detects] != incr_confs
+
+        detects.sort()
+
+        assert [detect.confidence for detect in detects] == incr_confs
+
+    def test_eq(self):
+        # Equivalance should be decided by the format name
+        assert DetectedFormat(FormatDetectionConfidence.LOW, "format") == DetectedFormat(
+            FormatDetectionConfidence.MEDIUM, "format"
+        )
+        assert DetectedFormat(FormatDetectionConfidence.LOW, "format1") != DetectedFormat(
+            FormatDetectionConfidence.MEDIUM, "format2"
+        )

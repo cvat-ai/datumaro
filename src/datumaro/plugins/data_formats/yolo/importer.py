@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 
 import yaml
 
-from datumaro.components.format_detection import FormatDetectionContext
+from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
 from datumaro.components.importer import Importer
 from datumaro.plugins.data_formats.yolo.base import (
     YoloUltralyticsClassificationBase,
@@ -20,10 +20,18 @@ from datumaro.plugins.data_formats.yolo.base import (
     YoloUltralyticsPoseBase,
     YoloUltralyticsSegmentationBase,
 )
-from datumaro.plugins.data_formats.yolo.format import YoloUltralyticsPath, YoloUltralyticsPoseFormat
+from datumaro.plugins.data_formats.yolo.format import (
+    YoloUltralyticsClassificationFormat,
+    YoloUltralyticsPath,
+    YoloUltralyticsPoseFormat,
+)
+from datumaro.util.image import contains_only_images
+from datumaro.util.meta_file_util import DATASET_META_FILE
 
 
 class YoloImporter(Importer):
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
+
     @classmethod
     def detect(cls, context: FormatDetectionContext) -> None:
         context.require_file("obj.data")
@@ -112,12 +120,24 @@ class YoloUltralyticsPoseImporter(YoloUltralyticsDetectionImporter):
 
 
 class YoloUltralyticsClassificationImporter(Importer):
+    _FORMAT = YoloUltralyticsClassificationBase.NAME
+    DETECT_CONFIDENCE = FormatDetectionConfidence.LOW
+
     @classmethod
     def find_sources(cls, path):
         if not osp.isdir(path):
             return []
-        if not [
+        subfolders = [
             subfolder for name in os.listdir(path) if osp.isdir(subfolder := osp.join(path, name))
-        ]:
+        ]
+        if not subfolders:
             return []
-        return [{"url": path, "format": YoloUltralyticsClassificationBase.NAME}]
+        for subset_folder in subfolders:
+            for name in os.listdir(subset_folder):
+                if name in [YoloUltralyticsClassificationFormat.LABELS_FILE, DATASET_META_FILE]:
+                    continue
+                label_folder = osp.join(subset_folder, name)
+                if not osp.isdir(label_folder) or not contains_only_images(label_folder):
+                    return []
+
+        return [{"url": path, "format": cls._FORMAT}]

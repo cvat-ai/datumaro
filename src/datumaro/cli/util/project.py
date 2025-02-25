@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 
 from datumaro.cli.util.errors import WrongRevpathError
 from datumaro.components.dataset import Dataset
-from datumaro.components.environment import Environment
+from datumaro.components.environment import DEFAULT_ENVIRONMENT, Environment
 from datumaro.components.errors import DatumaroError, ProjectNotFoundError
 from datumaro.components.project import Project, Revision
 from datumaro.util.os_util import generate_next_name
@@ -16,6 +16,7 @@ from datumaro.util.scope import on_error_do, scoped
 
 
 def load_project(project_dir, readonly=False):
+    """load a Project."""
     return Project(project_dir, readonly=readonly)
 
 
@@ -129,7 +130,7 @@ def parse_full_revpath(
     if ctx_project:
         env = ctx_project.env
     else:
-        env = Environment()
+        env = DEFAULT_ENVIRONMENT
 
     errors = []
     try:

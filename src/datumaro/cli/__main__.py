@@ -98,7 +98,7 @@ def _get_known_commands():
             commands.describe_downloads,
             "Print information about downloadable datasets",
         ),
-        ("detect-format", commands.detect_format, "Detect the format of a dataset"),
+        ("detect", commands.detect_format, "Detect the format of a dataset"),
         ("diff", commands.diff, "Compare datasets"),
         ("download", commands.download, "Download a publicly available dataset"),
         ("explain", commands.explain, "Run Explainable AI algorithm for model"),

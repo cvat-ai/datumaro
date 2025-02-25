@@ -1,11 +1,13 @@
+import os
 from unittest import TestCase
 
 import numpy as np
 
 from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.media import Image
 from datumaro.components.project import Dataset
-from datumaro.plugins.data_formats.image_dir import ImageDirExporter
+from datumaro.plugins.data_formats.image_dir import ImageDirExporter, ImageDirImporter
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.test_utils import TestDir, check_save_and_load
@@ -83,3 +85,17 @@ class ImageDirFormatTest(TestCase):
                 importer="image_dir",
                 require_media=True,
             )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_ignore_special_macos_folders(self):
+        with TestDir() as test_dir:
+            dataset = Dataset.from_iterable(
+                [
+                    DatasetItem(id=1, media=Image.from_numpy(data=np.ones((10, 6, 3)))),
+                    DatasetItem(id=2, media=Image.from_numpy(data=np.ones((5, 4, 3)))),
+                ]
+            )
+
+            ImageDirExporter.convert(dataset, test_dir)
+            os.mkdir(os.path.join(test_dir, "__MACOSX"))
+            assert ImageDirImporter.detect(FormatDetectionContext(test_dir))

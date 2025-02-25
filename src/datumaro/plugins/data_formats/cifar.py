@@ -1,20 +1,23 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2023 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 
+import errno
 import os
 import os.path as osp
-import pickle  # nosec - disable B403:import_pickle check - fixed
+import pickle  # nosec B403
 from collections import OrderedDict
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
 from datumaro.components.annotation import AnnotationType, Label, LabelCategories
 from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
-from datumaro.components.errors import MediaTypeError
+from datumaro.components.errors import InvalidAnnotationError, MediaTypeError
 from datumaro.components.exporter import Exporter
-from datumaro.components.importer import Importer
+from datumaro.components.format_detection import FormatDetectionConfidence
+from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util import cast
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
@@ -46,14 +49,20 @@ Cifar10Label = [
 
 
 class CifarBase(SubsetBase):
-    def __init__(self, path, subset=None):
+    def __init__(
+        self,
+        path: str,
+        *,
+        subset: Optional[str] = None,
+        ctx: Optional[ImportContext] = None,
+    ):
         if not osp.isfile(path):
-            raise FileNotFoundError("Can't read annotation file '%s'" % path)
+            raise FileNotFoundError(errno.ENOENT, "Can't find annotations file", path)
 
         if not subset:
             subset = osp.splitext(osp.basename(path))[0]
 
-        super().__init__(subset=subset)
+        super().__init__(subset=subset, ctx=ctx)
 
         self._categories = self._load_categories(osp.dirname(path))
         self._items = list(self._load_items(path).values())
@@ -119,16 +128,21 @@ class CifarBase(SubsetBase):
         size = annotation_dict.get("image_sizes")
 
         if len(labels) != len(filenames):
-            raise Exception("The sizes of the arrays 'filenames', " "'labels' don't match.")
+            raise InvalidAnnotationError(
+                "The sizes of the arrays 'filenames', " "'labels' don't match."
+            )
 
         if 0 < len(images_data) and len(images_data) != len(filenames):
-            raise Exception("The sizes of the arrays 'data', " "'filenames', 'labels' don't match.")
+            raise InvalidAnnotationError(
+                "The sizes of the arrays 'data', " "'filenames', 'labels' don't match."
+            )
 
         for i, (filename, label) in enumerate(zip(filenames, labels)):
             item_id = osp.splitext(filename)[0]
             annotations = []
             if label is not None:
                 annotations.append(Label(label))
+                self._ann_types.add(AnnotationType.label)
                 if (
                     0 < len(coarse_labels)
                     and coarse_labels[i] is not None
@@ -154,29 +168,55 @@ class CifarBase(SubsetBase):
             items[item_id] = DatasetItem(
                 id=item_id, subset=self._subset, media=image, annotations=annotations
             )
-
         return items
 
 
 class CifarImporter(Importer):
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
+
     @classmethod
-    def find_sources(cls, path):
-        return cls._find_sources_recursive(
-            path,
-            "",
-            "cifar",
-            file_filter=lambda p: not osp.splitext(  # subset files have no extension in the format
-                osp.basename(p)
-            )[1]
-            and osp.basename(p)
-            not in {CifarPath.META_10_FILE, CifarPath.META_100_FILE, CifarPath.USELESS_FILE},
-        )
+    def find_sources(cls, path: str) -> List[Dict[str, Any]]:
+        def _find(path: str, meta_file_name: str) -> List[Dict[str, Any]]:
+            # Find dataset root by looking for the meta file
+            roots = cls._find_sources_recursive(
+                path,
+                "",
+                "cifar",
+                file_filter=lambda p: osp.basename(p) == meta_file_name,
+            )
+
+            sources = []
+            # Extract subset files from the root path
+            for root in roots:
+                root_dir = osp.dirname(root["url"])
+                sources += cls._find_sources_recursive(
+                    root_dir,
+                    "",
+                    "cifar",
+                    # Subset files have no extension in the format, and
+                    # should not be the meta file.
+                    file_filter=lambda p: not osp.isdir(p)
+                    and not osp.splitext(osp.basename(p))[1]
+                    and osp.basename(p) != meta_file_name,
+                )
+
+            return sources
+
+        sources = []
+        sources += _find(path, CifarPath.META_10_FILE)
+        sources += _find(path, CifarPath.META_100_FILE)
+
+        return sources
+
+    @classmethod
+    def get_file_extensions(cls) -> List[str]:
+        return list({osp.splitext(p)[1] for p in (CifarPath.META_10_FILE, CifarPath.META_100_FILE)})
 
 
 class CifarExporter(Exporter):
     DEFAULT_IMAGE_EXT = ".png"
 
-    def apply(self):
+    def _apply_impl(self):
         if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
             raise MediaTypeError("Media type is not an image")
 

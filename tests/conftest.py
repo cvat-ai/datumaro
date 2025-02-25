@@ -1,4 +1,4 @@
-# Copyright (C) 2021 Intel Corporation
+# Copyright (C) 2023 Intel Corporation
 # Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
@@ -21,6 +21,8 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "reqids(ids): link a test with a requirement")
     config.addinivalue_line("markers", "bugs(ids): link a test with a bug")
 
+    config.addinivalue_line("markers", "new: mark the tests for the new features")
+
 
 @pytest.fixture(scope="function")
 def test_dir():
@@ -31,3 +33,9 @@ def test_dir():
 @pytest.fixture(scope="class")
 def helper_tc():
     return TestCaseHelper()
+
+
+@pytest.fixture
+def fxt_test_case(request):
+    fxt_name = request.param
+    yield request.getfixturevalue(fxt_name)

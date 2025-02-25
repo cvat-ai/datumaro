@@ -1,14 +1,22 @@
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+
 import os.path as osp
 from unittest import TestCase
+
+import numpy as np
 
 from datumaro.components.annotation import Bbox, Label
 from datumaro.components.dataset import Dataset
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.errors import ReadonlyDatasetError
+from datumaro.components.media import Image
 from datumaro.components.project import Project
 from datumaro.util.scope import scope_add, scoped
 
-from tests.requirements import Requirements, mark_requirement
+from ...requirements import Requirements, mark_requirement
+
 from tests.utils.test_utils import TestDir, compare_datasets
 from tests.utils.test_utils import run_datum as run
 
@@ -61,7 +69,14 @@ class TransformTest(TestCase):
                 categories=["a", "b"],
             ).export(test_dir, "coco")
 
-            run(self, "transform", "-t", "random_split", test_dir + ":coco", expected_code=1)
+            run(
+                self,
+                "transform",
+                "-t",
+                "random_split",
+                test_dir + ":coco",
+                expected_code=1,
+            )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_transform_fails_on_inplace_update_of_stage(self):
@@ -69,7 +84,19 @@ class TransformTest(TestCase):
             dataset_url = osp.join(test_dir, "dataset")
             dataset = Dataset.from_iterable(
                 [
-                    DatasetItem(id=1, annotations=[Bbox(1, 2, 3, 4, label=1)]),
+                    DatasetItem(
+                        id=1,
+                        media=Image.from_numpy(
+                            data=np.ones(
+                                (
+                                    10,
+                                    10,
+                                    3,
+                                )
+                            )
+                        ),
+                        annotations=[Bbox(1, 2, 3, 4, label=1)],
+                    ),
                 ],
                 categories=["a", "b"],
             )

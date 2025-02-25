@@ -216,7 +216,7 @@ class DatasetBase(_DatasetBase, CliPlugin):
         length: Optional[int] = None,
         subsets: Optional[Sequence[str]] = None,
         media_type: Type[MediaElement] = Image,
-        ann_types: Optional[List[AnnotationType]] = None,
+        ann_types: Optional[Set[AnnotationType]] = None,
         ctx: Optional[ImportContext] = None,
     ):
         super().__init__(length=length, subsets=subsets)
@@ -244,7 +244,7 @@ class SubsetBase(DatasetBase):
         length: Optional[int] = None,
         subset: Optional[str] = None,
         media_type: Type[MediaElement] = Image,
-        ann_types: List[AnnotationType] = None,
+        ann_types: Set[AnnotationType] = None,
         ctx: Optional[ImportContext] = None,
     ):
         self._subset = subset or DEFAULT_SUBSET_NAME

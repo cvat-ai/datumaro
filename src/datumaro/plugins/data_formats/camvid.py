@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
@@ -9,23 +9,23 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from enum import Enum, auto
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 
 from datumaro.components.annotation import (
     AnnotationType,
     CompiledMask,
+    ExtractedMask,
     LabelCategories,
-    Mask,
     MaskCategories,
 )
 from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
-from datumaro.components.errors import MediaTypeError
+from datumaro.components.errors import AnnotationExportError, InvalidAnnotationError, MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
-from datumaro.components.importer import Importer
+from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util import find, str_to_bool
 from datumaro.util.annotation_util import make_label_id_mapping
@@ -101,7 +101,7 @@ def parse_label_map(path):
                 color = None
 
             if name in label_map:
-                raise ValueError("Label '%s' is already defined" % name)
+                raise InvalidAnnotationError("Label '%s' is already defined" % name)
 
             label_map[name] = color
     return label_map
@@ -161,7 +161,9 @@ def _parse_annotation_line(line: str) -> Tuple[str, Optional[str]]:
             objects[0] = objects[1]
             objects[1] = objects[3]
         else:
-            raise Exception("Line %s: unexpected number " "of quotes in filename" % line)
+            raise InvalidAnnotationError(
+                "Line %s: unexpected number " "of quotes in filename" % line
+            )
     else:
         objects = line.split()
 
@@ -172,14 +174,21 @@ def _parse_annotation_line(line: str) -> Tuple[str, Optional[str]]:
 
 
 class CamvidBase(SubsetBase):
-    def __init__(self, path, subset=None):
+    def __init__(
+        self,
+        path: str,
+        *,
+        subset: Optional[str] = None,
+        ctx: Optional[ImportContext] = None,
+    ):
         assert osp.isfile(path), path
         self._path = path
         self._dataset_dir = osp.dirname(path)
 
         if not subset:
             subset = osp.splitext(osp.basename(path))[0]
-        super().__init__(subset=subset)
+
+        super().__init__(subset=subset, ctx=ctx)
 
         self._categories = self._load_categories(self._dataset_dir)
         self._items = list(self._load_items(path).values())
@@ -214,13 +223,20 @@ class CamvidBase(SubsetBase):
                     mask = lazy_mask(
                         gt_path, self._categories[AnnotationType.mask].inverse_colormap
                     )
-                    mask = mask()  # loading mask through cache
+                    np_mask = mask()  # loading mask through cache
 
-                    classes = np.unique(mask)
+                    classes = np.unique(np_mask)
                     for label_id in classes:
                         if labels[label_id] in self._labels:
-                            image = self._lazy_extract_mask(mask, label_id)
-                            item_annotations.append(Mask(image=image, label=label_id))
+                            item_annotations.append(
+                                ExtractedMask(
+                                    index_mask=mask,
+                                    index=label_id,
+                                    label=label_id,
+                                )
+                            )
+
+                            self._ann_types.add(AnnotationType.mask)
 
                 items[item_id] = DatasetItem(
                     id=item_id,
@@ -231,15 +247,15 @@ class CamvidBase(SubsetBase):
 
         return items
 
-    @staticmethod
-    def _lazy_extract_mask(mask, c):
-        return lambda: mask == c
-
 
 class CamvidImporter(Importer):
+    _ANNO_EXT = ".txt"
+
     @classmethod
     def detect(cls, context: FormatDetectionContext) -> None:
-        annot_path = context.require_file("*.txt", exclude_fnames=CamvidPath.LABELMAP_FILE)
+        annot_path = context.require_file(
+            f"*{cls._ANNO_EXT}", exclude_fnames=CamvidPath.LABELMAP_FILE
+        )
 
         with context.probe_text_file(
             annot_path,
@@ -264,6 +280,10 @@ class CamvidImporter(Importer):
             "camvid",
             file_filter=lambda p: osp.basename(p) != CamvidPath.LABELMAP_FILE,
         )
+
+    @classmethod
+    def get_file_extensions(cls) -> List[str]:
+        return [cls._ANNO_EXT]
 
 
 class LabelmapType(Enum):
@@ -313,7 +333,7 @@ class CamvidExporter(Exporter):
             label_map = LabelmapType.source.name
         self._load_categories(label_map)
 
-    def apply(self):
+    def _apply_impl(self):
         if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
             raise MediaTypeError("Media type is not an image")
 
@@ -415,7 +435,7 @@ class CamvidExporter(Exporter):
                 label_map = parse_label_map(label_map_source)
 
         else:
-            raise Exception(
+            raise AnnotationExportError(
                 "Wrong labelmap specified, "
                 "expected one of %s or a file path" % ", ".join(t.name for t in LabelmapType)
             )

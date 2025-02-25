@@ -258,6 +258,8 @@ class CifarFormatTest(TestCase):
             anno_file = osp.join(test_dir, "test")
             with open(anno_file, "wb") as file:
                 pickle.dump(enumerate([1, 2, 3]), file)
+            with open(osp.join(test_dir, "meta"), "wb") as file:
+                pickle.dump({}, file)
             with self.assertRaises(DatasetImportError) as capture:
                 Dataset.import_from(test_dir, "cifar")
             assert isinstance(capture.exception.__cause__, pickle.UnpicklingError)

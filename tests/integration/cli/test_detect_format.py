@@ -4,11 +4,12 @@ import json
 import os
 import os.path as osp
 import shutil
+from typing import List
 from unittest.case import TestCase
 
 from datumaro.plugins.data_formats.ade20k2017 import Ade20k2017Importer
 from datumaro.plugins.data_formats.ade20k2020 import Ade20k2020Importer
-from datumaro.plugins.data_formats.image_dir import ImageDirImporter
+from datumaro.plugins.data_formats.camvid import CamvidImporter
 from datumaro.plugins.data_formats.lfw import LfwImporter
 from datumaro.util.os_util import suppress_output
 
@@ -23,17 +24,26 @@ LFW_DIR = get_test_asset_path("lfw_dataset")
 
 
 class DetectFormatTest(TestCase):
+    def _extract_detect_format_name(self, output_file: io.StringIO) -> List[str]:
+        output = output_file.getvalue()
+        if "Ambiguous dataset; detected the following formats:\n\n" in output:
+            tokens = output.replace(
+                "Ambiguous dataset; detected the following formats:\n\n", ""
+            ).split("- ")[1:]
+            return [token.replace("\n", "") for token in tokens]
+
+        return [output.replace("Detected format: ", "").replace("\n", "")]
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_unambiguous(self):
         output_file = io.StringIO()
 
         with contextlib.redirect_stdout(output_file):
-            run(self, "detect-format", ADE20K2017_DIR)
+            run(self, "detect", ADE20K2017_DIR)
 
-        output = output_file.getvalue()
+        output = self._extract_detect_format_name(output_file)
 
-        self.assertIn(Ade20k2017Importer.NAME, output)
-        self.assertNotIn(Ade20k2020Importer.NAME, output)
+        self.assertEqual([Ade20k2017Importer.NAME], output)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_deep_nested_folders(self):
@@ -45,11 +55,11 @@ class DetectFormatTest(TestCase):
             shutil.copy(osp.join(LFW_DIR, "test", "annotations", "pairs.txt"), annotation_dir)
 
             with contextlib.redirect_stdout(output_file):
-                run(self, "detect-format", test_dir, "--depth", "3")
+                run(self, "detect", test_dir, "--depth", "3")
 
-            output = output_file.getvalue()
+            output = self._extract_detect_format_name(output_file)
 
-            self.assertIn(LfwImporter.NAME, output)
+            self.assertEqual([LfwImporter.NAME], output)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_nested_folders(self):
@@ -61,11 +71,11 @@ class DetectFormatTest(TestCase):
             shutil.copy(osp.join(ADE20K2020_DIR, "training/street/1.json"), annotation_dir)
 
             with contextlib.redirect_stdout(output_file):
-                run(self, "detect-format", test_dir)
+                run(self, "detect", test_dir)
 
-            output = output_file.getvalue()
+            output = self._extract_detect_format_name(output_file)
 
-            self.assertIn(Ade20k2020Importer.NAME, output)
+            self.assertEqual([Ade20k2020Importer.NAME], output)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_ambiguous(self):
@@ -82,12 +92,11 @@ class DetectFormatTest(TestCase):
             output_file = io.StringIO()
 
             with contextlib.redirect_stdout(output_file):
-                run(self, "detect-format", test_dir)
+                run(self, "detect", test_dir)
 
-            output = output_file.getvalue()
+            output = self._extract_detect_format_name(output_file)
 
-            self.assertIn(Ade20k2017Importer.NAME, output)
-            self.assertIn(Ade20k2020Importer.NAME, output)
+            self.assertEqual([Ade20k2017Importer.NAME, Ade20k2020Importer.NAME], output)
 
     # Ideally, there should be a test for the case where no formats match,
     # but currently that's impossible, because some low-confidence detectors
@@ -98,16 +107,13 @@ class DetectFormatTest(TestCase):
         output_file = io.StringIO()
 
         with contextlib.redirect_stdout(output_file):
-            run(self, "detect-format", "--show-rejections", ADE20K2017_DIR)
+            run(self, "detect", "--show-rejections", ADE20K2017_DIR)
 
         output = output_file.getvalue()
 
         self.assertIn(Ade20k2017Importer.NAME, output)
 
-        self.assertIn(Ade20k2020Importer.NAME, output)
-        self.assertIn("*/**/*.json", output)
-
-        self.assertIn(ImageDirImporter.NAME, output)
+        self.assertIn(CamvidImporter.NAME, output)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_json_report(self):
@@ -116,7 +122,7 @@ class DetectFormatTest(TestCase):
 
             run(
                 self,
-                "detect-format",
+                "detect",
                 "--show-rejections",
                 "--json-report",
                 report_path,
@@ -132,19 +138,11 @@ class DetectFormatTest(TestCase):
 
         self.assertIn("rejected_formats", report)
 
-        self.assertIn("ade20k2020", report["rejected_formats"])
-        ade20k2020_rejection = report["rejected_formats"]["ade20k2020"]
+        self.assertIn("camvid", report["rejected_formats"])
+        camvid_rejection = report["rejected_formats"]["camvid"]
 
-        self.assertIn("reason", ade20k2020_rejection)
-        self.assertEqual(ade20k2020_rejection["reason"], "unmet_requirements")
-        self.assertIn("message", ade20k2020_rejection)
-        self.assertIsInstance(ade20k2020_rejection["message"], str)
-        self.assertTrue("*/**/*.json" in ade20k2020_rejection["message"])
-
-        self.assertIn("image_dir", report["rejected_formats"])
-        image_dir_rejection = report["rejected_formats"]["image_dir"]
-
-        self.assertIn("reason", image_dir_rejection)
-        self.assertEqual(image_dir_rejection["reason"], "insufficient_confidence")
-        self.assertIn("message", image_dir_rejection)
-        self.assertIsInstance(image_dir_rejection["message"], str)
+        self.assertIn("reason", camvid_rejection)
+        self.assertEqual(camvid_rejection["reason"], "unmet_requirements")
+        self.assertIn("message", camvid_rejection)
+        self.assertIsInstance(camvid_rejection["message"], str)
+        self.assertTrue(CamvidImporter._ANNO_EXT in camvid_rejection["message"])

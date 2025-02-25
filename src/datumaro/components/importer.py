@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import os
 import os.path as osp
+from contextlib import contextmanager
+from functools import wraps
 from glob import iglob
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Type, TypeVar
 
 from datumaro.components.cli_plugin import CliPlugin
@@ -20,6 +23,7 @@ from datumaro.components.contexts.importer import (
 from datumaro.components.errors import DatasetImportError, DatasetNotFoundError
 from datumaro.components.format_detection import FormatDetectionConfidence, FormatDetectionContext
 from datumaro.components.merge.extractor_merger import ExtractorMerger
+from datumaro.util.definitions import SUBSET_NAME_WHITELIST
 
 T = TypeVar("T")
 
@@ -28,19 +32,20 @@ __all__ = [
     "NullImportContext",
     "_ImportFail",
     "Importer",
+    "with_subset_dirs",
     "ImportErrorPolicy",
     "FailingImportErrorPolicy",
 ]
 
 
 class Importer(CliPlugin):
-    DETECT_CONFIDENCE = FormatDetectionConfidence.LOW
+    DETECT_CONFIDENCE = FormatDetectionConfidence.MEDIUM
 
     @classmethod
     def detect(
         cls,
         context: FormatDetectionContext,
-    ) -> FormatDetectionConfidence:
+    ) -> Optional[FormatDetectionConfidence]:  # read FormatDetector docs
         if not cls.find_sources_with_params(context.root_path):
             context.fail("specific requirement information unavailable")
 
@@ -165,3 +170,107 @@ class Importer(CliPlugin):
             Otherwise, use the return type to merge the extractors.
         """
         return None
+
+
+def with_subset_dirs(input_cls: Type[Importer]):
+    """
+    Transforms an importer that can parse just 1 subset into one that can parse several nested
+    directories as subsets.
+
+    This decorator only recognizes directories from SUBSET_NAME_WHITELIST as candidate subsets.
+
+    Example:
+
+    Suppose there is a directory structure like this:
+
+    .. code-block::
+
+        root/
+        ├── train/
+        │   └── ....
+        └── valid/
+            └── ....
+
+    and we have FooImporter that can parse datasets either from root/train/ or root/valid/
+    dirs, but not both at once. with_subset_dirs() decorator can be used to define
+    a new Importer that can parse both subset directories from the root directory:
+
+    .. code-block::
+
+        @with_subset_dirs
+        class FooWithSubsetDirsImporter(FooImporter):
+            pass
+
+    Now, FooWithSubsetDirsImporter can be used to import a combined dataset from root folder.
+    """
+
+    @wraps(input_cls, updated=())
+    class WrappedImporter(input_cls):
+        NAME = input_cls.NAME
+
+        @classmethod
+        def detect(
+            cls,
+            context: FormatDetectionContext,
+        ) -> Optional[FormatDetectionConfidence]:
+            @contextmanager
+            def _changed_context_root_path(context: FormatDetectionContext, path: str):
+                tmp = context.root_path
+                context._root_path = path
+
+                try:
+                    yield
+                finally:
+                    context._root_path = tmp
+
+            confs = []
+            path = Path(context.root_path)
+
+            if not path.is_dir():
+                context.fail(
+                    f"{input_cls.NAME} should require an input as a directory path. "
+                    f"However, {path} is not a directory path."
+                )
+
+            for sub_path in path.iterdir():
+                if sub_path.name.lower() not in SUBSET_NAME_WHITELIST or not sub_path.is_dir():
+                    continue
+
+                with _changed_context_root_path(context, str(sub_path)):
+                    conf = input_cls.detect(context)
+                    if conf is None:
+                        conf = input_cls.DETECT_CONFIDENCE
+
+                    confs.append(conf)
+
+            if not confs:
+                context.fail(f"{input_cls.NAME} cannot find its subdirectory structure.")
+
+            return max(confs)
+
+        def __call__(self, path, **extra_params):
+            sources = []
+            for sub_dir in os.listdir(path):
+                sub_path = osp.join(path, sub_dir)
+                if osp.isdir(sub_path):
+                    source = input_cls.__call__(self, sub_path, **extra_params)
+
+                    if len(source) != 1:
+                        raise DatasetImportError(
+                            f"@with_subset_dirs only allows one source format from {sub_path}."
+                        )
+
+                    if "subset" in source[0]:
+                        raise DatasetImportError(
+                            f"@with_subset_dirs does not allow a subset key in source: {source[0]}."
+                        )
+
+                    source[0]["options"]["subset"] = sub_dir
+                    sources += source
+
+            return sources
+
+        def __reduce__(self):
+            return (input_cls.__class__, ())
+
+    return WrappedImporter

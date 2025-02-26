@@ -3,8 +3,8 @@ import io
 import json
 import os
 import os.path as osp
-from pathlib import Path
 import shutil
+from pathlib import Path
 from typing import List
 from unittest.case import TestCase
 

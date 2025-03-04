@@ -162,7 +162,8 @@ class YoloExporterTest(CompareDatasetMixin):
         )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_and_load(self, test_dir):
+    @pytest.mark.parametrize("stream", [True, False])
+    def test_can_save_and_load(self, test_dir, stream):
         source_dataset = self._generate_random_dataset(
             [
                 {"annotations": 2},
@@ -171,7 +172,7 @@ class YoloExporterTest(CompareDatasetMixin):
             ]
         )
 
-        self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
+        self.CONVERTER.convert(source_dataset, test_dir, save_media=True, stream=stream)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
 
         self.compare_datasets(source_dataset, parsed_dataset)

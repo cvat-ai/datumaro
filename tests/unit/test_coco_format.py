@@ -2170,3 +2170,20 @@ class CocoExporterTest(TestCase):
                 require_media=True,
             )
             self.assertTrue(osp.isfile(osp.join(test_dir, "dataset_meta.json")))
+
+
+class CocoStreamExporterTest(CocoExporterTest):
+    def _test_save_and_load(
+        self, source_dataset, converter, test_dir, target_dataset=None, importer_args=None, **kwargs
+    ):
+        return check_save_and_load(
+            self,
+            source_dataset,
+            converter,
+            test_dir,
+            importer="coco",
+            target_dataset=target_dataset,
+            importer_args=importer_args,
+            stream=True,
+            **kwargs,
+        )

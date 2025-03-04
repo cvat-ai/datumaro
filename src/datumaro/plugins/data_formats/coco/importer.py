@@ -5,7 +5,7 @@
 import logging as log
 import os.path as osp
 from glob import glob
-from typing import List, Optional
+from typing import List, Optional, Type
 
 from datumaro.components.dataset_base import DEFAULT_SUBSET_NAME
 from datumaro.components.errors import DatasetNotFoundError
@@ -21,8 +21,8 @@ from datumaro.plugins.data_formats.coco.base import (
     CocoPersonKeypointsBase,
     CocoStuffBase,
 )
-from .extractor_merger import COCOExtractorMerger
 
+from .extractor_merger import COCOExtractorMerger
 from .format import CocoImporterType, CocoTask
 
 

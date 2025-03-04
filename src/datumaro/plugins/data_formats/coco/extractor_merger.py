@@ -13,8 +13,6 @@ from datumaro.plugins.data_formats.coco.base import _CocoBase
 
 
 class COCOTaskMergedBase(SubsetBase):
-    __not_plugin__ = True
-
     def __init__(
         self,
         sources: Sequence[_CocoBase],
@@ -68,8 +66,6 @@ class COCOTaskMergedBase(SubsetBase):
 
 
 class COCOExtractorMerger(ExtractorMerger):
-    __not_plugin__ = True
-
     def __init__(self, sources: Sequence[_CocoBase]):
         if len(sources) == 0:
             raise _ImportFail("It should not be empty.")

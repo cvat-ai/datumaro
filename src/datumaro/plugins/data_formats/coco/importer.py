@@ -21,7 +21,7 @@ from datumaro.plugins.data_formats.coco.base import (
     CocoPersonKeypointsBase,
     CocoStuffBase,
 )
-from datumaro.plugins.data_formats.coco.extractor_merger import COCOExtractorMerger
+from .extractor_merger import COCOExtractorMerger
 
 from .format import CocoImporterType, CocoTask
 
@@ -168,7 +168,7 @@ class CocoImporter(Importer):
     def can_stream(self) -> bool:
         return True
 
-    def get_extractor_merger(self) -> Optional[ExtractorMerger]:
+    def get_extractor_merger(self) -> Optional[Type[ExtractorMerger]]:
         return COCOExtractorMerger
 
 

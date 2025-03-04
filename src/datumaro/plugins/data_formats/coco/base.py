@@ -213,7 +213,7 @@ class _CocoBase(SubsetBase):
             if self._task == CocoTask.person_keypoints:
                 self._load_person_kp_categories(self._parse_field(json_data, "categories", list))
 
-        # informs users if 0 is found as category id sicne 0 is reserved for no class
+        # informs users if 0 is found as category id since 0 is reserved for no class
         found = [
             self._categories[AnnotationType.label][label_id].name
             for cat_id, label_id in self._label_map.items()

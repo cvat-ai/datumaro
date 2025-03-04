@@ -81,7 +81,7 @@ class COCOExtractorMerger(ExtractorMerger):
 
         ann_types = set()
         for source in sources:
-            ann_types.union(source.ann_types())
+            ann_types.update(source.ann_types())
         self._ann_types = ann_types
 
         grouped_by_subset = defaultdict(list)

@@ -5,6 +5,7 @@
 import errno
 import logging as log
 import os.path as osp
+from collections.abc import Generator
 from inspect import isclass
 from typing import Any, Dict, Iterator, Optional, Tuple, Type, TypeVar, Union, overload
 
@@ -321,14 +322,14 @@ class _CocoBase(SubsetBase):
     def _load_items(self, json_data):
         pbar = self._ctx.progress_reporter
 
-        def _gen_ann(info_lists):
+        def _iterate_infos(info_lists: list[T]) -> Generator[T, None, None]:
             while info_lists:
                 yield info_lists.pop()
 
         items = {}
         img_infos = {}
         img_lists = self._parse_field(json_data, "images", list)
-        for img_info in _gen_ann(img_lists):
+        for img_info in _iterate_infos(img_lists):
             parsed = self._parse_item(img_info)
             if parsed is None:
                 continue
@@ -341,7 +342,7 @@ class _CocoBase(SubsetBase):
 
         ann_lists = self._parse_field(json_data, "annotations", list)
         for ann_info in pbar.iter(
-            _gen_ann(ann_lists),
+            _iterate_infos(ann_lists),
             desc=f"Importing '{self._subset}'",
             total=len(ann_lists),
         ):

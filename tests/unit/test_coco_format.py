@@ -1022,9 +1022,7 @@ class CocoExtractorTests(TestCase):
             dump_json_file(ann_path, anns)
 
             with self.assertRaises(DatasetImportError) as capture:
-                Dataset.import_from(
-                    ann_path, "coco_instances", unknown_image_ids_strict_handling=True
-                )
+                Dataset.import_from(ann_path, "coco_instances")
             self.assertIsInstance(capture.exception.__cause__, AnnotationImportError)
             self.assertIsInstance(capture.exception.__cause__.__cause__, InvalidAnnotationError)
             self.assertIn("Unknown image id", str(capture.exception.__cause__.__cause__))

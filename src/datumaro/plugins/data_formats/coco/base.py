@@ -115,10 +115,12 @@ class _CocoBase(SubsetBase):
         subset: Optional[str] = None,
         stream: bool = False,
         ctx: Optional[ImportContext] = None,
+        unknown_image_ids_strict_handling: bool = False,
     ):
         if not osp.isfile(path):
             raise FileNotFoundError(errno.ENOENT, "Can't find JSON file", path)
         self._path = path
+        self.unknown_image_ids_strict_handling = unknown_image_ids_strict_handling
 
         if not subset:
             parts = osp.splitext(osp.basename(path))[0].split(task.name + "_", maxsplit=1)
@@ -346,6 +348,8 @@ class _CocoBase(SubsetBase):
             try:
                 img_id = self._parse_field(ann_info, "image_id", int)
                 if img_id not in img_infos:
+                    if self.unknown_image_ids_strict_handling:
+                        raise InvalidAnnotationError(f"Unknown image id '{img_id}'")
                     log.warn(f"Unknown image id '{img_id}'")
                     continue
 

@@ -144,6 +144,9 @@ class CocoImporter(Importer):
         for subset_path in subset_paths:
             ann_type = detect_coco_task(osp.basename(subset_path))
 
+            if ann_type is None and len(cls._TASKS) == 1:
+                ann_type = list(cls._TASKS)[0]
+
             if ann_type not in cls._TASKS:
                 log.warning(
                     "File '%s' was skipped, could't match this file "

@@ -20,8 +20,8 @@ from datumaro.components.annotation import (
     Polygon,
     Skeleton,
 )
-from datumaro.components.dataset import Dataset
-from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.dataset import Dataset, StreamDataset
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     AnnotationImportError,
@@ -2429,3 +2429,33 @@ class CocoStreamExporterTest(CocoExporterTest):
             stream=True,
             **kwargs,
         )
+
+    def test_can_export_stream(self):
+        iter_call_count = 0
+
+        class DummyStreamExtractor(SubsetBase):
+            def categories(self):
+                return {AnnotationType.label: LabelCategories.from_iterable(["a", "b"])}
+
+            def __len__(self):
+                return 1
+
+            def __iter__(self):
+                nonlocal iter_call_count
+                iter_call_count += 1
+                yield DatasetItem(
+                    id=str(id),
+                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
+                    annotations=[Polygon([0, 0, 4, 0, 4, 4], label=0, id=5)],
+                )
+
+            @property
+            def is_stream(self) -> bool:
+                return True
+
+        dataset = StreamDataset.from_extractors(
+            DummyStreamExtractor(media_type=Image, subset="default")
+        )
+        with TestDir() as test_dir:
+            CocoInstancesExporter.convert(dataset, test_dir, stream=True)
+        assert iter_call_count == 1

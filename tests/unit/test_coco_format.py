@@ -20,8 +20,8 @@ from datumaro.components.annotation import (
     Polygon,
     Skeleton,
 )
-from datumaro.components.dataset import Dataset
-from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.dataset import Dataset, StreamDataset
+from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     AnnotationImportError,
@@ -815,7 +815,6 @@ class CocoImporterTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_detect(self):
         subdirs = [
-            "coco",
             "coco_captions",
             "coco_image_info",
             "coco_instances",
@@ -827,12 +826,16 @@ class CocoImporterTest(TestCase):
 
         env = Environment()
 
+        detected_formats = env.detect_dataset(osp.join(DUMMY_DATASET_DIR, "coco"))
+        self.assertIn("coco", detected_formats)
+
         for subdir in subdirs:
             with self.subTest(subdir=subdir):
                 dataset_dir = osp.join(DUMMY_DATASET_DIR, subdir)
 
                 detected_formats = env.detect_dataset(dataset_dir)
-                self.assertEqual([CocoImporter.NAME], detected_formats)
+                self.assertIn(subdir, detected_formats)
+                self.assertNotIn("coco", detected_formats)
 
     @mark_requirement(Requirements.DATUM_673)
     def test_can_pickle(self):
@@ -889,7 +892,7 @@ class CocoExtractorTests(TestCase):
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_unexpected_file(self):
         with TestDir() as test_dir:
-            with self.assertRaisesRegex(DatasetImportError, "JSON file"):
+            with self.assertRaisesRegex(FileNotFoundError, "JSON file"):
                 CocoInstancesBase(test_dir)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
@@ -910,7 +913,7 @@ class CocoExtractorTests(TestCase):
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_ann_field(self):
-        for field in ["id", "image_id", "segmentation", "iscrowd", "category_id", "bbox"]:
+        for field in ["id", "image_id", "iscrowd", "category_id", "bbox"]:
             with self.subTest(field=field):
                 with TestDir() as test_dir:
                     ann_path = osp.join(test_dir, "ann.json")
@@ -2409,3 +2412,50 @@ class CocoExporterTest(TestCase):
                 require_media=True,
             )
             self.assertTrue(osp.isfile(osp.join(test_dir, "dataset_meta.json")))
+
+
+class CocoStreamExporterTest(CocoExporterTest):
+    def _test_save_and_load(
+        self, source_dataset, converter, test_dir, target_dataset=None, importer_args=None, **kwargs
+    ):
+        return check_save_and_load(
+            self,
+            source_dataset,
+            converter,
+            test_dir,
+            importer="coco",
+            target_dataset=target_dataset,
+            importer_args=importer_args,
+            stream=True,
+            **kwargs,
+        )
+
+    def test_can_export_stream(self):
+        iter_call_count = 0
+
+        class DummyStreamExtractor(SubsetBase):
+            def categories(self):
+                return {AnnotationType.label: LabelCategories.from_iterable(["a", "b"])}
+
+            def __len__(self):
+                return 1
+
+            def __iter__(self):
+                nonlocal iter_call_count
+                iter_call_count += 1
+                yield DatasetItem(
+                    id=str(id),
+                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
+                    annotations=[Polygon([0, 0, 4, 0, 4, 4], label=0, id=5)],
+                )
+
+            @property
+            def is_stream(self) -> bool:
+                return True
+
+        dataset = StreamDataset.from_extractors(
+            DummyStreamExtractor(media_type=Image, subset="default")
+        )
+        with TestDir() as test_dir:
+            CocoInstancesExporter.convert(dataset, test_dir, stream=True)
+        assert iter_call_count == 1

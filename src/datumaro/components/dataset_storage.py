@@ -749,7 +749,11 @@ class StreamDatasetStorage(DatasetStorage):
 
     @property
     def subset_names(self):
-        if self._transform_ids_for_latest_subset_names != [id(t) for t in self._transforms]:
+        if any(
+            id(t) not in self._transform_ids_for_latest_subset_names
+            and not t[0].KEEPS_SUBSETS_INTACT
+            for t in self._transforms
+        ):
             self._subset_names = {item.subset for item in self}
             self._transform_ids_for_latest_subset_names = [id(t) for t in self._transforms]
 

@@ -49,7 +49,7 @@ class InfoTest:
     def test_can_print_info_for_dataset(self):
         stdout = self.run("info", DUMMY_DATASET_DIR)
 
-        assert "format: coco" in stdout
+        assert "format: coco_instances" in stdout
         assert "media type: image" in stdout
         assert "subsets" in stdout
 
@@ -58,6 +58,6 @@ class InfoTest:
         stdout = self.run("info", "--json", DUMMY_DATASET_DIR)
 
         result = parse_json(stdout)
-        assert result["format"] == "coco"
+        assert result["format"] == "coco_instances"
         assert result["media type"] == "image"
         assert len(result["subsets"]) == 2

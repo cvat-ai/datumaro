@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2020-2024 Intel Corporation
 # Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
@@ -26,6 +26,7 @@ from datumaro.components.annotation import (
     AnnotationType,
     Bbox,
     Caption,
+    Ellipse,
     Label,
     LabelCategories,
     Mask,
@@ -38,13 +39,18 @@ from datumaro.components.annotation import (
     Shape,
 )
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, IDataset
+from datumaro.components.dataset_base import (
+    DEFAULT_SUBSET_NAME,
+    CategoriesInfo,
+    DatasetInfo,
+    DatasetItem,
+    IDataset,
+)
 from datumaro.components.errors import DatumaroError
 from datumaro.components.media import Image
 from datumaro.components.transformer import ItemTransform, Transform
 from datumaro.util import NOTSET, filter_dict, parse_str_enum_value, take_by
 from datumaro.util.annotation_util import find_group_leader, find_instances
-from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 
 class CropCoveredSegments(ItemTransform, CliPlugin):
@@ -259,11 +265,12 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
 
 class PolygonsToMasks(ItemTransform, CliPlugin):
     KEEPS_SUBSETS_INTACT = True
+    _allowed_types = {AnnotationType.polygon, AnnotationType.ellipse}
 
     def transform_item(self, item):
         annotations = []
         for ann in item.annotations:
-            if ann.type == AnnotationType.polygon:
+            if ann.type in self._allowed_types:
                 if not isinstance(item.media, Image):
                     raise Exception("Image info is required for this transform")
                 h, w = item.media.size
@@ -274,8 +281,8 @@ class PolygonsToMasks(ItemTransform, CliPlugin):
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
-    def convert_polygon(polygon: Polygon, img_h: int, img_w: int):
-        rle = mask_utils.frPyObjects([polygon.points], img_h, img_w)[0]
+    def convert_polygon(polygon: Union[Polygon, Ellipse], img_h, img_w):
+        rle = mask_utils.frPyObjects([polygon.as_polygon()], img_h, img_w)[0]
 
         return RleMask(
             rle=rle,
@@ -314,6 +321,29 @@ class BoxesToMasks(ItemTransform, CliPlugin):
             id=bbox.id,
             attributes=bbox.attributes,
             group=bbox.group,
+        )
+
+
+class BoxesToPolygons(ItemTransform, CliPlugin):
+    KEEPS_SUBSETS_INTACT = True
+
+    def transform_item(self, item):
+        annotations = [
+            self.convert_bbox(ann) if ann.type == AnnotationType.bbox else ann
+            for ann in item.annotations
+        ]
+
+        return self.wrap_item(item, annotations=annotations)
+
+    @staticmethod
+    def convert_bbox(bbox: Bbox):
+        return Polygon(
+            points=bbox.as_polygon(),
+            id=bbox.id,
+            attributes=bbox.attributes,
+            group=bbox.group,
+            label=bbox.label,
+            z_order=bbox.z_order,
         )
 
 
@@ -365,6 +395,7 @@ class ShapesToBoxes(ItemTransform, CliPlugin):
                 AnnotationType.polygon,
                 AnnotationType.polyline,
                 AnnotationType.points,
+                AnnotationType.ellipse,
             }:
                 annotations.append(self.convert_shape(ann))
             else:
@@ -404,6 +435,36 @@ class Reindex(Transform, CliPlugin):
     def __iter__(self) -> Iterator[DatasetItem]:
         for i, item in enumerate(self._extractor):
             yield self.wrap_item(item, id=i + self._start)
+
+
+class Sort(Transform, CliPlugin):
+    """
+    Sorts dataset items.
+    """
+
+    KEEPS_SUBSETS_INTACT = True
+
+    @classmethod
+    def build_cmdline_parser(cls, **kwargs):
+        parser = super().build_cmdline_parser(**kwargs)
+        parser.add_argument("-k", "--key", type=str, default=None, help="key functions to sort.")
+        return parser
+
+    def __init__(self, extractor, key=None):
+        super().__init__(extractor)
+        if key:
+            if isinstance(key, str):
+                key = eval(key)
+            if not callable(key):
+                raise Exception("key must be a function with one argument.")
+        else:
+            key = lambda item: item.id
+        self._key = key
+
+    def __iter__(self):
+        items = sorted(list(iter(self._extractor)), key=lambda item: self._key(item))
+        for item in items:
+            yield item
 
 
 class MapSubsets(ItemTransform, CliPlugin):
@@ -562,25 +623,26 @@ class Rename(ItemTransform, CliPlugin):
     the pattern and replacement parts. Replacement part can also
     contain `str.format` replacement fields with the `item`
     (of type `DatasetItem`) object available.|n
+    Please use double quotes to represent regex.|n
     |n
     Examples:|n
     |s|s- Replace 'pattern' with 'replacement':|n
 
       .. code-block::
 
-    |s|s|s|srename -e '|pattern|replacement|'|n
+    |s|s|s|srename -e "|pattern|replacement|"|n
     |n
     |s|s- Remove 'frame_' from item ids:|n
 
       .. code-block::
 
-    |s|s|s|srename -e '|^frame_||'|n
+    |s|s|s|srename -e "|^frame_||"|n
     |n
     |s|s- Rename by regex:|n
 
       .. code-block::
 
-    |s|s|s|srename -e '|frame_(\d+)_extra|{item.subset}_id_\1|'
+    |s|s|s|srename -e "|frame_(\d+)_extra|{item.subset}_id_\1|"
     """
     KEEPS_SUBSETS_INTACT = True
 
@@ -774,6 +836,52 @@ class RemapLabels(ItemTransform, CliPlugin):
             elif self._default_action is self.DefaultAction.keep:
                 annotations.append(ann.wrap())
         return item.wrap(annotations=annotations)
+
+
+class ProjectInfos(Transform, CliPlugin):
+    """
+    Changes the content of infos.
+    A user can add meta-data of dataset such as author, comments, or related papers.
+    Infos values are not affect on the dataset structure.
+    We thus can add any meta-data freely.
+    """
+
+    @classmethod
+    def build_cmdline_parser(cls, **kwargs):
+        parser = super().build_cmdline_parser(**kwargs)
+        parser.add_argument(
+            "-i",
+            "--infos",
+            action="append",
+            dest="dst_infos",
+            help="A dictionary of the dataset meta-information",
+        )
+        parser.add_argument(
+            "-o",
+            "--overwrite",
+            action="store_true",
+            dest="overwrite",
+            help="Overwrite the infos of src if True",
+        )
+        return parser
+
+    def __init__(self, extractor: IDataset, dst_infos: DatasetInfo, overwrite: bool = False):
+        super().__init__(extractor)
+
+        if overwrite:
+            self._infos = dst_infos
+        else:
+            self._infos = deepcopy(extractor.infos())
+            for k, v in dst_infos.items():
+                self._infos[k] = v
+
+    def __iter__(self):
+        for item in self._extractor:
+            if item is not None:
+                yield item
+
+    def infos(self):
+        return self._infos
 
 
 class ProjectLabels(ItemTransform):
@@ -1272,7 +1380,7 @@ class RemoveAttributes(ItemTransform):
         else:
             return filter_dict(attrs, exclude_keys=self._attributes)
 
-    def transform_item(self, item):
+    def transform_item(self, item: DatasetItem):
         if not self._ids or (item.id, item.subset) in self._ids:
             filtered_annotations = []
             for ann in item.annotations:

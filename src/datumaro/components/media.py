@@ -455,6 +455,26 @@ class ImageFromBytes(ImageFromData):
             self._size = tuple(map(int, data.shape[:2]))
         return data
 
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        ext: Optional[str] = None,
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        new_ext = self._get_ext_to_save(fp, ext)
+
+        if self.ext == new_ext:
+            if isinstance(fp, str):
+                os.makedirs(osp.dirname(fp), exist_ok=True)
+            data = super().data
+            if isinstance(fp, str):
+                with open(fp, "wb") as f:
+                    f.write(data)
+            else:
+                fp.write(data)
+        else:
+            super().save(fp=fp, ext=ext, crypter=crypter)
+
     def get_data_as_dtype(self, dtype: Optional[np.dtype] = np.uint8) -> Optional[np.ndarray]:
         """Get image data with a specific data type"""
 

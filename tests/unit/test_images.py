@@ -1,5 +1,6 @@
 import os.path as osp
 from unittest import TestCase
+from unittest.mock import Mock
 
 import numpy as np
 
@@ -7,7 +8,6 @@ from datumaro.components.media import Image, ImageFromBytes
 from datumaro.util.image import (
     encode_image,
     lazy_image,
-    load_image,
     load_image_meta_file,
     save_image,
     save_image_meta_file,
@@ -163,6 +163,20 @@ class BytesImageTest(TestCase):
         image_bytes = b"\xff" * 10  # invalid image
         image = ImageFromBytes(data=image_bytes)
         self.assertEqual(image.ext, None)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_no_excess_decode_on_image_save(self):
+        with TestDir() as test_dir:
+            image_np = np.ones([2, 4, 3])
+
+            extensions = ["png", "bmp", "jpg"]
+            for source_ext, save_ext in zip(extensions, extensions):
+                with self.subTest(source_ext=source_ext, save_ext=save_ext):
+                    image_bytes = encode_image(image_np, source_ext)
+                    img = Image.from_bytes(data=image_bytes)
+                    mimg = Mock(wraps=img)
+                    mimg.save(osp.join(test_dir, f"path_{source_ext}.{save_ext}"))
+                    assert mimg.data.call_count == 0 if source_ext == save_ext else 1
 
 
 class ImageMetaTest(TestCase):

@@ -291,7 +291,7 @@ class Image(MediaElement[np.ndarray]):
             assert ext is None, "'ext' must be empty if string is given."
             ext = osp.splitext(osp.basename(fp))[1].lower()
         else:
-            ext = ext if ext else self._DEFAULT_EXT
+            ext = ext or self.ext or self._DEFAULT_EXT
         return ext
 
     def __eq__(self, other):
@@ -463,7 +463,7 @@ class ImageFromBytes(ImageFromData):
     ):
         new_ext = self._get_ext_to_save(fp, ext)
 
-        if self.ext == new_ext and crypter.is_null_crypter or crypter == self.crypter:
+        if self.ext == new_ext and (crypter.is_null_crypter or crypter == self._crypter):
             if isinstance(fp, str):
                 os.makedirs(osp.dirname(fp), exist_ok=True)
             data = self.bytes

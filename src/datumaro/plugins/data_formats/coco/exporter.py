@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-import json
 import logging as log
 import os
 import os.path as osp
@@ -12,8 +11,8 @@ from io import BufferedWriter
 from itertools import chain, groupby
 from typing import Dict, List, Optional, Type, Union
 
+import orjson
 import pycocotools.mask as mask_utils
-from json_stream.writer import streamable_dict, streamable_list
 
 import datumaro.util.annotation_util as anno_tools
 import datumaro.util.mask_tools as mask_tools
@@ -106,13 +105,11 @@ class TemporaryWriters:
     def merge(self, path: str, header: Dict, min_ann_id: Optional[int]) -> None:
         self.close()
 
-        @streamable_list
         def _gen_images():
             with open(self.imgs.fp.name, "rb") as fp:
                 for line in fp:
-                    yield parse_json(line)
+                    yield orjson.Fragment(line)
 
-        @streamable_list
         def _gen_anns():
             with open(self.anns.fp.name, "rb") as fp:
                 next_id = min_ann_id
@@ -121,26 +118,14 @@ class TemporaryWriters:
                     if min_ann_id is not None and not ann["id"]:
                         ann["id"] = next_id
                         next_id += 1
-                    yield ann
+                    yield orjson.Fragment(dump_json(ann))
 
-        @streamable_dict
-        def _gen():
-            yield "licenses", header["licenses"]
-            yield "info", header["info"]
-            yield "categories", header["categories"]
-
-            if not self.imgs.is_empty:
-                yield "images", _gen_images()
-            else:
-                yield "images", []
-
-            if not self.anns.is_empty:
-                yield "annotations", _gen_anns()
-            else:
-                yield "annotations", []
-
-        with open(path, "w", encoding="utf-8") as fp:
-            json.dump(_gen(), fp)
+        data = dict(
+            header,
+            images=[] if self.imgs.is_empty else list(_gen_images()),
+            annotations=[] if self.anns.is_empty else list(_gen_anns()),
+        )
+        dump_json_file(path, data)
 
         self.remove()
 

@@ -1,11 +1,15 @@
+import itertools
 import os.path as osp
+from io import BytesIO
 from unittest import TestCase
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 
+from datumaro.components.crypter import NULL_CRYPTER, Crypter
 from datumaro.components.media import Image, ImageFromBytes
 from datumaro.util.image import (
+    decode_image,
     encode_image,
     lazy_image,
     load_image_meta_file,
@@ -166,17 +170,67 @@ class BytesImageTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_no_excess_decode_on_image_save(self):
+        def check_decode_call_count(image: Image, expected_call_count: int, **kwargs):
+            with patch(
+                "datumaro.components.media.decode_image", Mock(wraps=decode_image)
+            ) as mock_decode:
+                image.save(**kwargs)
+                assert mock_decode.call_count == expected_call_count
+
         with TestDir() as test_dir:
             image_np = np.ones([2, 4, 3])
 
-            extensions = ["png", "bmp", "jpg"]
-            for source_ext, save_ext in zip(extensions, extensions):
-                with self.subTest(source_ext=source_ext, save_ext=save_ext):
+            implicit_extensions = {".png", ".bmp", ".jpg"}
+            extensions = {
+                ".jpg",
+                ".png",
+                ".bmp",
+                ".tif",
+                ".tiff",
+                ".webp",
+                ".pfm",
+                ".sr",
+                ".ras",
+                ".hdr",
+                ".pic",
+                ".pnm",
+            }
+            crypters = [NULL_CRYPTER, Crypter(Crypter.gen_key())]
+            for source_ext, save_ext, save_crypter, explicit_ext in itertools.product(
+                extensions, extensions, crypters, [True, False]
+            ):
+                with self.subTest(
+                    source_ext=source_ext, save_ext=save_ext, save_crypter=save_crypter
+                ):
                     image_bytes = encode_image(image_np, source_ext)
-                    img = Image.from_bytes(data=image_bytes)
-                    mimg = Mock(wraps=img)
-                    mimg.save(osp.join(test_dir, f"path_{source_ext}.{save_ext}"))
-                    assert mimg.data.call_count == 0 if source_ext == save_ext else 1
+                    img = Image.from_bytes(
+                        data=image_bytes, ext=source_ext if explicit_ext else None
+                    )
+
+                    knows_current_extension = source_ext in implicit_extensions or explicit_ext
+
+                    # test determine target extension from path
+                    check_decode_call_count(
+                        img,
+                        (0 if knows_current_extension and source_ext == save_ext else 1),
+                        fp=osp.join(test_dir, f"name{save_ext}"),
+                        crypter=save_crypter,
+                    )
+                    # test explicit target extension and fp
+                    check_decode_call_count(
+                        img,
+                        (0 if knows_current_extension and source_ext == save_ext else 1),
+                        fp=BytesIO(),
+                        ext=save_ext,
+                        crypter=save_crypter,
+                    )
+                    # test extension not passed
+                    check_decode_call_count(
+                        img,
+                        (0 if knows_current_extension else 1),
+                        fp=BytesIO(),
+                        crypter=save_crypter,
+                    )
 
 
 class ImageMetaTest(TestCase):

@@ -463,15 +463,10 @@ class ImageFromBytes(ImageFromData):
     ):
         new_ext = self._get_ext_to_save(fp, ext)
 
-        if self.ext == new_ext and (crypter.is_null_crypter or crypter == self._crypter):
+        if self.ext == new_ext:
             if isinstance(fp, str):
                 os.makedirs(osp.dirname(fp), exist_ok=True)
-            data = self.bytes
-            if isinstance(fp, str):
-                with open(fp, "wb") as f:
-                    f.write(data)
-            else:
-                fp.write(data)
+            copyto_image(io.BytesIO(self.bytes), fp, src_crypter=self._crypter, dst_crypter=crypter)
         else:
             super().save(fp=fp, ext=ext, crypter=crypter)
 

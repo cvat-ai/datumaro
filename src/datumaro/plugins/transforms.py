@@ -38,7 +38,7 @@ from datumaro.components.annotation import (
     Shape,
 )
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, IDataset
+from datumaro.components.dataset_base import CategoriesInfo, DatasetInfo, DatasetItem, IDataset
 from datumaro.components.errors import DatumaroError
 from datumaro.components.media import Image
 from datumaro.components.transformer import ItemTransform, Transform

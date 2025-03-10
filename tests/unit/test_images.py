@@ -9,7 +9,10 @@ import numpy as np
 from datumaro.components.crypter import NULL_CRYPTER, Crypter
 from datumaro.components.media import Image, ImageFromBytes
 from datumaro.util.image import (
+    ImageBackend,
+    ImageColorChannel,
     decode_image,
+    decode_image_context,
     encode_image,
     lazy_image,
     load_image_meta_file,
@@ -174,33 +177,26 @@ class BytesImageTest(TestCase):
             with patch(
                 "datumaro.components.media.decode_image", Mock(wraps=decode_image)
             ) as mock_decode:
-                image.save(**kwargs)
-                assert mock_decode.call_count == expected_call_count
+                with decode_image_context(
+                    image_backend=ImageBackend.cv2, image_color_channel=ImageColorChannel.UNCHANGED
+                ):
+                    image.save(**kwargs)
+                    assert mock_decode.call_count == expected_call_count
 
         with TestDir() as test_dir:
             image_np = np.ones([2, 4, 3])
 
             implicit_extensions = {".png", ".bmp", ".jpg"}
-            extensions = {
-                ".jpg",
-                ".png",
-                ".bmp",
-                ".tif",
-                ".tiff",
-                ".webp",
-                ".pfm",
-                ".sr",
-                ".ras",
-                ".hdr",
-                ".pic",
-                ".pnm",
-            }
+            extensions = implicit_extensions | {".tif", ".pic", ".ras"}
             crypters = [NULL_CRYPTER, Crypter(Crypter.gen_key())]
             for source_ext, save_ext, save_crypter, explicit_ext in itertools.product(
                 extensions, extensions, crypters, [True, False]
             ):
                 with self.subTest(
-                    source_ext=source_ext, save_ext=save_ext, save_crypter=save_crypter
+                    source_ext=source_ext,
+                    save_ext=save_ext,
+                    save_crypter=save_crypter,
+                    explicit_ext=explicit_ext,
                 ):
                     image_bytes = encode_image(image_np, source_ext)
                     img = Image.from_bytes(

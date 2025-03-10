@@ -11,8 +11,8 @@ from io import BufferedWriter
 from itertools import chain, groupby
 from typing import Dict, List, Optional, Type, Union
 
-import orjson
 import pycocotools.mask as mask_utils
+import rapidjson
 
 import datumaro.util.annotation_util as anno_tools
 import datumaro.util.mask_tools as mask_tools
@@ -108,7 +108,7 @@ class TemporaryWriters:
         def _gen_images():
             with open(self.imgs.fp.name, "rb") as fp:
                 for line in fp:
-                    yield orjson.Fragment(line)
+                    yield parse_json(line)
 
         def _gen_anns():
             with open(self.anns.fp.name, "rb") as fp:
@@ -118,14 +118,16 @@ class TemporaryWriters:
                     if min_ann_id is not None and not ann["id"]:
                         ann["id"] = next_id
                         next_id += 1
-                    yield orjson.Fragment(dump_json(ann))
+                    yield ann
 
         data = dict(
             header,
-            images=[] if self.imgs.is_empty else list(_gen_images()),
-            annotations=[] if self.anns.is_empty else list(_gen_anns()),
+            images=[] if self.imgs.is_empty else _gen_images(),
+            annotations=[] if self.anns.is_empty else _gen_anns(),
         )
-        dump_json_file(path, data)
+
+        with open(path, "w", encoding="utf-8") as fp:
+            rapidjson.dump(data, fp, indent=None)
 
         self.remove()
 

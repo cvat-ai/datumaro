@@ -783,6 +783,7 @@ class ProjectInfos(Transform, CliPlugin):
     Infos values are not affect on the dataset structure.
     We thus can add any meta-data freely.
     """
+    KEEPS_SUBSETS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -799,7 +800,8 @@ class ProjectInfos(Transform, CliPlugin):
             "--overwrite",
             action="store_true",
             dest="overwrite",
-            help="Overwrite the infos of src if True",
+            help="Overwrite the infos of src if True or append to the existing ones "
+                 "(default: %(default)s)",
         )
         return parser
 

@@ -5,6 +5,7 @@ from typing import Dict, Tuple
 from unittest import TestCase, mock
 
 import numpy as np
+import pytest
 
 from datumaro.components.annotation import (
     AnnotationType,
@@ -48,9 +49,10 @@ from datumaro.components.filter import (
 from datumaro.components.hl_ops import HLOps
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement, Video
+from datumaro.components.merge import IntersectMerge
 from datumaro.components.progress_reporting import NullProgressReporter
 from datumaro.components.transformer import ItemTransform, Transform
-from datumaro.plugins.transforms import BoxesToMasks, MapSubsets, MasksToPolygons
+from datumaro.plugins.transforms import BoxesToMasks, MapSubsets, MasksToPolygons, RemapLabels, ProjectInfos
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 from tests.requirements import Requirements, mark_requirement
@@ -2319,6 +2321,101 @@ class TestHLOps(TestCase):
             actual = Dataset.load(test_dir)
 
             compare_datasets(self, expected, actual)
+
+
+@pytest.fixture
+def fxt_test_case():
+    return TestCase()
+
+
+@pytest.fixture
+def fxt_sample_dataset_factory():
+    def sample_dataset_factory(
+        items=None,
+        infos=None,
+        categories=None,
+    ):
+        if items is None:
+            items = [DatasetItem(0, subset="train"), DatasetItem(1, subset="train")]
+        if infos is None:
+            infos = {}
+        if categories is None:
+            categories = ["cat", "dog"]
+
+        dataset = Dataset.from_iterable(
+            items,
+            infos=infos,
+            categories=categories,
+        )
+        return dataset
+
+    return sample_dataset_factory
+
+
+@pytest.fixture
+def fxt_sample_infos():
+    infos_1 = {"info 1": 1}
+    infos_2 = {"info 2": "meta-info 2"}
+    infos = {}
+    infos.update(infos_1)
+    infos.update(infos_2)
+
+    return infos_1, infos_2, infos
+
+
+class DatasetInfosTest:
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_dataset_infos(self, fxt_test_case, fxt_sample_dataset_factory, fxt_sample_infos):
+        _, _, infos = fxt_sample_infos
+        dataset = fxt_sample_dataset_factory(infos=infos)
+        fxt_test_case.assertEqual(dataset.infos(), infos)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_dataset_infos_exact_merge(
+        self, fxt_test_case, fxt_sample_dataset_factory, fxt_sample_infos
+    ):
+        infos_1, infos_2, infos = fxt_sample_infos
+
+        dataset_1 = fxt_sample_dataset_factory(infos=infos_1)
+        dataset_2 = fxt_sample_dataset_factory(infos=infos_2)
+
+        dataset = Dataset.from_extractors(dataset_1, dataset_2)
+
+        fxt_test_case.assertEqual(dataset.infos(), infos)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_dataset_infos_intersect_merge(
+        self, fxt_test_case, fxt_sample_dataset_factory, fxt_sample_infos
+    ):
+        infos_1, infos_2, infos = fxt_sample_infos
+
+        dataset_1 = fxt_sample_dataset_factory(infos=infos_1)
+        dataset_2 = fxt_sample_dataset_factory(infos=infos_2)
+
+        merger = IntersectMerge()
+        dataset = merger(dataset_1, dataset_2)
+
+        fxt_test_case.assertEqual(dataset.infos(), infos)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    def test_dataset_infos_transform(
+        self, fxt_test_case, fxt_sample_dataset_factory, fxt_sample_infos, is_eager
+    ):
+        infos_1, infos_2, infos = fxt_sample_infos
+        with eager_mode(is_eager):
+            dataset = fxt_sample_dataset_factory(infos=infos_1)
+
+            dataset.transform(ProjectInfos, dst_infos=infos_2, overwrite=False)
+            fxt_test_case.assertEqual(dataset.infos(), infos)
+
+            dataset.transform(ProjectInfos, dst_infos=infos_2, overwrite=True)
+            fxt_test_case.assertEqual(dataset.infos(), infos_2)
+
+            dataset.transform(
+                RemapLabels, mapping={"car": "apple", "cat": "banana", "dog": "cinnamon"}
+            )
+            fxt_test_case.assertEqual(dataset.infos(), infos_2)
 
 
 class StreamDatasetTest:

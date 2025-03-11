@@ -134,7 +134,6 @@ class BytesImageTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_ctors(self):
         with TestDir() as test_dir:
-            path = osp.join(test_dir, "path.png")
             image = np.ones([2, 4, 3])
             image_bytes = encode_image(image, "png")
 
@@ -188,14 +187,13 @@ class BytesImageTest(TestCase):
         with TestDir() as test_dir:
             image_np = np.ones([2, 4, 3])
 
-            implicit_extensions = [ext for _, ext in ImageFromBytes._FORMAT_MAGICS]
+            implicit_extensions = set(ext for _, ext in ImageFromBytes._FORMAT_MAGICS)
             extensions = {".png", ".bmp", ".jpg", ".tif", ".pic", ".ras"}
-            assert any(ext in implicit_extensions for ext in extensions)
-            assert any(ext not in implicit_extensions for ext in extensions)
+            assert extensions & implicit_extensions
+            assert extensions - implicit_extensions
 
-            crypters = [NULL_CRYPTER, Crypter(Crypter.gen_key())]
             for source_ext, save_ext, save_crypter, explicit_ext in itertools.product(
-                extensions, extensions, crypters, [True, False]
+                extensions, extensions, [NULL_CRYPTER, Crypter(Crypter.gen_key())], [True, False]
             ):
                 with self.subTest(
                     source_ext=source_ext,
@@ -217,6 +215,7 @@ class BytesImageTest(TestCase):
                         fp=osp.join(test_dir, f"name{save_ext}"),
                         crypter=save_crypter,
                     )
+
                     # test explicit target extension and fp
                     check_decode_call_count(
                         img,
@@ -225,6 +224,7 @@ class BytesImageTest(TestCase):
                         ext=save_ext,
                         crypter=save_crypter,
                     )
+
                     # test extension not passed
                     check_decode_call_count(
                         img,

@@ -291,7 +291,7 @@ class Image(MediaElement[np.ndarray]):
             assert ext is None, "'ext' must be empty if string is given."
             ext = osp.splitext(osp.basename(fp))[1].lower()
         else:
-            ext = ext if ext else self._DEFAULT_EXT
+            ext = ext or self.ext or self._DEFAULT_EXT
         return ext
 
     def __eq__(self, other):
@@ -454,6 +454,21 @@ class ImageFromBytes(ImageFromData):
                 raise MediaShapeError("An image should have 2 (gray) or 3 (bgra) dims.")
             self._size = tuple(map(int, data.shape[:2]))
         return data
+
+    def save(
+        self,
+        fp: Union[str, io.IOBase],
+        ext: Optional[str] = None,
+        crypter: Crypter = NULL_CRYPTER,
+    ):
+        new_ext = self._get_ext_to_save(fp, ext)
+
+        if self.ext == new_ext:
+            if isinstance(fp, str):
+                os.makedirs(osp.dirname(fp), exist_ok=True)
+            copyto_image(io.BytesIO(self.bytes), fp, src_crypter=self._crypter, dst_crypter=crypter)
+        else:
+            super().save(fp=fp, ext=ext, crypter=crypter)
 
     def get_data_as_dtype(self, dtype: Optional[np.dtype] = np.uint8) -> Optional[np.ndarray]:
         """Get image data with a specific data type"""

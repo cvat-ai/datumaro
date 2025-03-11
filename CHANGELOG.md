@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/openvinotoolkit/datumaro/pull/678>)
 - Detection for Cityscapes format
   (<https://github.com/openvinotoolkit/datumaro/pull/680>)
-- Maximum recursion `--depth` parameter for `detect-dataset` CLI command
+- Maximum recursion `--depth` parameter for `detect` CLI command
   (<https://github.com/openvinotoolkit/datumaro/pull/680>)
 - An option to save a single subset in the `download` command
   (<https://github.com/openvinotoolkit/datumaro/pull/697>)
@@ -52,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/71>)
 - Support for tracks in Ultralytics YOLO formats
   (<https://github.com/cvat-ai/datumaro/pull/70>)
+- \[API\] `ImageFromBytes.save()` now preserves image extension if no output extension is specified
+  (<https://github.com/cvat-ai/datumaro/pull/91>)
+- \[API\] `ImageFromBytes.save()` now guarantees there will be no extra image encoding/decoding
+  when possible (e.g. if input and output extension is the same)
+  (<https://github.com/cvat-ai/datumaro/pull/91>)
 
 ### Changed
 - `env.detect_dataset()` now returns a list of detected formats at all recursion levels
@@ -113,6 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/45>)
 - Failing `resize` transform for RLE masks
   (<https://github.com/cvat-ai/datumaro/pull/46>)
+- Invalid handling of Mac OS special dirs in format detection
+  (<https://github.com/cvat-ai/datumaro/pull/88>)
 
 ### Security
 - TBD

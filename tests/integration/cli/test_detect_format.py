@@ -4,6 +4,7 @@ import json
 import os
 import os.path as osp
 import shutil
+from pathlib import Path
 from typing import List
 from unittest.case import TestCase
 
@@ -11,7 +12,7 @@ from datumaro.plugins.data_formats.ade20k2017 import Ade20k2017Importer
 from datumaro.plugins.data_formats.ade20k2020 import Ade20k2020Importer
 from datumaro.plugins.data_formats.camvid import CamvidImporter
 from datumaro.plugins.data_formats.lfw import LfwImporter
-from datumaro.util.os_util import suppress_output
+from datumaro.util.os_util import SPECIAL_MACOS_FOLDERS, is_subpath, suppress_output
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path
@@ -76,6 +77,29 @@ class DetectFormatTest(TestCase):
             output = self._extract_detect_format_name(output_file)
 
             self.assertEqual([Ade20k2020Importer.NAME], output)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_ignore_special_dirs_in_nested_folders(self):
+        with TestDir() as test_dir:
+            output_file = io.StringIO()
+
+            annotation_dir = osp.join(test_dir, "a", "b", "c", "annotations")
+            os.makedirs(annotation_dir)
+            shutil.copy(osp.join(LFW_DIR, "test", "annotations", "pairs.txt"), annotation_dir)
+
+            for subdir_path in Path(annotation_dir).parents:
+                if not is_subpath(str(subdir_path), test_dir):
+                    continue
+
+                for special_dir_name in SPECIAL_MACOS_FOLDERS:
+                    (subdir_path / special_dir_name).mkdir(exist_ok=True)
+
+            with contextlib.redirect_stdout(output_file):
+                run(self, "detect", test_dir, "--depth", "3")
+
+            output = self._extract_detect_format_name(output_file)
+
+            self.assertEqual([LfwImporter.NAME], output)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_ambiguous(self):

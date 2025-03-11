@@ -2330,11 +2330,6 @@ class TestHLOps(TestCase):
 
 
 @pytest.fixture
-def fxt_test_case():
-    return TestCase()
-
-
-@pytest.fixture
 def fxt_sample_dataset_factory():
     def sample_dataset_factory(
         items=None,
@@ -2371,15 +2366,13 @@ def fxt_sample_infos():
 
 class DatasetInfosTest:
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_dataset_infos(self, fxt_test_case, fxt_sample_dataset_factory, fxt_sample_infos):
+    def test_dataset_infos(self, fxt_sample_dataset_factory, fxt_sample_infos):
         _, _, infos = fxt_sample_infos
         dataset = fxt_sample_dataset_factory(infos=infos)
-        fxt_test_case.assertEqual(dataset.infos(), infos)
+        assert dataset.infos() == infos
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_dataset_infos_exact_merge(
-        self, fxt_test_case, fxt_sample_dataset_factory, fxt_sample_infos
-    ):
+    def test_dataset_infos_exact_merge(self, fxt_sample_dataset_factory, fxt_sample_infos):
         infos_1, infos_2, infos = fxt_sample_infos
 
         dataset_1 = fxt_sample_dataset_factory(infos=infos_1)
@@ -2387,12 +2380,10 @@ class DatasetInfosTest:
 
         dataset = Dataset.from_extractors(dataset_1, dataset_2)
 
-        fxt_test_case.assertEqual(dataset.infos(), infos)
+        assert dataset.infos() == infos
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_dataset_infos_intersect_merge(
-        self, fxt_test_case, fxt_sample_dataset_factory, fxt_sample_infos
-    ):
+    def test_dataset_infos_intersect_merge(self, fxt_sample_dataset_factory, fxt_sample_infos):
         infos_1, infos_2, infos = fxt_sample_infos
 
         dataset_1 = fxt_sample_dataset_factory(infos=infos_1)
@@ -2401,27 +2392,25 @@ class DatasetInfosTest:
         merger = IntersectMerge()
         dataset = merger(dataset_1, dataset_2)
 
-        fxt_test_case.assertEqual(dataset.infos(), infos)
+        assert dataset.infos() == infos
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     @pytest.mark.parametrize("is_eager", [True, False])
-    def test_dataset_infos_transform(
-        self, fxt_test_case, fxt_sample_dataset_factory, fxt_sample_infos, is_eager
-    ):
+    def test_dataset_infos_transform(self, fxt_sample_dataset_factory, fxt_sample_infos, is_eager):
         infos_1, infos_2, infos = fxt_sample_infos
         with eager_mode(is_eager):
             dataset = fxt_sample_dataset_factory(infos=infos_1)
 
             dataset.transform(ProjectInfos, dst_infos=infos_2, overwrite=False)
-            fxt_test_case.assertEqual(dataset.infos(), infos)
+            assert dataset.infos() == infos
 
             dataset.transform(ProjectInfos, dst_infos=infos_2, overwrite=True)
-            fxt_test_case.assertEqual(dataset.infos(), infos_2)
+            assert dataset.infos() == infos_2
 
             dataset.transform(
                 RemapLabels, mapping={"car": "apple", "cat": "banana", "dog": "cinnamon"}
             )
-            fxt_test_case.assertEqual(dataset.infos(), infos_2)
+            assert dataset.infos() == infos_2
 
 
 class StreamDatasetTest:

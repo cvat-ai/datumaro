@@ -273,9 +273,10 @@ def check_save_and_load(
     target_dataset=None,
     importer_args=None,
     compare=None,
+    stream: bool = False,
     **cmp_kwargs,
 ):
-    converter(source_dataset, test_dir)
+    converter(source_dataset, test_dir, stream=stream)
 
     if importer_args is None:
         importer_args = {}

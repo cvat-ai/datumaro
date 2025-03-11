@@ -1,13 +1,20 @@
+import itertools
 import os.path as osp
+from io import BytesIO
 from unittest import TestCase
+from unittest.mock import Mock, patch
 
 import numpy as np
 
+from datumaro.components.crypter import NULL_CRYPTER, Crypter
 from datumaro.components.media import Image, ImageFromBytes
 from datumaro.util.image import (
+    ImageBackend,
+    ImageColorChannel,
+    decode_image,
+    decode_image_context,
     encode_image,
     lazy_image,
-    load_image,
     load_image_meta_file,
     save_image,
     save_image_meta_file,
@@ -127,7 +134,6 @@ class BytesImageTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_ctors(self):
         with TestDir() as test_dir:
-            path = osp.join(test_dir, "path.png")
             image = np.ones([2, 4, 3])
             image_bytes = encode_image(image, "png")
 
@@ -163,6 +169,69 @@ class BytesImageTest(TestCase):
         image_bytes = b"\xff" * 10  # invalid image
         image = ImageFromBytes(data=image_bytes)
         self.assertEqual(image.ext, None)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_no_excess_decode_on_image_save(self):
+        def check_decode_call_count(image: Image, expected_call_count: int, **kwargs):
+            with patch(
+                "datumaro.components.media.decode_image", Mock(wraps=decode_image)
+            ) as mock_decode:
+                # Only OpenCV backend implements crypter support, so force it.
+                # https://github.com/cvat-ai/datumaro/issues/92
+                with decode_image_context(
+                    image_backend=ImageBackend.cv2, image_color_channel=ImageColorChannel.UNCHANGED
+                ):
+                    image.save(**kwargs)
+                    assert mock_decode.call_count == expected_call_count
+
+        with TestDir() as test_dir:
+            image_np = np.ones([2, 4, 3])
+
+            implicit_extensions = set(ext for _, ext in ImageFromBytes._FORMAT_MAGICS)
+            extensions = {".png", ".bmp", ".jpg", ".tif", ".pic", ".ras"}
+            assert extensions & implicit_extensions
+            assert extensions - implicit_extensions
+
+            for source_ext, save_ext, save_crypter, explicit_ext in itertools.product(
+                extensions, extensions, [NULL_CRYPTER, Crypter(Crypter.gen_key())], [True, False]
+            ):
+                with self.subTest(
+                    source_ext=source_ext,
+                    save_ext=save_ext,
+                    save_crypter=save_crypter,
+                    explicit_ext=explicit_ext,
+                ):
+                    image_bytes = encode_image(image_np, source_ext)
+                    img = Image.from_bytes(
+                        data=image_bytes, ext=source_ext if explicit_ext else None
+                    )
+
+                    knows_current_extension = source_ext in implicit_extensions or explicit_ext
+
+                    # test determine target extension from path
+                    check_decode_call_count(
+                        img,
+                        (0 if knows_current_extension and source_ext == save_ext else 1),
+                        fp=osp.join(test_dir, f"name{save_ext}"),
+                        crypter=save_crypter,
+                    )
+
+                    # test explicit target extension and fp
+                    check_decode_call_count(
+                        img,
+                        (0 if knows_current_extension and source_ext == save_ext else 1),
+                        fp=BytesIO(),
+                        ext=save_ext,
+                        crypter=save_crypter,
+                    )
+
+                    # test extension not passed
+                    check_decode_call_count(
+                        img,
+                        (0 if knows_current_extension else 1),
+                        fp=BytesIO(),
+                        crypter=save_crypter,
+                    )
 
 
 class ImageMetaTest(TestCase):

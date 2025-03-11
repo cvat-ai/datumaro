@@ -27,6 +27,8 @@ class Transform(DatasetBase, CliPlugin):
     or their annotations.
     """
 
+    KEEPS_SUBSETS_INTACT = False
+
     @staticmethod
     def wrap_item(item: DatasetItem, **kwargs) -> DatasetItem:
         return item.wrap(**kwargs)

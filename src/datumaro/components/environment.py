@@ -13,7 +13,7 @@ from typing import Callable, List, Optional, Sequence
 from datumaro.components.cli_plugin import plugin_types
 from datumaro.components.format_detection import RejectionReason, detect_dataset_format
 from datumaro.components.registry import PluginRegistry
-from datumaro.util.os_util import import_foreign_module, split_path
+from datumaro.util.os_util import SPECIAL_MACOS_FOLDERS, import_foreign_module, split_path
 
 
 class Environment:
@@ -208,7 +208,8 @@ class Environment:
         depth: int = 1,
         rejection_callback: Optional[Callable[[str, RejectionReason, str], None]] = None,
     ) -> List[str]:
-        ignore_dirs = {"__MSOSX", "__MACOSX"}
+        ignore_dirs = SPECIAL_MACOS_FOLDERS
+
         matched_formats = set()
         for _ in range(depth + 1):
             detected_formats = detect_dataset_format(
@@ -225,9 +226,12 @@ class Environment:
             elif detected_formats:
                 matched_formats |= set(detected_formats)
 
-            paths = glob.glob(osp.join(path, "*"))
-            path = "" if len(paths) != 1 else paths[0]
-            if not osp.isdir(path) or osp.basename(path) in ignore_dirs:
+            # If there is only a single nested dir, recurse into it up to the allowed level
+            nested_paths = [
+                p for p in glob.glob(osp.join(path, "*")) if osp.basename(p) not in ignore_dirs
+            ]
+            path = "" if len(nested_paths) != 1 else nested_paths[0]
+            if not path or not osp.isdir(path):
                 break
 
         return [format.name for format in matched_formats]

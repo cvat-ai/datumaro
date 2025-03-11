@@ -6,11 +6,10 @@ import inspect
 from functools import wraps
 from inspect import isclass
 from itertools import islice
-from typing import Any, Callable, Dict, Iterable, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, Tuple, TypeVar, Union
 
 import attrs
 import orjson
-from json_stream.base import StreamingJSONList, StreamingJSONObject
 
 NOTSET = object()
 
@@ -204,11 +203,3 @@ def dump_json_file(
 
 def current_function_name(depth=1):
     return inspect.getouterframes(inspect.currentframe())[depth].function
-
-
-def to_dict_from_streaming_json(obj: Any) -> Dict[str, Any]:
-    if isinstance(obj, StreamingJSONObject):
-        return {k: to_dict_from_streaming_json(v) for k, v in obj.items()}
-    if isinstance(obj, StreamingJSONList):
-        return [to_dict_from_streaming_json(v) for v in obj]
-    return obj

@@ -9,7 +9,6 @@ nibabel>=3.2.1
 numpy<2,>=1.22.2
 orjson==3.10.12
 Pillow>=10.3.0
-python-rapidjson==1.20
 ruamel.yaml>=0.17.0
 shapely>=1.7
 typing_extensions>=3.7.4.3
@@ -51,6 +50,9 @@ tabulate
 
 # prune
 scikit-learn
+
+# Stream JSON dumper
+python-rapidjson==1.20
 
 # TabularValidator
 nltk

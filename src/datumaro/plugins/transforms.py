@@ -776,7 +776,7 @@ class RemapLabels(ItemTransform, CliPlugin):
         return item.wrap(annotations=annotations)
 
 
-class ProjectInfos(Transform, CliPlugin):
+class UpdateInfos(Transform, CliPlugin):
     """
     Changes the content of infos.
     A user can add meta-data of dataset such as author, comments, or related papers.
@@ -792,7 +792,7 @@ class ProjectInfos(Transform, CliPlugin):
         parser.add_argument(
             "-i",
             "--infos",
-            type=parse_json,
+            type=lambda v: dict(parse_json(v)),
             dest="dst_infos",
             help="A dictionary of the dataset meta-information in json format",
         )
@@ -806,15 +806,19 @@ class ProjectInfos(Transform, CliPlugin):
         )
         return parser
 
-    def __init__(self, extractor: IDataset, dst_infos: DatasetInfo | dict, overwrite: bool = False):
+    def __init__(self, extractor: IDataset, dst_infos: DatasetInfo, overwrite: bool = False):
         super().__init__(extractor)
+
+        def _merge_infos():
+            infos = deepcopy(self._extractor.infos())
+            for k, v in dst_infos.items():
+                infos[k] = v
+            return infos
 
         if overwrite:
             self._infos = dst_infos
         else:
-            self._infos = deepcopy(extractor.infos())
-            for k, v in dst_infos.items():
-                self._infos[k] = v
+            self._infos = _merge_infos
 
     def __iter__(self):
         for item in self._extractor:
@@ -822,6 +826,8 @@ class ProjectInfos(Transform, CliPlugin):
                 yield item
 
     def infos(self):
+        if callable(self._infos):
+            self._infos = self._infos()
         return self._infos
 
 

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 from datumaro.components.annotation import AnnotationType
 from datumaro.components.dataset_base import CategoriesInfo, DatasetInfo
 from datumaro.components.dataset_storage import StreamDatasetStorage
-from datumaro.plugins.transforms import MapSubsets, ProjectInfos, RandomSplit, RemapLabels, Rename
+from datumaro.plugins.transforms import MapSubsets, RandomSplit, RemapLabels, Rename, UpdateInfos
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 
@@ -111,7 +111,7 @@ class StreamDatasetStorageTest:
         assert storage.infos() == fxt_infos
 
         dst_infos = {"new": "info"}
-        storage.transform(ProjectInfos, dst_infos=dst_infos)
+        storage.transform(UpdateInfos, dst_infos=dst_infos)
 
         assert storage.infos().get("new") == "info"
         assert fxt_stream_extractor.__iter__.call_count == 0
@@ -145,7 +145,7 @@ class StreamDatasetStorageTest:
         assert storage.infos() == fxt_infos
 
         dst_infos = {"new": "info"}
-        storage.transform(ProjectInfos, dst_infos=dst_infos)
+        storage.transform(UpdateInfos, dst_infos=dst_infos)
         assert fxt_stream_extractor.__iter__.call_count == 0
 
         # Check extractor categories

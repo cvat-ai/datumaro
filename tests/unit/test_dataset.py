@@ -56,8 +56,8 @@ from datumaro.plugins.transforms import (
     BoxesToMasks,
     MapSubsets,
     MasksToPolygons,
-    ProjectInfos,
     RemapLabels,
+    UpdateInfos,
 )
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
@@ -2401,10 +2401,10 @@ class DatasetInfosTest:
         with eager_mode(is_eager):
             dataset = fxt_sample_dataset_factory(infos=infos_1)
 
-            dataset.transform(ProjectInfos, dst_infos=infos_2, overwrite=False)
+            dataset.transform(UpdateInfos, dst_infos=infos_2, overwrite=False)
             assert dataset.infos() == infos
 
-            dataset.transform(ProjectInfos, dst_infos=infos_2, overwrite=True)
+            dataset.transform(UpdateInfos, dst_infos=infos_2, overwrite=True)
             assert dataset.infos() == infos_2
 
             dataset.transform(

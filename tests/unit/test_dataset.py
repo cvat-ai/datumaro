@@ -52,7 +52,13 @@ from datumaro.components.media import Image, MediaElement, Video
 from datumaro.components.merge import IntersectMerge
 from datumaro.components.progress_reporting import NullProgressReporter
 from datumaro.components.transformer import ItemTransform, Transform
-from datumaro.plugins.transforms import BoxesToMasks, MapSubsets, MasksToPolygons, RemapLabels, ProjectInfos
+from datumaro.plugins.transforms import (
+    BoxesToMasks,
+    MapSubsets,
+    MasksToPolygons,
+    ProjectInfos,
+    RemapLabels,
+)
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 from tests.requirements import Requirements, mark_requirement

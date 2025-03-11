@@ -42,7 +42,7 @@ from datumaro.components.dataset_base import CategoriesInfo, DatasetInfo, Datase
 from datumaro.components.errors import DatumaroError
 from datumaro.components.media import Image
 from datumaro.components.transformer import ItemTransform, Transform
-from datumaro.util import NOTSET, filter_dict, parse_str_enum_value, take_by
+from datumaro.util import NOTSET, filter_dict, parse_json, parse_str_enum_value, take_by
 from datumaro.util.annotation_util import find_group_leader, find_instances
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
@@ -783,6 +783,7 @@ class ProjectInfos(Transform, CliPlugin):
     Infos values are not affect on the dataset structure.
     We thus can add any meta-data freely.
     """
+
     KEEPS_SUBSETS_INTACT = True
 
     @classmethod
@@ -791,9 +792,9 @@ class ProjectInfos(Transform, CliPlugin):
         parser.add_argument(
             "-i",
             "--infos",
-            action="append",
+            type=parse_json,
             dest="dst_infos",
-            help="A dictionary of the dataset meta-information",
+            help="A dictionary of the dataset meta-information in json format",
         )
         parser.add_argument(
             "-o",
@@ -801,11 +802,11 @@ class ProjectInfos(Transform, CliPlugin):
             action="store_true",
             dest="overwrite",
             help="Overwrite the infos of src if True or append to the existing ones "
-                 "(default: %(default)s)",
+            "(default: %(default)s)",
         )
         return parser
 
-    def __init__(self, extractor: IDataset, dst_infos: DatasetInfo, overwrite: bool = False):
+    def __init__(self, extractor: IDataset, dst_infos: DatasetInfo | dict, overwrite: bool = False):
         super().__init__(extractor)
 
         if overwrite:

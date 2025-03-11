@@ -177,6 +177,8 @@ class BytesImageTest(TestCase):
             with patch(
                 "datumaro.components.media.decode_image", Mock(wraps=decode_image)
             ) as mock_decode:
+                # Only OpenCV backend implements crypter support, so force it.
+                # https://github.com/cvat-ai/datumaro/issues/92
                 with decode_image_context(
                     image_backend=ImageBackend.cv2, image_color_channel=ImageColorChannel.UNCHANGED
                 ):

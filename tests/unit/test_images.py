@@ -186,8 +186,11 @@ class BytesImageTest(TestCase):
         with TestDir() as test_dir:
             image_np = np.ones([2, 4, 3])
 
-            implicit_extensions = {".png", ".bmp", ".jpg"}
-            extensions = implicit_extensions | {".tif", ".pic", ".ras"}
+            implicit_extensions = [ext for _, ext in ImageFromBytes._FORMAT_MAGICS]
+            extensions = {".png", ".bmp", ".jpg", ".tif", ".pic", ".ras"}
+            assert any(ext in implicit_extensions for ext in extensions)
+            assert any(ext not in implicit_extensions for ext in extensions)
+
             crypters = [NULL_CRYPTER, Crypter(Crypter.gen_key())]
             for source_ext, save_ext, save_crypter, explicit_ext in itertools.product(
                 extensions, extensions, crypters, [True, False]

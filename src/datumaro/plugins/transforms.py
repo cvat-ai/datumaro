@@ -778,10 +778,9 @@ class RemapLabels(ItemTransform, CliPlugin):
 
 class UpdateInfos(Transform, CliPlugin):
     """
-    Changes the content of infos.
-    A user can add meta-data of dataset such as author, comments, or related papers.
-    Infos values are not affect on the dataset structure.
-    We thus can add any meta-data freely.
+    Changes the content of dataset metadata ("infos").
+    It's possible to add metadata of a dataset, such as author, comments, or related papers.
+    Infos values do not affect the dataset structure, so any metadata can be added freely.
     """
 
     KEEPS_SUBSETS_INTACT = True

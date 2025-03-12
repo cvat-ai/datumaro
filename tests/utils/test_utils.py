@@ -203,6 +203,9 @@ def compare_datasets(
                 )
             item_b.annotations.remove(ann_b)  # avoid repeats
 
+    # Check dataset info
+    test.assertEqual(expected.infos(), actual.infos())
+
 
 def compare_datasets_strict(test, expected: IDataset, actual: IDataset):
     # Compares datasets for strong equality

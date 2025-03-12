@@ -32,7 +32,7 @@ from datumaro.components.media import MediaElement
 from datumaro.components.transformer import ItemTransform, Transform
 from datumaro.util import is_method_redefined
 
-__all__ = ["DatasetPatch", "DatasetStorage"]
+__all__ = ["DatasetPatch", "DatasetStorage", "StreamDatasetStorage"]
 
 
 class DatasetPatch:

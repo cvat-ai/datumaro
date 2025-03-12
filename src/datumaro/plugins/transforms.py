@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022 Intel Corporation
+# Copyright (C) 2020-2024 Intel Corporation
 # Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
@@ -38,11 +38,11 @@ from datumaro.components.annotation import (
     Shape,
 )
 from datumaro.components.cli_plugin import CliPlugin
-from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, IDataset
+from datumaro.components.dataset_base import CategoriesInfo, DatasetInfo, DatasetItem, IDataset
 from datumaro.components.errors import DatumaroError
 from datumaro.components.media import Image
 from datumaro.components.transformer import ItemTransform, Transform
-from datumaro.util import NOTSET, filter_dict, parse_str_enum_value, take_by
+from datumaro.util import NOTSET, filter_dict, parse_json, parse_str_enum_value, take_by
 from datumaro.util.annotation_util import find_group_leader, find_instances
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
@@ -774,6 +774,60 @@ class RemapLabels(ItemTransform, CliPlugin):
             elif self._default_action is self.DefaultAction.keep:
                 annotations.append(ann.wrap())
         return item.wrap(annotations=annotations)
+
+
+class UpdateInfos(Transform, CliPlugin):
+    """
+    Changes the content of dataset metadata ("infos").
+    It's possible to add metadata of a dataset, such as author, comments, or related papers.
+    Infos values do not affect the dataset structure, so any metadata can be added freely.
+    """
+
+    KEEPS_SUBSETS_INTACT = True
+
+    @classmethod
+    def build_cmdline_parser(cls, **kwargs):
+        parser = super().build_cmdline_parser(**kwargs)
+        parser.add_argument(
+            "-i",
+            "--infos",
+            type=lambda v: dict(parse_json(v)),
+            dest="dst_infos",
+            help="A dictionary of the dataset meta-information in json format",
+        )
+        parser.add_argument(
+            "-o",
+            "--overwrite",
+            action="store_true",
+            dest="overwrite",
+            help="Overwrite the infos of src if True or append to the existing ones "
+            "(default: %(default)s)",
+        )
+        return parser
+
+    def __init__(self, extractor: IDataset, dst_infos: DatasetInfo, overwrite: bool = False):
+        super().__init__(extractor)
+
+        def _merge_infos():
+            infos = deepcopy(self._extractor.infos())
+            for k, v in dst_infos.items():
+                infos[k] = v
+            return infos
+
+        if overwrite:
+            self._infos = dst_infos
+        else:
+            self._infos = _merge_infos
+
+    def __iter__(self):
+        for item in self._extractor:
+            if item is not None:
+                yield item
+
+    def infos(self):
+        if callable(self._infos):
+            self._infos = self._infos()
+        return self._infos
 
 
 class ProjectLabels(ItemTransform):

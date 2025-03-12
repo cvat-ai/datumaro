@@ -1,9 +1,11 @@
 import os
 import os.path as osp
 import pickle  # nosec - disable B403:import_pickle check
+from typing import Dict, Tuple
 from unittest import TestCase, mock
 
 import numpy as np
+import pytest
 
 from datumaro.components.annotation import (
     AnnotationType,
@@ -22,7 +24,7 @@ from datumaro.components.contexts.importer import (
     ImportErrorPolicy,
     ProgressReporter,
 )
-from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, eager_mode
+from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, StreamDataset, eager_mode
 from datumaro.components.dataset_base import DatasetBase, DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.environment import Environment
@@ -47,8 +49,16 @@ from datumaro.components.filter import (
 from datumaro.components.hl_ops import HLOps
 from datumaro.components.launcher import Launcher
 from datumaro.components.media import Image, MediaElement, Video
+from datumaro.components.merge import IntersectMerge
 from datumaro.components.progress_reporting import NullProgressReporter
 from datumaro.components.transformer import ItemTransform, Transform
+from datumaro.plugins.transforms import (
+    BoxesToMasks,
+    MapSubsets,
+    MasksToPolygons,
+    RemapLabels,
+    UpdateInfos,
+)
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 from tests.requirements import Requirements, mark_requirement
@@ -2317,3 +2327,185 @@ class TestHLOps(TestCase):
             actual = Dataset.load(test_dir)
 
             compare_datasets(self, expected, actual)
+
+
+@pytest.fixture
+def fxt_sample_dataset_factory():
+    def sample_dataset_factory(
+        items=None,
+        infos=None,
+        categories=None,
+    ):
+        if items is None:
+            items = [DatasetItem(0, subset="train"), DatasetItem(1, subset="train")]
+        if infos is None:
+            infos = {}
+        if categories is None:
+            categories = ["cat", "dog"]
+
+        dataset = Dataset.from_iterable(
+            items,
+            infos=infos,
+            categories=categories,
+        )
+        return dataset
+
+    return sample_dataset_factory
+
+
+@pytest.fixture
+def fxt_sample_infos():
+    infos_1 = {"info 1": 1}
+    infos_2 = {"info 2": "meta-info 2"}
+    infos = {}
+    infos.update(infos_1)
+    infos.update(infos_2)
+
+    return infos_1, infos_2, infos
+
+
+class DatasetInfosTest:
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_dataset_infos(self, fxt_sample_dataset_factory, fxt_sample_infos):
+        _, _, infos = fxt_sample_infos
+        dataset = fxt_sample_dataset_factory(infos=infos)
+        assert dataset.infos() == infos
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_dataset_infos_exact_merge(self, fxt_sample_dataset_factory, fxt_sample_infos):
+        infos_1, infos_2, infos = fxt_sample_infos
+
+        dataset_1 = fxt_sample_dataset_factory(infos=infos_1)
+        dataset_2 = fxt_sample_dataset_factory(infos=infos_2)
+
+        dataset = Dataset.from_extractors(dataset_1, dataset_2)
+
+        assert dataset.infos() == infos
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_dataset_infos_intersect_merge(self, fxt_sample_dataset_factory, fxt_sample_infos):
+        infos_1, infos_2, infos = fxt_sample_infos
+
+        dataset_1 = fxt_sample_dataset_factory(infos=infos_1)
+        dataset_2 = fxt_sample_dataset_factory(infos=infos_2)
+
+        merger = IntersectMerge()
+        dataset = merger(dataset_1, dataset_2)
+
+        assert dataset.infos() == infos
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    def test_dataset_infos_transform(self, fxt_sample_dataset_factory, fxt_sample_infos, is_eager):
+        infos_1, infos_2, infos = fxt_sample_infos
+        with eager_mode(is_eager):
+            dataset = fxt_sample_dataset_factory(infos=infos_1)
+
+            dataset.transform(UpdateInfos, dst_infos=infos_2, overwrite=False)
+            assert dataset.infos() == infos
+
+            dataset.transform(UpdateInfos, dst_infos=infos_2, overwrite=True)
+            assert dataset.infos() == infos_2
+
+            dataset.transform(
+                RemapLabels, mapping={"car": "apple", "cat": "banana", "dog": "cinnamon"}
+            )
+            assert dataset.infos() == infos_2
+
+
+class StreamDatasetTest:
+    @staticmethod
+    def _gen_items(start_id, end_id, subset):
+        for id in range(start_id, end_id):
+            yield DatasetItem(
+                id=id,
+                subset=subset,
+                media=Image.from_numpy(data=np.ones((5, 5, 3))),
+                annotations=[
+                    Bbox(1, 2, 3, 4),
+                ],
+            )
+
+    @staticmethod
+    def _make_extractor(items_for_subsets: Dict[str, Tuple[int, int]]):
+        class SrcExtractor(DatasetBase):
+            def __init__(self):
+                super().__init__(
+                    length=sum(
+                        end_id - start_id for start_id, end_id in items_for_subsets.values()
+                    ),
+                    subsets=list(items_for_subsets.keys()),
+                )
+                self.iter_counter = 0
+
+            def __iter__(self):
+                self.iter_counter += 1
+                for subset, (start_id, end_id) in items_for_subsets.items():
+                    yield from StreamDatasetTest._gen_items(start_id, end_id, subset)
+
+            @property
+            def is_stream(self):
+                return True
+
+        return SrcExtractor()
+
+    def test_single_subset(self):
+        extractor = self._make_extractor({"train": (1, 3)})
+        dataset = StreamDataset.from_extractors(extractor)
+
+        assert list(dataset.subsets().keys()) == ["train"]
+        assert len(dataset) == 2
+        # does not iterate items to get any of the above info
+        assert extractor.iter_counter == 0
+
+        # does not cache items
+        assert len(list(dataset)) == 2
+        assert extractor.iter_counter == 1
+        assert len(list(dataset)) == 2
+        assert extractor.iter_counter == 2
+
+        # when accessing items through subsets, iterates over them only once
+        assert (
+            len([item for subset_name, subset in dataset.subsets().items() for item in subset]) == 2
+        )
+        assert extractor.iter_counter == 3
+
+    def test_subset_keeping_transforms_do_not_trigger_subset_recollection(self):
+        extractor = self._make_extractor({"train": (1, 3), "val": (3, 5)})
+        dataset = StreamDataset.from_extractors(extractor)
+        dataset = dataset.transform(BoxesToMasks)
+        assert set(dataset.subsets().keys()) == {"train", "val"}
+        assert extractor.iter_counter == 0
+
+    def test_subset_changing_transforms_trigger_subset_recollection(self):
+        extractor = self._make_extractor({"train": (1, 3), "val": (3, 6)})
+        dataset = StreamDataset.from_extractors(extractor)
+        dataset = dataset.transform(MapSubsets, mapping={"train": "another"})
+        assert set(dataset.subsets().keys()) == {"another", "val"}
+        assert extractor.iter_counter == 1
+        # subset names now cached
+        assert set(dataset.subsets().keys()) == {"another", "val"}
+        assert extractor.iter_counter == 1
+
+    def test_several_subsets(self):
+        extractor = self._make_extractor({"train": (1, 3), "val": (3, 6), "test": (9, 13)})
+        dataset = StreamDataset.from_extractors(extractor)
+        dataset = dataset.transform(BoxesToMasks)
+        dataset = dataset.transform(MasksToPolygons)
+
+        assert set(dataset.subsets().keys()) == {"train", "val", "test"}
+        assert len(dataset) == 9
+        # does not iterate items to get any of the above info
+        assert extractor.iter_counter == 0
+
+        # does not cache items
+        assert len(list(dataset)) == 9
+        assert extractor.iter_counter == 1
+        assert len(list(dataset)) == 9
+        assert extractor.iter_counter == 2
+
+        # when accessing items through subsets, iterates over them once for each subset
+        assert (
+            len([item for subset_name, subset in dataset.subsets().items() for item in subset]) == 9
+        )
+        assert extractor.iter_counter == 5

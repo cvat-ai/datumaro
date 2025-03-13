@@ -16,8 +16,8 @@ import numpy as np
 from datumaro.components.annotation import (
     AnnotationType,
     CompiledMask,
+    ExtractedMask,
     LabelCategories,
-    Mask,
     MaskCategories,
     RgbColor,
 )
@@ -30,7 +30,7 @@ from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util import find
 from datumaro.util.annotation_util import make_label_id_mapping
-from datumaro.util.image import find_images, load_image, save_image
+from datumaro.util.image import find_images, lazy_image, save_image
 from datumaro.util.mask_tools import generate_colormap, paint_mask
 from datumaro.util.meta_file_util import (
     has_meta_file,
@@ -303,8 +303,8 @@ class CityscapesBase(SubsetBase):
             item_id = self._get_id_from_mask_path(mask_path, mask_suffix)
 
             anns = []
-            instances_mask = load_image(mask_path, dtype=np.int32)
-            segm_ids = np.unique(instances_mask)
+            instances_mask = lazy_image(mask_path, dtype=np.int32)
+            segm_ids = np.unique(instances_mask())
             for segm_id in segm_ids:
                 # either is_crowd or ann_id should be set
                 if segm_id < 1000:
@@ -316,8 +316,9 @@ class CityscapesBase(SubsetBase):
                     is_crowd = False
                     ann_id = segm_id % 1000
                 anns.append(
-                    Mask(
-                        image=self._lazy_extract_mask(instances_mask, segm_id),
+                    ExtractedMask(
+                        index_mask=instances_mask,
+                        index=segm_id,
                         label=label_id,
                         id=ann_id,
                         attributes={"is_crowd": is_crowd},
@@ -341,10 +342,6 @@ class CityscapesBase(SubsetBase):
             self._path, use_train_label_map=mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
         )
         return items
-
-    @staticmethod
-    def _lazy_extract_mask(mask, c):
-        return lambda: mask == c
 
 
 class CityscapesImporter(Importer):

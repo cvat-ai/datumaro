@@ -589,6 +589,8 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
                         ("child_label_2", "skeleton_label"),
                         ("child_label_3", "skeleton_label"),
                         "one_more_label_wo_parent",
+                        "not_skeleton_parent",
+                        ("child_label_4", "not_skeleton_parent"),
                     ]
                 ),
                 AnnotationType.points: PointsCategories.from_iterable(
@@ -606,6 +608,8 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
                 1: "skeleton_label",
                 2: "another_label_wo_parent",
                 3: "one_more_label_wo_parent",
+                4: "not_skeleton_parent",
+                5: "child_label_4",
             }
         anno3.label = 2
         expected_dataset = Dataset.from_iterable(
@@ -622,6 +626,8 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
                 "skeleton_label",
                 "another_label_wo_parent",
                 "one_more_label_wo_parent",
+                "not_skeleton_parent",
+                "child_label_4",
             ],
         )
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)

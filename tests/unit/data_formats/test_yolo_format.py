@@ -566,7 +566,7 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
             require_media=True,
         )
 
-    def test_saves_only_parentless_labels(self, test_dir):
+    def test_does_not_save_skeleton_sublabels(self, test_dir):
         anno1 = self._generate_random_annotation(label=1)
         anno3 = self._generate_random_annotation(label=3)
 
@@ -579,24 +579,37 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
                     annotations=[anno1, anno3],
                 ),
             ],
-            categories=[
-                "label_wo_parent",
-                "parent_label",
-                ("child_label_1", "parent_label"),
-                "another_label_wo_parent",
-                ("child_label_2", "parent_label"),
-                ("child_label_3", "parent_label"),
-                "one_more_label_wo_parent",
-            ],
+            categories={
+                AnnotationType.label: LabelCategories.from_iterable(
+                    [
+                        "label_wo_parent",
+                        "skeleton_label",
+                        ("child_label_1", "skeleton_label"),
+                        "another_label_wo_parent",
+                        ("child_label_2", "skeleton_label"),
+                        ("child_label_3", "skeleton_label"),
+                        "one_more_label_wo_parent",
+                        "not_skeleton_parent",
+                        ("child_label_4", "not_skeleton_parent"),
+                    ]
+                ),
+                AnnotationType.points: PointsCategories.from_iterable(
+                    [
+                        (1, ["child_label_1", "child_label_2", "child_label_3"], {(0, 1)}),
+                    ],
+                ),
+            },
         )
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True)
         with open(osp.join(test_dir, "data.yaml"), "r") as f:
             config = yaml.safe_load(f)
             assert config["names"] == {
                 0: "label_wo_parent",
-                1: "parent_label",
+                1: "skeleton_label",
                 2: "another_label_wo_parent",
                 3: "one_more_label_wo_parent",
+                4: "not_skeleton_parent",
+                5: "child_label_4",
             }
         anno3.label = 2
         expected_dataset = Dataset.from_iterable(
@@ -610,9 +623,11 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
             ],
             categories=[
                 "label_wo_parent",
-                "parent_label",
+                "skeleton_label",
                 "another_label_wo_parent",
                 "one_more_label_wo_parent",
+                "not_skeleton_parent",
+                "child_label_4",
             ],
         )
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
@@ -915,7 +930,7 @@ class YoloUltralyticsPoseExporterTest(YoloUltralyticsDetectionExporterTest):
         assert osp.isfile(osp.join(test_dir, "dataset_meta.json"))
         self.compare_datasets(source_dataset, parsed_dataset)
 
-    def test_saves_only_parentless_labels(self, test_dir):
+    def test_does_not_save_skeleton_sublabels(self, test_dir):
         # should save only skeleton labels
         source_dataset = Dataset.from_iterable(
             [

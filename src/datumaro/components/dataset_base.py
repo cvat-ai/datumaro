@@ -280,3 +280,11 @@ class SubsetBase(DatasetBase):
     def subset(self) -> str:
         """Subset name of this instance."""
         return self._subset
+
+
+class StreamingDatasetBase(DatasetBase):
+    """
+    A base class for user-defined and built-in extractors.
+    Should be used in cases, where SubsetBase is not enough,
+    or its use makes problems with performance, implementation etc.
+    """

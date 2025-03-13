@@ -62,6 +62,10 @@ class Transform(DatasetBase, CliPlugin):
     def infos(self) -> DatasetInfo:
         return self._extractor.infos()
 
+    @property
+    def is_stream(self) -> bool:
+        return self._extractor.is_stream
+
 
 class ItemTransform(Transform):
     def transform_item(self, item: DatasetItem) -> Optional[DatasetItem]:

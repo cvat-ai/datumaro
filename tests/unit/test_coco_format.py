@@ -21,7 +21,7 @@ from datumaro.components.annotation import (
     Skeleton,
 )
 from datumaro.components.dataset import Dataset, StreamDataset
-from datumaro.components.dataset_base import DatasetItem, SubsetBase
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, IDataset, SubsetBase
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     AnnotationImportError,
@@ -2432,30 +2432,48 @@ class CocoStreamExporterTest(CocoExporterTest):
 
     def test_can_export_stream(self):
         iter_call_count = 0
+        iter_subset_call_count = 0
 
-        class DummyStreamExtractor(SubsetBase):
+        class DummyStreamExtractor(DatasetBase):
             def categories(self):
                 return {AnnotationType.label: LabelCategories.from_iterable(["a", "b"])}
-
-            def __len__(self):
-                return 1
 
             def __iter__(self):
                 nonlocal iter_call_count
                 iter_call_count += 1
-                yield DatasetItem(
-                    id=str(id),
-                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
-                    annotations=[Polygon([0, 0, 4, 0, 4, 4], label=0, id=5)],
-                )
+                for subset in self.subsets().values():
+                    yield from subset
+
+            def get_subset(self, name: str) -> IDataset:
+                assert name in ["train", "test"]
+
+                class _SubsetExtractor(SubsetBase):
+                    def __iter__(self):
+                        nonlocal iter_subset_call_count
+                        iter_subset_call_count += 1
+                        yield DatasetItem(
+                            id=str(id),
+                            subset=name,
+                            media=Image.from_numpy(data=np.ones((4, 2, 3))),
+                            annotations=[Polygon([0, 0, 4, 0, 4, 4], label=0, id=5)],
+                        )
+
+                    @property
+                    def is_stream(self):
+                        return True
+
+                return _SubsetExtractor(subset=name)
 
             @property
             def is_stream(self) -> bool:
                 return True
 
         dataset = StreamDataset.from_extractors(
-            DummyStreamExtractor(media_type=Image, subset="default")
+            DummyStreamExtractor(media_type=Image, subsets=["train", "test"], length=2)
         )
         with TestDir() as test_dir:
             CocoInstancesExporter.convert(dataset, test_dir, stream=True)
-        assert iter_call_count == 1
+        # there was no full iterations
+        assert iter_call_count == 0
+        # each subset was iterated once
+        assert iter_subset_call_count == 2

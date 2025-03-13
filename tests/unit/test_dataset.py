@@ -25,7 +25,7 @@ from datumaro.components.contexts.importer import (
     ProgressReporter,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, StreamDataset, eager_mode
-from datumaro.components.dataset_base import DatasetBase, DatasetItem, SubsetBase
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, IDataset, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
@@ -2437,11 +2437,32 @@ class StreamDatasetTest:
                     subsets=list(items_for_subsets.keys()),
                 )
                 self.iter_counter = 0
+                self.iter_subset_counter = 0
 
             def __iter__(self):
                 self.iter_counter += 1
-                for subset, (start_id, end_id) in items_for_subsets.items():
-                    yield from StreamDatasetTest._gen_items(start_id, end_id, subset)
+                for subset in self.subsets().values():
+                    yield from subset
+
+            def get_subset(self, name: str) -> IDataset:
+                assert name in items_for_subsets
+
+                class _SubsetExtractor(SubsetBase):
+                    def __init__(self, parent):
+                        super().__init__(subset=name)
+                        self.parent = parent
+
+                    def __iter__(self):
+                        self.parent.iter_subset_counter += 1
+                        yield from StreamDatasetTest._gen_items(
+                            items_for_subsets[name][0], items_for_subsets[name][1], name
+                        )
+
+                    @property
+                    def is_stream(self):
+                        return True
+
+                return _SubsetExtractor(self)
 
             @property
             def is_stream(self):
@@ -2457,18 +2478,22 @@ class StreamDatasetTest:
         assert len(dataset) == 2
         # does not iterate items to get any of the above info
         assert extractor.iter_counter == 0
+        assert extractor.iter_subset_counter == 0
 
         # does not cache items
         assert len(list(dataset)) == 2
         assert extractor.iter_counter == 1
+        assert extractor.iter_subset_counter == 1
         assert len(list(dataset)) == 2
         assert extractor.iter_counter == 2
+        assert extractor.iter_subset_counter == 2
 
-        # when accessing items through subsets, iterates over them only once
+        # when accessing items through subsets, iterates over only over subset items
         assert (
             len([item for subset_name, subset in dataset.subsets().items() for item in subset]) == 2
         )
-        assert extractor.iter_counter == 3
+        assert extractor.iter_counter == 2
+        assert extractor.iter_subset_counter == 3
 
     def test_subset_keeping_transforms_do_not_trigger_subset_recollection(self):
         extractor = self._make_extractor({"train": (1, 3), "val": (3, 5)})
@@ -2476,6 +2501,7 @@ class StreamDatasetTest:
         dataset = dataset.transform(BoxesToMasks)
         assert set(dataset.subsets().keys()) == {"train", "val"}
         assert extractor.iter_counter == 0
+        assert extractor.iter_subset_counter == 0
 
     def test_subset_changing_transforms_trigger_subset_recollection(self):
         extractor = self._make_extractor({"train": (1, 3), "val": (3, 6)})
@@ -2483,9 +2509,11 @@ class StreamDatasetTest:
         dataset = dataset.transform(MapSubsets, mapping={"train": "another"})
         assert set(dataset.subsets().keys()) == {"another", "val"}
         assert extractor.iter_counter == 1
+        assert extractor.iter_subset_counter == 2
         # subset names now cached
         assert set(dataset.subsets().keys()) == {"another", "val"}
         assert extractor.iter_counter == 1
+        assert extractor.iter_subset_counter == 2
 
     def test_several_subsets(self):
         extractor = self._make_extractor({"train": (1, 3), "val": (3, 6), "test": (9, 13)})
@@ -2497,15 +2525,20 @@ class StreamDatasetTest:
         assert len(dataset) == 9
         # does not iterate items to get any of the above info
         assert extractor.iter_counter == 0
+        assert extractor.iter_subset_counter == 0
 
         # does not cache items
         assert len(list(dataset)) == 9
         assert extractor.iter_counter == 1
+        assert extractor.iter_subset_counter == 3
         assert len(list(dataset)) == 9
         assert extractor.iter_counter == 2
+        assert extractor.iter_subset_counter == 6
 
-        # when accessing items through subsets, iterates over them once for each subset
+        # when accessing items through subsets, does not iterate over all items
+        # iterates over each subset once
         assert (
             len([item for subset_name, subset in dataset.subsets().items() for item in subset]) == 9
         )
-        assert extractor.iter_counter == 5
+        assert extractor.iter_counter == 2
+        assert extractor.iter_subset_counter == 9

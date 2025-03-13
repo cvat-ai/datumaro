@@ -252,10 +252,19 @@ class YoloExporter(Exporter):
 
     @cached_property
     def _labels_to_save(self) -> List[int]:
+        label_categories = self._extractor.categories()[AnnotationType.label]
+        point_categories = self._extractor.categories().get(
+            AnnotationType.points, PointsCategories.from_iterable([])
+        )
+        skeleton_sublabels = [
+            label_categories.find(sublabel, parent=label_categories[parent_label_id].name)[0]
+            for parent_label_id in point_categories.items
+            for sublabel in point_categories.items[parent_label_id].labels
+        ]
         return [
             label_id
-            for label_id, label in enumerate(self._extractor.categories()[AnnotationType.label])
-            if label.parent == ""
+            for label_id, label in enumerate(label_categories)
+            if label_id not in skeleton_sublabels
         ]
 
     @cached_property

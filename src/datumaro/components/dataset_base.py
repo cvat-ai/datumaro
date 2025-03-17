@@ -13,6 +13,7 @@ from attr import attrs, field
 from datumaro.components.annotation import Annotation, Annotations, AnnotationType, Categories
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.contexts.importer import ImportContext, NullImportContext
+from datumaro.components.errors import NotAvailableError
 from datumaro.components.media import Image, MediaElement
 from datumaro.util.attrs_util import default_if_none, not_empty
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
@@ -284,7 +285,31 @@ class SubsetBase(DatasetBase):
 
 class StreamingDatasetBase(DatasetBase):
     """
-    A base class for user-defined and built-in extractors.
-    Should be used in cases, where SubsetBase is not enough,
-    or its use makes problems with performance, implementation etc.
+    A base class for multi-subset extractors adapted for streaming export.
+    Should be used in cases when number of items and subsets are known beforehand
+    and subsets can be accessed independently.
+
+    get_subset method should be redefined
     """
+
+    def __init__(self, *, length: Optional[int] = None, subsets: Optional[Sequence[str]] = None):
+        assert length is not None
+        assert subsets is not None
+        super().__init__(length=length, subsets=subsets)
+
+    def __iter__(self):
+        for subset in self.subsets().values():
+            yield from subset
+
+    def get(self, id, subset=None) -> Optional[DatasetItem]:
+        raise NotAvailableError("Random access to the item is not allowed in streaming.")
+
+    def _init_cache(self):
+        raise NotAvailableError()
+
+    @property
+    def is_stream(self) -> bool:
+        return True
+
+    def get_subset(self, name) -> IDataset:
+        raise NotImplementedError()

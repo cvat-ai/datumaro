@@ -3,13 +3,13 @@ import pytest
 
 from datumaro import AnnotationType, CategoriesInfo, LabelCategories
 from datumaro.components.dataset import StreamDataset
-from datumaro.components.dataset_base import DatasetBase, DatasetItem, IDataset, SubsetBase
+from datumaro.components.dataset_base import DatasetItem, IDataset, StreamingDatasetBase, SubsetBase
 from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatasetExportError
 from datumaro.components.media import Image
 
 
-class DummyStreamingExtractor(DatasetBase):
+class DummyStreamingExtractor(StreamingDatasetBase):
     def __init__(self):
         super().__init__(length=3, subsets=["train", "test", "foo"])
         self.iter_subset_call_count = 0
@@ -17,8 +17,7 @@ class DummyStreamingExtractor(DatasetBase):
 
     def __iter__(self):
         self.iter_call_count += 1
-        for subset in self.subsets().values():
-            yield from subset
+        yield from super().__iter__()
 
     def get_subset(self, name: str) -> IDataset:
         assert name in ["train", "test", "foo"]
@@ -42,10 +41,6 @@ class DummyStreamingExtractor(DatasetBase):
                 return True
 
         return _SubsetExtractor(self)
-
-    @property
-    def is_stream(self):
-        return True
 
     def categories(self) -> CategoriesInfo:
         return {AnnotationType.label: LabelCategories.from_iterable(["a", "b", "c"])}

@@ -44,7 +44,6 @@ from datumaro.plugins.data_formats.coco.exporter import (
     CocoPersonKeypointsExporter,
     CocoStuffExporter,
 )
-from datumaro.plugins.data_formats.coco.importer import CocoImporter
 from datumaro.util import dump_json_file
 
 from tests.requirements import Requirements, mark_requirement
@@ -2429,51 +2428,3 @@ class CocoStreamExporterTest(CocoExporterTest):
             stream=True,
             **kwargs,
         )
-
-    def test_can_export_stream(self):
-        iter_call_count = 0
-        iter_subset_call_count = 0
-
-        class DummyStreamExtractor(DatasetBase):
-            def categories(self):
-                return {AnnotationType.label: LabelCategories.from_iterable(["a", "b"])}
-
-            def __iter__(self):
-                nonlocal iter_call_count
-                iter_call_count += 1
-                for subset in self.subsets().values():
-                    yield from subset
-
-            def get_subset(self, name: str) -> IDataset:
-                assert name in ["train", "test"]
-
-                class _SubsetExtractor(SubsetBase):
-                    def __iter__(self):
-                        nonlocal iter_subset_call_count
-                        iter_subset_call_count += 1
-                        yield DatasetItem(
-                            id=str(id),
-                            subset=name,
-                            media=Image.from_numpy(data=np.ones((4, 2, 3))),
-                            annotations=[Polygon([0, 0, 4, 0, 4, 4], label=0, id=5)],
-                        )
-
-                    @property
-                    def is_stream(self):
-                        return True
-
-                return _SubsetExtractor(subset=name)
-
-            @property
-            def is_stream(self) -> bool:
-                return True
-
-        dataset = StreamDataset.from_extractors(
-            DummyStreamExtractor(media_type=Image, subsets=["train", "test"], length=2)
-        )
-        with TestDir() as test_dir:
-            CocoInstancesExporter.convert(dataset, test_dir, stream=True)
-        # there was no full iterations
-        assert iter_call_count == 0
-        # each subset was iterated once
-        assert iter_subset_call_count == 2

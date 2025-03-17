@@ -292,10 +292,20 @@ class StreamingDatasetBase(DatasetBase):
     get_subset method should be redefined
     """
 
-    def __init__(self, *, length: Optional[int] = None, subsets: Optional[Sequence[str]] = None):
+    def __init__(
+        self,
+        *,
+        length: Optional[int] = None,
+        subsets: Optional[Sequence[str]] = None,
+        media_type: Type[MediaElement] = Image,
+        ann_types: Optional[Set[AnnotationType]] = None,
+        ctx: Optional[ImportContext] = None,
+    ):
         assert length is not None
         assert subsets is not None
-        super().__init__(length=length, subsets=subsets)
+        super().__init__(
+            length=length, subsets=subsets, media_type=media_type, ann_types=ann_types, ctx=ctx
+        )
 
     def __iter__(self):
         for subset in self.subsets().values():

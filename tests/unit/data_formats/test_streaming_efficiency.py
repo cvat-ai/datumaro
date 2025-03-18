@@ -30,7 +30,7 @@ class DummyStreamingExtractor(StreamingDatasetBase):
             def __iter__(self):
                 self.parent.iter_subset_call_count += 1
                 yield DatasetItem(
-                    id=str(id),
+                    id=f"{name}_1",
                     subset=name,
                     media=Image.from_numpy(data=np.ones((4, 2, 3))),
                     annotations=[],

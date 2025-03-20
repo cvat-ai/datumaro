@@ -13,7 +13,7 @@ from attr import attrs, field
 from datumaro.components.annotation import Annotation, Annotations, AnnotationType, Categories
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.contexts.importer import ImportContext, NullImportContext
-from datumaro.components.errors import NotAvailableError
+from datumaro.components.errors import DatumaroError, NotAvailableError
 from datumaro.components.media import Image, MediaElement
 from datumaro.util.attrs_util import default_if_none, not_empty
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
@@ -301,8 +301,8 @@ class StreamingDatasetBase(DatasetBase):
         ann_types: Optional[Set[AnnotationType]] = None,
         ctx: Optional[ImportContext] = None,
     ):
-        assert length is not None
-        assert subsets is not None
+        if length is None or subsets is None:
+            raise DatumaroError("StreamingDatasetBase should receive non-empty length and subsets")
         super().__init__(
             length=length, subsets=subsets, media_type=media_type, ann_types=ann_types, ctx=ctx
         )
@@ -312,7 +312,7 @@ class StreamingDatasetBase(DatasetBase):
             yield from subset
 
     def get(self, id, subset=None) -> Optional[DatasetItem]:
-        raise NotAvailableError("Random access to the item is not allowed in streaming.")
+        raise NotAvailableError("Random access to items is not allowed in streaming.")
 
     def _init_cache(self):
         raise NotAvailableError()

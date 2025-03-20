@@ -703,7 +703,7 @@ class StreamDatasetStorage(DatasetStorage):
         log.debug("This function has no effect on streaming.")
         pass
 
-    def _make_stacked_transfrom(self, source: IDataset):
+    def _apply_stacked_transform(self, source: IDataset):
         if self._transforms:
             transform = _StackedTransform(
                 source,
@@ -718,7 +718,7 @@ class StreamDatasetStorage(DatasetStorage):
 
     @property
     def stacked_transform(self) -> IDataset:
-        transform = self._make_stacked_transfrom(self._source)
+        transform = self._apply_stacked_transform(self._source)
 
         self._flush_changes = True
         return transform
@@ -751,7 +751,7 @@ class StreamDatasetStorage(DatasetStorage):
 
     def get_subset(self, name: str) -> IDataset:
         if all(t[0].KEEPS_SUBSETS_INTACT for t in self._transforms):
-            transformed_subset = self._make_stacked_transfrom(self._source.get_subset(name))
+            transformed_subset = self._apply_stacked_transform(self._source.get_subset(name))
             if transformed_subset.is_stream:
                 return StreamSubset(transformed_subset, name)
 

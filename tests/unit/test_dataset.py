@@ -2433,8 +2433,10 @@ class StreamDatasetTest:
             )
 
     @staticmethod
-    def _make_extractor_dataset_base(items_for_subsets: Dict[str, Tuple[int, int]]):
-        class SrcExtractor(DatasetBase):
+    def _make_extractor(
+        items_for_subsets: Dict[str, Tuple[int, int]], streaming_base: bool = False
+    ):
+        class SrcExtractor(StreamingDatasetBase if streaming_base else DatasetBase):
             def __init__(self):
                 super().__init__(
                     length=sum(
@@ -2444,64 +2446,44 @@ class StreamDatasetTest:
                 )
                 self.iter_counter = 0
                 self.iter_subset_counter = 0
+
+            @property
+            def is_stream(self):
+                return True
 
             def __iter__(self):
                 self.iter_counter += 1
                 for subset, (start_id, end_id) in items_for_subsets.items():
                     yield from StreamDatasetTest._gen_items(start_id, end_id, subset)
 
-            @property
-            def is_stream(self):
-                return True
-
-        return SrcExtractor()
-
-    @staticmethod
-    def _make_extractor_streaming_base(items_for_subsets: Dict[str, Tuple[int, int]]):
-        class SrcExtractor(StreamingDatasetBase):
-            def __init__(self):
-                super().__init__(
-                    length=sum(
-                        end_id - start_id for start_id, end_id in items_for_subsets.values()
-                    ),
-                    subsets=list(items_for_subsets.keys()),
-                )
-                self.iter_counter = 0
-                self.iter_subset_counter = 0
-
-            def __iter__(self):
-                self.iter_counter += 1
-                yield from super().__iter__()
-
-            def get_subset(self, name: str) -> IDataset:
-                assert name in items_for_subsets
-
-                class _SubsetExtractor(SubsetBase):
-                    def __init__(self, parent):
-                        super().__init__(subset=name)
-                        self.parent = parent
-
-                    def __iter__(self):
-                        self.parent.iter_subset_counter += 1
-                        yield from StreamDatasetTest._gen_items(
-                            items_for_subsets[name][0], items_for_subsets[name][1], name
-                        )
-
-                    @property
-                    def is_stream(self):
-                        return True
-
-                return _SubsetExtractor(self)
-
-        return SrcExtractor()
-
-    def _make_extractor(
-        self, items_for_subsets: Dict[str, Tuple[int, int]], streaming_base: bool = False
-    ):
         if streaming_base:
-            return self._make_extractor_streaming_base(items_for_subsets)
-        else:
-            return self._make_extractor_dataset_base(items_for_subsets)
+
+            class SrcExtractor(SrcExtractor):
+                def __iter__(self):
+                    self.iter_counter += 1
+                    yield from StreamingDatasetBase.__iter__(self)
+
+                def get_subset(self, name: str) -> IDataset:
+                    assert name in items_for_subsets
+
+                    class _SubsetExtractor(SubsetBase):
+                        def __init__(self, parent):
+                            super().__init__(subset=name)
+                            self.parent = parent
+
+                        def __iter__(self):
+                            self.parent.iter_subset_counter += 1
+                            yield from StreamDatasetTest._gen_items(
+                                items_for_subsets[name][0], items_for_subsets[name][1], name
+                            )
+
+                        @property
+                        def is_stream(self):
+                            return True
+
+                    return _SubsetExtractor(self)
+
+        return SrcExtractor()
 
     @pytest.mark.parametrize("streaming_base", [True, False])
     def test_single_subset(self, streaming_base):

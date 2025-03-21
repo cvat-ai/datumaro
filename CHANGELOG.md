@@ -57,6 +57,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - \[API\] `ImageFromBytes.save()` now guarantees there will be no extra image encoding/decoding
   when possible (e.g. if input and output extension is the same)
   (<https://github.com/cvat-ai/datumaro/pull/91>)
+- \[API\] Added `StreamingDatasetBase` as a utility base type for user-created extractors
+  with streaming support. Added support for using `get_subset()` from the source dataset
+  in `StreamDataset` during iteration, when possible.
+  (<https://github.com/cvat-ai/datumaro/pull/97>)
 
 ### Changed
 - `env.detect_dataset()` now returns a list of detected formats at all recursion levels

@@ -43,6 +43,8 @@ class DummyStreamingExtractor(StreamingDatasetBase):
                 assert sys.getrefcount(item) == 2
 
                 # after yielded, there are more references (e.g. where it's yielded from)
+                # number of references doesn't have to increase in general,
+                # but it should due to how our code works
                 yield item
                 assert sys.getrefcount(item) > 2
 

@@ -15,6 +15,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generator,
     Iterable,
     Iterator,
     List,
@@ -1046,6 +1047,9 @@ class StreamDataset(Dataset):
             return _MergedStreamDataset(*sources)
 
         return dataset
+
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        yield from self._data.ids()
 
 
 @contextmanager

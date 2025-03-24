@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import logging as log
-from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type, Union
+from typing import Dict, Generator, Iterable, Iterator, List, Optional, Set, Tuple, Type, Union
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.contexts.importer import _ImportFail
@@ -288,7 +288,7 @@ class DatasetStorage(IDataset):
                 # with transform outputs.
                 # TODO: introduce DatasetBase.items() / .ids() to avoid extra
                 # dataset traversals?
-                old_ids = set((item.id, item.subset) for item in source)
+                old_ids = set(source.ids())
                 source = transform
 
             if not issubclass(transform.media_type(), media_type):
@@ -731,6 +731,9 @@ class StreamDatasetStorage(DatasetStorage):
                 if ann.type == AnnotationType.hash_key:
                     continue
                 self._ann_types.add(ann.type)
+
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        yield from self.stacked_transform.ids()
 
     def __len__(self) -> int:
         if self._length is None:

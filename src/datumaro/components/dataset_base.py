@@ -5,7 +5,21 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Set, Type, TypeVar, Union, cast
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import attr
 from attr import attrs, field
@@ -123,6 +137,14 @@ class IDataset:
         If the dataset is a stream, the dataset item is generated on demand from its iterator.
         """
         return False
+
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        """
+        Returns item ids and subsets as tuples
+        """
+        assert not self.is_stream, type(self)
+        for item in self:
+            yield item.id, item.subset
 
 
 class _DatasetBase(IDataset):
@@ -322,4 +344,7 @@ class StreamingDatasetBase(DatasetBase):
         return True
 
     def get_subset(self, name) -> IDataset:
+        raise NotImplementedError()
+
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
         raise NotImplementedError()

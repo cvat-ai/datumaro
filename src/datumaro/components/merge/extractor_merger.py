@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 from collections import defaultdict
-from typing import Dict, Iterator, List, Optional, Sequence, TypeVar
+from typing import Dict, Generator, Iterator, List, Optional, Sequence, Tuple, TypeVar
 
 from datumaro.components.contexts.importer import _ImportFail
 from datumaro.components.dataset_base import (
@@ -64,6 +64,11 @@ class ExtractorMerger(DatasetBase):
         for sources in self._subsets.values():
             for source in sources:
                 yield from source
+
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        for sources in self._subsets.values():
+            for source in sources:
+                yield from source.ids()
 
     def __len__(self) -> int:
         return sum(len(source) for sources in self._subsets.values() for source in sources)

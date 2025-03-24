@@ -10,7 +10,7 @@ import os.path as osp
 import re
 from functools import cached_property
 from itertools import cycle
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Type, TypeVar, Union
 
 import cv2
 import numpy as np
@@ -68,6 +68,10 @@ class _YoloBase(SubsetBase):
                 item = self._parent._get(item_id, self._name)
                 if item is not None:
                     yield item
+
+        def ids(self) -> Generator[Tuple[str, str], None, None]:
+            for item_id in self.items:
+                yield item_id, self._name
 
         def __len__(self):
             return len(self.items)
@@ -152,6 +156,10 @@ class _YoloBase(SubsetBase):
         for pbar, (subset_name, subset) in zip(pbars, subsets.items()):
             for item in pbar.iter(subset, desc=f"Parsing '{subset_name}'"):
                 yield item
+
+    def ids(self):
+        for subset in self._subsets.values():
+            yield from subset.ids()
 
     def __len__(self):
         return sum(len(s) for s in self._subsets.values())

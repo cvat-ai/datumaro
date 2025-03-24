@@ -1,14 +1,16 @@
+import os.path
 import sys
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 from datumaro import AnnotationType, CategoriesInfo, LabelCategories
-from datumaro.components.dataset import StreamDataset
+from datumaro.components import media
+from datumaro.components.dataset import Dataset, StreamDataset
 from datumaro.components.dataset_base import DatasetItem, IDataset, StreamingDatasetBase, SubsetBase
 from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatasetExportError
-from datumaro.components.media import Image
 
 
 class DummyStreamingExtractor(StreamingDatasetBase):
@@ -34,7 +36,7 @@ class DummyStreamingExtractor(StreamingDatasetBase):
                 item = DatasetItem(
                     id=f"{name}_1",
                     subset=name,
-                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
+                    media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
                     annotations=[],
                 )
                 # counting references to make sure that exporter is actually streaming
@@ -52,7 +54,7 @@ class DummyStreamingExtractor(StreamingDatasetBase):
                 yield DatasetItem(
                     id=f"{name}_2",
                     subset=name,
-                    media=Image.from_numpy(data=np.ones((4, 2, 3))),
+                    media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
                     annotations=[],
                 )
                 assert sys.getrefcount(item) == 2
@@ -85,3 +87,84 @@ def test_streaming_exporters_only_iterate_items_once(test_dir, exporter_cls):
         for subset, call_count in extractor.iter_subset_call_dict.items()
         if call_count != 1
     }
+
+
+@pytest.fixture(scope="session")
+def fxt_dataset():
+    subsets = ["train", "test", "val"]
+    return Dataset.from_iterable(
+        [
+            DatasetItem(
+                id=f"item_{index}",
+                subset=subsets[index % len(subsets)],
+                media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
+                annotations=[],
+            )
+            for index in range(10)
+        ],
+        categories=["aaa", "bbbb"],
+    )
+
+
+class MediaElementInitCounter:
+    def __init__(self):
+        self.count = 0
+
+    def __enter__(self):
+        orig_init = media.MediaElement.__init__
+
+        def mock_init_func(instance):
+            self.count += 1
+            orig_init(instance)
+
+        self._patch = patch.object(media.MediaElement, "__init__", mock_init_func)
+        self._patch.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._patch.stop()
+
+
+@pytest.mark.parametrize("export_format", DEFAULT_ENVIRONMENT.exporters.items.keys())
+def test_streaming_importers(test_dir, export_format, fxt_dataset):
+    import_format = {
+        "mots_png": "mots",
+        "mot_seq_gt": "mot_seq",
+    }.get(export_format, export_format)
+    assert import_format in DEFAULT_ENVIRONMENT.importers, sorted(
+        DEFAULT_ENVIRONMENT.importers.items.keys()
+    )
+
+    if not DEFAULT_ENVIRONMENT.make_importer(import_format).can_stream:
+        pytest.skip(f"Importer for '{import_format}' can not stream")
+
+    dataset_folder = os.path.join(test_dir, "dataset")
+    fxt_dataset.export(dataset_folder, format=export_format, save_media=True)
+
+    # checking baseline non-streaming importer
+    with MediaElementInitCounter() as init_counter:
+        parsed_dataset = Dataset.import_from(dataset_folder, format=import_format)
+        assert len(list(parsed_dataset)) == len(fxt_dataset)
+        # after first iteration all items are initialized
+        assert init_counter.count == len(fxt_dataset)
+        # no inits on second iteration
+        assert len(list(parsed_dataset)) == len(fxt_dataset)
+        assert init_counter.count == len(fxt_dataset)
+        # no inits on calling ids
+        assert len(list(parsed_dataset.ids())) == len(fxt_dataset)
+        assert init_counter.count == len(fxt_dataset)
+
+    # checking streaming importer
+    with MediaElementInitCounter() as init_counter:
+        parsed_dataset = StreamDataset.import_from(dataset_folder, format=import_format)
+        # nothing initialized yet
+        assert init_counter.count == 0
+        # no inits on calling ids()
+        assert len(list(parsed_dataset.ids())) == len(fxt_dataset)
+        assert init_counter.count == 0
+        # inits on iteration
+        assert len(list(parsed_dataset)) == len(fxt_dataset)
+        assert init_counter.count == len(fxt_dataset)
+        # inits again on iteration, i.e. not caching items
+        assert len(list(parsed_dataset)) == len(fxt_dataset)
+        assert init_counter.count == len(fxt_dataset) * 2

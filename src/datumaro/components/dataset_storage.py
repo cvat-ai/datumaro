@@ -115,6 +115,9 @@ class _StackedTransform(Transform):
             item = t.transform_item(item)
         return item
 
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        yield from self.transforms[-1].ids()
+
     def __iter__(self) -> Iterator[DatasetItem]:
         yield from self.transforms[-1]
 
@@ -684,8 +687,8 @@ class StreamDatasetStorage(DatasetStorage):
     ):
         if not source.is_stream:
             raise ValueError("source should be a stream.")
-        self._subset_names = list(source.subsets().keys())
-        self._transform_ids_for_latest_subset_names = []
+        self._ids = list(source.ids())
+        self._transform_ids_for_latest_ids = []
         super().__init__(
             source=source,
             infos=infos,
@@ -733,7 +736,14 @@ class StreamDatasetStorage(DatasetStorage):
                 self._ann_types.add(ann.type)
 
     def ids(self) -> Generator[Tuple[str, str], None, None]:
-        yield from self.stacked_transform.ids()
+        if any(
+            id(t) not in self._transform_ids_for_latest_ids and not t[0].KEEPS_IDS_INTACT
+            for t in self._transforms
+        ):
+            self._ids = list(self.stacked_transform.ids())
+            self._transform_ids_for_latest_ids = [id(t) for t in self._transforms]
+
+        yield from self._ids
 
     def __len__(self) -> int:
         if self._length is None:
@@ -753,7 +763,7 @@ class StreamDatasetStorage(DatasetStorage):
         raise NotAvailableError("Drop-in removal is not allowed in streaming.")
 
     def get_subset(self, name: str) -> IDataset:
-        if all(t[0].KEEPS_SUBSETS_INTACT for t in self._transforms):
+        if all(t[0].KEEPS_IDS_INTACT for t in self._transforms):
             transformed_subset = self._apply_stacked_transform(self._source.get_subset(name))
             if transformed_subset.is_stream:
                 return StreamSubset(transformed_subset, name)
@@ -762,15 +772,7 @@ class StreamDatasetStorage(DatasetStorage):
 
     @property
     def subset_names(self):
-        if any(
-            id(t) not in self._transform_ids_for_latest_subset_names
-            and not t[0].KEEPS_SUBSETS_INTACT
-            for t in self._transforms
-        ):
-            self._subset_names = {item.subset for item in self}
-            self._transform_ids_for_latest_subset_names = [id(t) for t in self._transforms]
-
-        return self._subset_names
+        return set(subset for _, subset in self.ids())
 
     def subsets(self) -> Dict[str, IDataset]:
         return {subset: self.get_subset(subset) for subset in self.subset_names}

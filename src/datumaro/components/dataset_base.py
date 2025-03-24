@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import (
     Any,
     Dict,
@@ -142,7 +143,8 @@ class IDataset:
         """
         Returns item ids and subsets as tuples
         """
-        assert not self.is_stream, type(self)
+        if self.is_stream:
+            logging.debug(f"Class {type(self)} needs to iterate items to get ids.")
         for item in self:
             yield item.id, item.subset
 
@@ -305,6 +307,27 @@ class SubsetBase(DatasetBase):
         return self._subset
 
 
+class StreamingSubsetBase(SubsetBase):
+    """
+    A base class for simple, single-subset extractors adapted for streaming.
+
+    ids() method should be redefined to generate ids without iterating items
+    """
+
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        raise NotImplementedError()
+
+    @property
+    def is_stream(self):
+        return True
+
+    def get(self, id, subset=None) -> Optional[DatasetItem]:
+        raise NotAvailableError("Random access to items is not allowed in streaming.")
+
+    def _init_cache(self):
+        raise NotAvailableError()
+
+
 class StreamingDatasetBase(DatasetBase):
     """
     A base class for multi-subset extractors adapted for streaming export.
@@ -343,8 +366,9 @@ class StreamingDatasetBase(DatasetBase):
     def is_stream(self) -> bool:
         return True
 
-    def get_subset(self, name) -> IDataset:
+    def get_subset(self, name) -> StreamingSubsetBase:
         raise NotImplementedError()
 
     def ids(self) -> Generator[Tuple[str, str], None, None]:
-        raise NotImplementedError()
+        for subset in self.subsets().values():
+            yield from subset.ids()

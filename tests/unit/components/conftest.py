@@ -55,5 +55,6 @@ def fxt_stream_extractor(
     stream_extractor.is_stream = True
 
     stream_extractor.subsets.return_value = {DEFAULT_SUBSET_NAME: stream_extractor}
+    stream_extractor.ids.return_value = [(item.id, item.subset) for item in items]
 
     return stream_extractor

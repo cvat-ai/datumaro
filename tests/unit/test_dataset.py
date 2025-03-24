@@ -30,6 +30,7 @@ from datumaro.components.dataset_base import (
     DatasetItem,
     IDataset,
     StreamingDatasetBase,
+    StreamingSubsetBase,
     SubsetBase,
 )
 from datumaro.components.dataset_item_storage import ItemStatus
@@ -60,8 +61,8 @@ from datumaro.components.progress_reporting import NullProgressReporter
 from datumaro.components.transformer import ItemTransform, Transform
 from datumaro.plugins.transforms import (
     BoxesToMasks,
-    MapSubsets,
     MasksToPolygons,
+    RandomSplit,
     RemapLabels,
     UpdateInfos,
 )
@@ -2456,6 +2457,11 @@ class StreamDatasetTest:
                 for subset, (start_id, end_id) in items_for_subsets.items():
                     yield from StreamDatasetTest._gen_items(start_id, end_id, subset)
 
+            def ids(self):
+                for subset, (start_id, end_id) in items_for_subsets.items():
+                    for id in range(start_id, end_id):
+                        yield id, subset
+
         if streaming_base:
 
             class SrcExtractor(SrcExtractor):
@@ -2466,7 +2472,7 @@ class StreamDatasetTest:
                 def get_subset(self, name: str) -> IDataset:
                     assert name in items_for_subsets
 
-                    class _SubsetExtractor(SubsetBase):
+                    class _SubsetExtractor(StreamingSubsetBase):
                         def __init__(self, parent):
                             super().__init__(subset=name)
                             self.parent = parent
@@ -2477,9 +2483,9 @@ class StreamDatasetTest:
                                 items_for_subsets[name][0], items_for_subsets[name][1], name
                             )
 
-                        @property
-                        def is_stream(self):
-                            return True
+                        def ids(self):
+                            for id in range(items_for_subsets[name][0], items_for_subsets[name][1]):
+                                yield id, name
 
                     return _SubsetExtractor(self)
 
@@ -2526,7 +2532,7 @@ class StreamDatasetTest:
     def test_subset_changing_transforms_trigger_subset_recollection(self):
         extractor = self._make_extractor({"train": (1, 3), "val": (3, 6)})
         dataset = StreamDataset.from_extractors(extractor)
-        dataset = dataset.transform(MapSubsets, mapping={"train": "another"})
+        dataset = dataset.transform(RandomSplit, splits=[("another", 0.5), ("val", 0.5)])
         assert set(dataset.subsets().keys()) == {"another", "val"}
         assert extractor.iter_counter == 1
         # subset names now cached

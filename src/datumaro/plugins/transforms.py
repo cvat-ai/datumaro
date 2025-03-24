@@ -14,7 +14,18 @@ from collections import Counter
 from copy import deepcopy
 from enum import Enum, auto
 from itertools import chain
-from typing import Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import (
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import cv2
 import numpy as np
@@ -40,7 +51,7 @@ from datumaro.components.annotation import (
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.dataset_base import CategoriesInfo, DatasetInfo, DatasetItem, IDataset
 from datumaro.components.errors import DatumaroError
-from datumaro.components.media import Image
+from datumaro.components.media import Image, VideoFrame
 from datumaro.components.transformer import ItemTransform, Transform
 from datumaro.util import NOTSET, filter_dict, parse_json, parse_str_enum_value, take_by
 from datumaro.util.annotation_util import find_group_leader, find_instances
@@ -55,7 +66,7 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
     the corresponding number of separate annotations joined into a group.
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     ALLOW_REMOVAL_ARG = "--allow-removal"
 
@@ -166,7 +177,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
     resulting mask takes properties from that annotation.
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -258,7 +269,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
 
 
 class PolygonsToMasks(ItemTransform, CliPlugin):
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     def transform_item(self, item):
         annotations = []
@@ -288,7 +299,7 @@ class PolygonsToMasks(ItemTransform, CliPlugin):
 
 
 class BoxesToMasks(ItemTransform, CliPlugin):
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     def transform_item(self, item):
         annotations = []
@@ -318,7 +329,7 @@ class BoxesToMasks(ItemTransform, CliPlugin):
 
 
 class MasksToPolygons(ItemTransform, CliPlugin):
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     def transform_item(self, item):
         annotations = []
@@ -355,7 +366,7 @@ class MasksToPolygons(ItemTransform, CliPlugin):
 
 
 class ShapesToBoxes(ItemTransform, CliPlugin):
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     def transform_item(self, item):
         annotations = []
@@ -453,6 +464,10 @@ class MapSubsets(ItemTransform, CliPlugin):
     def transform_item(self, item):
         return self.wrap_item(item, subset=self._mapping.get(item.subset, item.subset))
 
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        for item_id, subset in self._extractor.ids():
+            yield item_id, self._mapping.get(subset, subset)
+
 
 class RandomSplit(Transform, CliPlugin):
     """
@@ -544,14 +559,14 @@ class IdFromImageName(ItemTransform, CliPlugin):
     Renames items in the dataset using image file name (without extension).
     """
 
-    KEEPS_SUBSETS_INTACT = True
-
     def transform_item(self, item):
-        if isinstance(item.media, Image) and item.media.path:
+        if isinstance(item.media, Image) and hasattr(item.media, "path"):
             name = osp.splitext(osp.basename(item.media.path))[0]
+            if isinstance(item.media, VideoFrame):
+                name += f"_frame-{item.media.index}"
             return self.wrap_item(item, id=name)
         else:
-            log.debug("Can't change item id for item '%s': " "item has no image info" % item.id)
+            log.debug("Can't change item id for item '%s': " "item has no path info" % item.id)
             return item
 
 
@@ -582,7 +597,6 @@ class Rename(ItemTransform, CliPlugin):
 
     |s|s|s|srename -e '|frame_(\d+)_extra|{item.subset}_id_\1|'
     """
-    KEEPS_SUBSETS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -643,7 +657,7 @@ class RemapLabels(ItemTransform, CliPlugin):
     |s|s|s|s%(prog)s -l person:car -l bus:bus -l cat:dog --default delete
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     class DefaultAction(Enum):
         keep = auto()
@@ -783,7 +797,7 @@ class UpdateInfos(Transform, CliPlugin):
     Infos values do not affect the dataset structure, so any metadata can be added freely.
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -851,7 +865,7 @@ class ProjectLabels(ItemTransform):
     |s|s|s|s%(prog)s -l person -l cat -l dog
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -975,7 +989,7 @@ class AnnsToLabels(ItemTransform, CliPlugin):
     transforms them into a set of annotations of type Label
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     def transform_item(self, item):
         labels = set(p.label for p in item.annotations if getattr(p, "label") is not None)
@@ -991,7 +1005,7 @@ class BboxValuesDecrement(ItemTransform, CliPlugin):
     Subtracts one from the coordinates of bounding boxes
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     def transform_item(self, item):
         annotations = [p for p in item.annotations if p.type != AnnotationType.bbox]
@@ -1030,7 +1044,7 @@ class ResizeTransform(ItemTransform):
         |s|s%(prog)s -sx 2 -sy 2
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -1206,6 +1220,11 @@ class RemoveItems(ItemTransform):
             return None
         return item
 
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        for item_id, subset in self._extractor.ids():
+            if (item_id, subset) not in self._ids:
+                yield item_id, subset
+
 
 class RemoveAnnotations(ItemTransform):
     """
@@ -1221,7 +1240,7 @@ class RemoveAnnotations(ItemTransform):
         |s|s%(prog)s --id 'image1:train' --id 'image2:test'
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     @staticmethod
     def _parse_id(s):
@@ -1277,7 +1296,7 @@ class RemoveAttributes(ItemTransform):
         |s|s%(prog)s --id '2010_001705:train' --attr 'occluded'
     """
 
-    KEEPS_SUBSETS_INTACT = True
+    KEEPS_IDS_INTACT = True
 
     @staticmethod
     def _parse_id(s):

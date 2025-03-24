@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import logging as log
 from unittest import TestCase
 
@@ -23,8 +24,11 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.dataset import Dataset
 from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatumaroError
 from datumaro.components.media import Image
+from datumaro.components.transformer import Transform
+from datumaro.util import is_method_redefined
 
 from tests.requirements import Requirements, mark_bug, mark_requirement
 from tests.utils.test_utils import compare_datasets
@@ -1143,3 +1147,50 @@ class CropCoveredSegmentsTest:
                 Dataset(actual).init_cache()
 
             assert "completely covered object removed" in str(capture.value)
+
+
+@pytest.mark.parametrize("transform_cls", DEFAULT_ENVIRONMENT.transforms.items.values())
+def test_transform_fields(transform_cls):
+    if transform_cls.__module__ != "datumaro.plugins.transforms":
+        pytest.skip()
+
+    if transform_cls.__name__ == "RemoveItems":
+        assert not transform_cls.KEEPS_IDS_INTACT
+        assert is_method_redefined("ids", Transform, transform_cls)
+        return
+
+    modified_fields = set()
+
+    class _DatasetItem(DatasetItem):
+        def wrap(self, **kwargs):
+            modified_fields.update(kwargs.keys())
+            return super().wrap(**kwargs)
+
+    source_dataset = Dataset.from_iterable(
+        [
+            _DatasetItem(
+                id=f"item_{index}",
+                subset="subset",
+                media=Image.from_file(path=f"image_path_{index}.jpg", size=(100, 100)),
+                annotations=[],
+            )
+            for index in range(10)
+        ],
+        categories=["aaa", "bbbb"],
+    )
+
+    parameters = {
+        "UpdateInfos": dict(dst_infos={}),
+        "Rename": dict(regex="|item|foo|"),
+        "RemapLabels": dict(mapping={}),
+        "ProjectLabels": dict(dst_labels={}),
+        "ResizeTransform": dict(width=10, height=10),
+        "RandomSplit": dict(splits=[("train", 0.67), ("test", 0.33)]),
+    }.get(transform_cls.__name__, {})
+
+    dataset = source_dataset.transform(transform_cls, **parameters)
+
+    assert len(list(dataset)) == 10
+
+    ids_modified = bool({"id", "subset"} & modified_fields)
+    assert ids_modified ^ transform_cls.KEEPS_IDS_INTACT

@@ -1,5 +1,6 @@
 import os.path
 import sys
+from typing import Generator, Tuple
 from unittest.mock import patch
 
 import numpy as np
@@ -8,7 +9,13 @@ import pytest
 from datumaro import AnnotationType, CategoriesInfo, LabelCategories
 from datumaro.components import media
 from datumaro.components.dataset import Dataset, StreamDataset
-from datumaro.components.dataset_base import DatasetItem, IDataset, StreamingDatasetBase, SubsetBase
+from datumaro.components.dataset_base import (
+    DatasetItem,
+    IDataset,
+    StreamingDatasetBase,
+    StreamingSubsetBase,
+    SubsetBase,
+)
 from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatasetExportError
 
@@ -23,10 +30,10 @@ class DummyStreamingExtractor(StreamingDatasetBase):
         self.iter_call_count += 1
         yield from super().__iter__()
 
-    def get_subset(self, name: str) -> IDataset:
+    def get_subset(self, name: str) -> StreamingSubsetBase:
         assert name in self._subsets
 
-        class _SubsetExtractor(SubsetBase):
+        class _SubsetExtractor(StreamingSubsetBase):
             def __init__(self, parent):
                 super().__init__(subset=name)
                 self.parent = parent
@@ -59,9 +66,9 @@ class DummyStreamingExtractor(StreamingDatasetBase):
                 )
                 assert sys.getrefcount(item) == 2
 
-            @property
-            def is_stream(self):
-                return True
+            def ids(self) -> Generator[Tuple[str, str], None, None]:
+                yield f"{name}_1", name
+                yield f"{name}_2", name
 
         return _SubsetExtractor(self)
 

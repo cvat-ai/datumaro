@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 from multiprocessing.pool import ThreadPool
-from typing import Dict, Iterator, List, Optional, Type
+from typing import Dict, Generator, Iterator, List, Optional, Tuple, Type
 
 import numpy as np
 
@@ -27,7 +27,7 @@ class Transform(DatasetBase, CliPlugin):
     or their annotations.
     """
 
-    KEEPS_SUBSETS_INTACT = False
+    KEEPS_IDS_INTACT = False
 
     @staticmethod
     def wrap_item(item: DatasetItem, **kwargs) -> DatasetItem:
@@ -65,6 +65,12 @@ class Transform(DatasetBase, CliPlugin):
     @property
     def is_stream(self) -> bool:
         return self._extractor.is_stream
+
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        if self.KEEPS_IDS_INTACT:
+            yield from self._extractor.ids()
+        else:
+            yield from super().ids()
 
 
 class ItemTransform(Transform):

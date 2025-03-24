@@ -79,6 +79,7 @@ class _YoloBase(SubsetBase):
         self,
         rootpath: str,
         image_info: Union[None, str, ImageMeta] = None,
+        stream: bool = False,
         **kwargs,
     ) -> None:
         if not osp.isdir(rootpath):
@@ -87,6 +88,7 @@ class _YoloBase(SubsetBase):
         super().__init__(**kwargs)
 
         self._path = rootpath
+        self._stream = stream
 
         assert image_info is None or isinstance(image_info, (str, dict))
         if image_info is None:
@@ -123,7 +125,8 @@ class _YoloBase(SubsetBase):
                 item = DatasetItem(
                     id=item_id, subset=subset_name, media=image, annotations=annotations
                 )
-                subset.items[item_id] = item
+                if not self.is_stream:
+                    subset.items[item_id] = item
             except (FileNotFoundError, IOError, DatasetImportError) as e:
                 self._ctx.error_policy.report_item_error(e, item_id=(item_id, subset_name))
                 subset.items.pop(item_id)
@@ -155,6 +158,10 @@ class _YoloBase(SubsetBase):
 
     def get_subset(self, name):
         return self._subsets[name]
+
+    @property
+    def is_stream(self) -> bool:
+        return self._stream
 
 
 class YoloBase(_YoloBase):

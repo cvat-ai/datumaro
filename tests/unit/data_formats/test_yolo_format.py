@@ -26,7 +26,7 @@ from datumaro.components.annotation import (
     Skeleton,
 )
 from datumaro.components.dataset import Dataset, StreamDataset
-from datumaro.components.dataset_base import DatasetItem, SubsetBase
+from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
     AnnotationImportError,
@@ -173,7 +173,8 @@ class YoloExporterTest(CompareDatasetMixin):
         )
 
         self.CONVERTER.convert(source_dataset, test_dir, save_media=True, stream=stream)
-        parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
+        dataset_cls = StreamDataset if stream else Dataset
+        parsed_dataset = dataset_cls.import_from(test_dir, self.IMPORTER.NAME)
 
         self.compare_datasets(source_dataset, parsed_dataset)
 
@@ -435,37 +436,6 @@ class YoloExporterTest(CompareDatasetMixin):
         source_dataset.export(test_dir, self.CONVERTER.NAME, save_media=True)
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         self.compare_datasets(expected_dataset, parsed_dataset)
-
-    def test_can_export_stream(self, test_dir):
-        source_dataset = self._generate_random_dataset(
-            [
-                {"subset": "valid", "id": 3},
-            ],
-            n_of_labels=2,
-        )
-        iter_call_count = 0
-
-        class DummyStreamExtractor(SubsetBase):
-            def categories(self):
-                return source_dataset.categories()
-
-            def __len__(self):
-                return len(source_dataset)
-
-            def __iter__(self):
-                nonlocal iter_call_count
-                iter_call_count += 1
-                yield from source_dataset
-
-            @property
-            def is_stream(self) -> bool:
-                return True
-
-        stream_dataset = StreamDataset.from_extractors(
-            DummyStreamExtractor(media_type=Image, subset="default")
-        )
-        self.CONVERTER.convert(stream_dataset, test_dir, stream=True)
-        assert iter_call_count == 1
 
 
 class YoloUltralyticsDetectionExporterTest(YoloExporterTest):

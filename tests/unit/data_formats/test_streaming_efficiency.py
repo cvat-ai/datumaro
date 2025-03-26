@@ -158,7 +158,7 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         assert len(list(parsed_dataset)) == len(fxt_dataset)
         assert init_counter.count == len(fxt_dataset)
         # no inits on calling ids
-        assert len(list(parsed_dataset.ids())) == len(fxt_dataset)
+        assert set(parsed_dataset.ids()) == set(fxt_dataset.ids())
         assert init_counter.count == len(fxt_dataset)
 
     # checking streaming importer
@@ -167,7 +167,7 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         # nothing initialized yet
         assert init_counter.count == 0
         # no inits on calling ids()
-        assert len(list(parsed_dataset.ids())) == len(fxt_dataset)
+        assert set(parsed_dataset.ids()) == set(fxt_dataset.ids())
         assert init_counter.count == 0
         # inits on iteration
         assert len(list(parsed_dataset)) == len(fxt_dataset)

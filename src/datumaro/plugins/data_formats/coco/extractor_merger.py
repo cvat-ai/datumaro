@@ -52,7 +52,7 @@ class COCOTaskMergedBase(SubsetBase):
             return len(self.item_keys)
 
     def ids(self) -> Generator[Tuple[str, str], None, None]:
-        yield from self.item_keys
+        yield from self._sources[0].ids()
 
     @property
     def item_keys(self):

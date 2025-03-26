@@ -640,9 +640,14 @@ class StreamSubset(IDataset):
             if item.subset == self._subset:
                 yield item
 
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        for item_id, subset in self._source.ids():
+            if subset == self._subset:
+                yield item_id, subset
+
     def __len__(self) -> int:
         if self._length is None:
-            self._length = sum(1 for _ in self)
+            self._length = sum(1 for _ in self.ids())
         return self._length
 
     def subsets(self) -> Dict[str, IDataset]:

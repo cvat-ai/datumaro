@@ -9,13 +9,7 @@ import pytest
 from datumaro import AnnotationType, CategoriesInfo, LabelCategories
 from datumaro.components import media
 from datumaro.components.dataset import Dataset, StreamDataset
-from datumaro.components.dataset_base import (
-    DatasetItem,
-    IDataset,
-    StreamingDatasetBase,
-    StreamingSubsetBase,
-    SubsetBase,
-)
+from datumaro.components.dataset_base import DatasetItem, StreamingDatasetBase, StreamingSubsetBase
 from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatasetExportError
 

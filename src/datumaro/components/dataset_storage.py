@@ -692,6 +692,7 @@ class StreamDatasetStorage(DatasetStorage):
     ):
         if not source.is_stream:
             raise ValueError("source should be a stream.")
+        self._subset_names = list(source.subsets().keys())
         self._ids = list(source.ids())
         self._transform_ids_for_latest_ids = []
         super().__init__(
@@ -740,16 +741,6 @@ class StreamDatasetStorage(DatasetStorage):
                     continue
                 self._ann_types.add(ann.type)
 
-    def ids(self) -> Generator[Tuple[str, str], None, None]:
-        if any(
-            id(t) not in self._transform_ids_for_latest_ids and not t[0].KEEPS_IDS_INTACT
-            for t in self._transforms
-        ):
-            self._ids = list(self.stacked_transform.ids())
-            self._transform_ids_for_latest_ids = [id(t) for t in self._transforms]
-
-        yield from self._ids
-
     def __len__(self) -> int:
         if self._length is None:
             self._length = len(self._source)
@@ -775,9 +766,24 @@ class StreamDatasetStorage(DatasetStorage):
 
         return StreamSubset(self, name)
 
+    def _ids_should_be_recollected(self):
+        return any(
+            id(t) not in self._transform_ids_for_latest_ids and not t[0].KEEPS_IDS_INTACT
+            for t in self._transforms
+        )
+
+    def ids(self) -> Generator[Tuple[str, str], None, None]:
+        if self._ids_should_be_recollected():
+            self._ids = list(self.stacked_transform.ids())
+            self._transform_ids_for_latest_ids = [id(t) for t in self._transforms]
+
+        yield from self._ids
+
     @property
     def subset_names(self):
-        return set(subset for _, subset in self.ids())
+        if self._ids_should_be_recollected():
+            self._subset_names = set(subset for _, subset in self.ids())
+        return self._subset_names
 
     def subsets(self) -> Dict[str, IDataset]:
         return {subset: self.get_subset(subset) for subset in self.subset_names}

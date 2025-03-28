@@ -312,14 +312,23 @@ class StreamingSubsetBase(SubsetBase):
     A base class for simple, single-subset extractors adapted for streaming.
 
     ids() method should be redefined to generate ids without iterating items
+    __iter__() method should be redefined
     """
 
     def ids(self) -> Generator[Tuple[str, str], None, None]:
         raise NotImplementedError()
 
+    def __iter__(self):
+        raise NotImplementedError()
+
     @property
     def is_stream(self):
         return True
+
+    def __len__(self):
+        if self._length is None:
+            self._length = sum(1 for _ in self.ids())
+        return self._length
 
     def get(self, id, subset=None) -> Optional[DatasetItem]:
         raise NotAvailableError("Random access to items is not allowed in streaming.")
@@ -331,8 +340,7 @@ class StreamingSubsetBase(SubsetBase):
 class StreamingDatasetBase(DatasetBase):
     """
     A base class for multi-subset extractors adapted for streaming export.
-    Should be used in cases when number of items and subsets are known beforehand
-    and subsets can be accessed independently.
+    Should be used in cases when subsets are known beforehand and can be accessed independently.
 
     get_subset method should be redefined
     """
@@ -346,8 +354,8 @@ class StreamingDatasetBase(DatasetBase):
         ann_types: Optional[Set[AnnotationType]] = None,
         ctx: Optional[ImportContext] = None,
     ):
-        if length is None or subsets is None:
-            raise DatumaroError("StreamingDatasetBase should receive non-empty length and subsets")
+        if subsets is None:
+            raise DatumaroError("StreamingDatasetBase should receive non-empty subsets")
         super().__init__(
             length=length, subsets=subsets, media_type=media_type, ann_types=ann_types, ctx=ctx
         )
@@ -355,6 +363,11 @@ class StreamingDatasetBase(DatasetBase):
     def __iter__(self):
         for subset in self.subsets().values():
             yield from subset
+
+    def __len__(self):
+        if self._length is None:
+            self._length = sum(1 for _ in self.ids())
+        return self._length
 
     def get(self, id, subset=None) -> Optional[DatasetItem]:
         raise NotAvailableError("Random access to items is not allowed in streaming.")

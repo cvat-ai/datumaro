@@ -16,7 +16,7 @@ from datumaro.components.errors import DatasetExportError
 
 class DummyStreamingExtractor(StreamingDatasetBase):
     def __init__(self):
-        super().__init__(length=6, subsets=["train", "test", "foo"])
+        super().__init__(subsets=["train", "test", "foo"])
         self.iter_subset_call_dict = {subset: 0 for subset in self._subsets}
         self.iter_call_count = 0
 

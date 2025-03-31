@@ -11,6 +11,7 @@ from io import BufferedWriter
 from itertools import chain, groupby
 from typing import Dict, List, Optional, Type, Union
 
+import numpy as np
 import pycocotools.mask as mask_utils
 import rapidjson
 
@@ -429,14 +430,24 @@ class _InstancesExporter(_TaskExporter):
     def convert_instance(self, instance, item) -> Optional[Dict]:
         ann, polygons, mask, bbox = instance
 
+        def ensure_typed_list(data, target_type):
+            if isinstance(data, np.ndarray):
+                if target_type is int and np.issubdtype(data.dtype, np.integer):
+                    return data
+                if target_type is float and (
+                    np.issubdtype(data.dtype, np.integer) or np.issubdtype(data.dtype, np.floating)
+                ):
+                    return data
+            return list(target_type(c) for c in data)
+
         is_crowd = mask is not None
         if is_crowd:
             segmentation = {
-                "counts": list(int(c) for c in mask["counts"]),
-                "size": list(int(c) for c in mask["size"]),
+                "counts": ensure_typed_list(mask["counts"], int),
+                "size": ensure_typed_list(mask["size"], int),
             }
         else:
-            segmentation = [list(map(float, p)) for p in polygons]
+            segmentation = [ensure_typed_list(p, float) for p in polygons]
 
         area = 0
         if segmentation:

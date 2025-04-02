@@ -8,6 +8,7 @@ import pytest
 
 from datumaro import AnnotationType, CategoriesInfo, LabelCategories
 from datumaro.components import media
+from datumaro.components.annotation import Annotations
 from datumaro.components.dataset import Dataset, StreamDataset
 from datumaro.components.dataset_base import DatasetItem, StreamingDatasetBase, StreamingSubsetBase
 from datumaro.components.environment import DEFAULT_ENVIRONMENT
@@ -153,9 +154,16 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         parsed_dataset = StreamDataset.import_from(dataset_folder, format=import_format)
         # nothing initialized yet
         assert init_counter.count == 0
+
         # inits on iteration
-        assert len(list(parsed_dataset)) == len(fxt_dataset)
+        for item in parsed_dataset:
+            # annotations are not parsed if we do not access them
+            assert callable(item._annotations)
+            # annotations are parsed if we access them
+            assert isinstance(item.annotations, Annotations)
+            assert isinstance(item._annotations, Annotations)
         assert init_counter.count == len(fxt_dataset)
+
         # inits again on iteration, i.e. not caching items
         assert len(list(parsed_dataset)) == len(fxt_dataset)
         assert init_counter.count == len(fxt_dataset) * 2

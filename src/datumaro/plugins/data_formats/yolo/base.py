@@ -120,7 +120,9 @@ class _YoloBase(SubsetBase):
 
                 image = Image.from_file(path=image_path, size=image_size)
 
-                annotations = self._parse_annotations(image, item_id=(item_id, subset_name))
+                annotations = lambda: self._parse_annotations(image, item_id=(item_id, subset_name))
+                if not self.is_stream:
+                    annotations = annotations()
 
                 item = DatasetItem(
                     id=item_id, subset=subset_name, media=image, annotations=annotations

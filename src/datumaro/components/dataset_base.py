@@ -5,7 +5,20 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Set, Type, TypeVar, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import attr
 from attr import attrs, field
@@ -31,7 +44,10 @@ class DatasetItem:
         default=None, validator=attr.validators.optional(attr.validators.instance_of(MediaElement))
     )
 
-    annotations: Annotations = field(factory=Annotations, validator=default_if_none(Annotations))
+    _annotations: Annotations | Callable[[], list[Annotation]] = field(
+        factory=Annotations,
+        validator=default_if_none(lambda val: val if callable(val) else Annotations(val)),
+    )
 
     attributes: Dict[str, Any] = field(factory=dict, validator=default_if_none(dict))
 
@@ -48,12 +64,25 @@ class DatasetItem:
         *,
         subset: Optional[str] = None,
         media: Union[str, MediaElement, None] = None,
-        annotations: Optional[List[Annotation]] = None,
+        annotations: Optional[List[Annotation] | Callable[[], list[Annotation]]] = None,
         attributes: Dict[str, Any] = None,
     ):
         self.__attrs_init__(
             id=id, subset=subset, media=media, annotations=annotations, attributes=attributes
         )
+
+    @property
+    def annotations(self):
+        if callable(self._annotations):
+            annotations = self._annotations()
+            if not isinstance(annotations, Annotations):
+                annotations = Annotations(annotations)
+            self._annotations = annotations
+        return self._annotations
+
+    @annotations.setter
+    def annotations(self, value: Annotations | Callable[[], list[Annotation]]):
+        self._annotations = value
 
 
 DatasetInfo = Dict[str, Any]

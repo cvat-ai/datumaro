@@ -13,6 +13,7 @@ import pycocotools.mask as mask_utils
 from attrs import define
 
 from datumaro.components.annotation import (
+    Annotation,
     AnnotationType,
     Bbox,
     Caption,
@@ -296,8 +297,13 @@ class _CocoBase(SubsetBase):
 
             _, item = parsed
 
-            for ann_info in ann_infos:
-                self._parse_anns(img_info, ann_info, item)
+            def parse_all_anns():
+                parsed_annotations = []
+                for ann_info in ann_infos:
+                    self._parse_anns(img_info, ann_info, parsed_annotations)
+                return parsed_annotations
+
+            item.annotations = parse_all_anns
 
             yield item
             length += 1
@@ -306,12 +312,12 @@ class _CocoBase(SubsetBase):
 
         self._length = length
 
-    def _parse_anns(self, img_info, ann_info, item):
+    def _parse_anns(self, img_info, ann_info, parsed_annotations: list[Annotation]):
         try:
             if self._task is not CocoTask.panoptic:
-                self._load_annotations(ann_info, img_info, parsed_annotations=item.annotations)
+                self._load_annotations(ann_info, img_info, parsed_annotations=parsed_annotations)
             else:
-                self._load_panoptic_ann(ann_info, parsed_annotations=item.annotations)
+                self._load_panoptic_ann(ann_info, parsed_annotations=parsed_annotations)
         except Exception as e:
             self._ctx.error_policy.report_annotation_error(
                 e, item_id=(ann_info.get("id", None), self._subset)
@@ -352,7 +358,7 @@ class _CocoBase(SubsetBase):
                 # Retrieve item (DatasetItem) and img_info (Dict) from the integer key dictionary
                 item = items[img_id]
                 img_info = img_infos[img_id]
-                self._parse_anns(img_info, ann_info, item)
+                self._parse_anns(img_info, ann_info, item.annotations)
                 for ann in item.annotations:
                     self._ann_types.add(ann.type)
             except Exception as e:
@@ -628,7 +634,7 @@ class _CocoBase(SubsetBase):
             _, item = parsed
 
             for ann_info in ann_infos:
-                self._parse_anns(img_info, ann_info, item)
+                self._parse_anns(img_info, ann_info, item.annotations)
 
             return item
         else:

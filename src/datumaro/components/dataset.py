@@ -960,6 +960,9 @@ class Dataset(IDataset):
             return self._data[idx]
         raise StreamedItemError()
 
+    def shallow_items(self) -> Generator[DatasetItem, None, None]:
+        yield from self._data.shallow_items()
+
 
 class StreamDataset(Dataset):
     _stream = True
@@ -1047,9 +1050,6 @@ class StreamDataset(Dataset):
             return _MergedStreamDataset(*sources)
 
         return dataset
-
-    def shallow_items(self) -> Generator[DatasetItem, None, None]:
-        yield from self._data.shallow_items()
 
 
 @contextmanager

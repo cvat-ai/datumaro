@@ -711,22 +711,17 @@ class StreamDatasetStorage(DatasetStorage):
         log.debug("This function has no effect on streaming.")
         pass
 
-    def _apply_stacked_transform(self, source: IDataset):
+    @property
+    def stacked_transform(self) -> IDataset:
         if self._transforms:
             transform = _StackedTransform(
-                source,
+                self._source,
                 self._transforms,
                 raise_on_malformed_transform=self._raise_on_malformed_transform,
             )
             self._drop_malformed_transforms(transform.malformed_transform_indices)
         else:
-            transform = source
-
-        return transform
-
-    @property
-    def stacked_transform(self) -> IDataset:
-        transform = self._apply_stacked_transform(self._source)
+            transform = self._source
 
         self._flush_changes = True
         return transform
@@ -762,12 +757,7 @@ class StreamDatasetStorage(DatasetStorage):
         raise NotAvailableError("Drop-in removal is not allowed in streaming.")
 
     def get_subset(self, name: str) -> IDataset:
-        if all(t[0].KEEPS_SUBSETS_INTACT for t in self._transforms):
-            transformed_subset = self._apply_stacked_transform(self._source.get_subset(name))
-            if transformed_subset.is_stream:
-                return StreamSubset(transformed_subset, name)
-
-        return StreamSubset(self, name)
+        return self.subsets()[name]
 
     @property
     def subset_names(self):
@@ -781,7 +771,7 @@ class StreamDatasetStorage(DatasetStorage):
         return self._subset_names
 
     def subsets(self) -> Dict[str, IDataset]:
-        return {subset: self.get_subset(subset) for subset in self.subset_names}
+        return {subset: StreamSubset(self, subset) for subset in self.subset_names}
 
     def transform(self, method: Type[Transform], *args, **kwargs) -> None:
         super().transform(method, *args, **kwargs)

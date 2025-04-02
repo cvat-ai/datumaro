@@ -2457,11 +2457,6 @@ class StreamDatasetTest:
                 for subset, (start_id, end_id) in items_for_subsets.items():
                     yield from StreamDatasetTest._gen_items(start_id, end_id, subset)
 
-            def ids(self):
-                for subset, (start_id, end_id) in items_for_subsets.items():
-                    for id in range(start_id, end_id):
-                        yield id, subset
-
         if streaming_base:
 
             class SrcExtractor(SrcExtractor):
@@ -2482,10 +2477,6 @@ class StreamDatasetTest:
                             yield from StreamDatasetTest._gen_items(
                                 items_for_subsets[name][0], items_for_subsets[name][1], name
                             )
-
-                        def ids(self):
-                            for id in range(items_for_subsets[name][0], items_for_subsets[name][1]):
-                                yield id, name
 
                     return _SubsetExtractor(self)
 

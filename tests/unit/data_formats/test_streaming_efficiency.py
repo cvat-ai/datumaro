@@ -60,10 +60,6 @@ class DummyStreamingExtractor(StreamingDatasetBase):
                 )
                 assert sys.getrefcount(item) == 2
 
-            def ids(self) -> Generator[Tuple[str, str], None, None]:
-                yield f"{name}_1", name
-                yield f"{name}_2", name
-
         return _SubsetExtractor(self)
 
     def categories(self) -> CategoriesInfo:
@@ -151,17 +147,11 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         # no inits on second iteration
         assert len(list(parsed_dataset)) == len(fxt_dataset)
         assert init_counter.count == len(fxt_dataset)
-        # no inits on calling ids
-        assert set(parsed_dataset.ids()) == set(fxt_dataset.ids())
-        assert init_counter.count == len(fxt_dataset)
 
     # checking streaming importer
     with MediaElementInitCounter() as init_counter:
         parsed_dataset = StreamDataset.import_from(dataset_folder, format=import_format)
         # nothing initialized yet
-        assert init_counter.count == 0
-        # no inits on calling ids()
-        assert set(parsed_dataset.ids()) == set(fxt_dataset.ids())
         assert init_counter.count == 0
         # inits on iteration
         assert len(list(parsed_dataset)) == len(fxt_dataset)

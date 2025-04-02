@@ -1156,7 +1156,6 @@ def test_transform_fields(transform_cls):
 
     if transform_cls.__name__ == "RemoveItems":
         assert not transform_cls.KEEPS_IDS_INTACT
-        assert is_method_redefined("ids", Transform, transform_cls)
         return
 
     modified_fields = set()

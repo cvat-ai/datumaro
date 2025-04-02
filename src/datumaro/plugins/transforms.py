@@ -14,18 +14,7 @@ from collections import Counter
 from copy import deepcopy
 from enum import Enum, auto
 from itertools import chain
-from typing import (
-    Callable,
-    Dict,
-    Generator,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Union
 
 import cv2
 import numpy as np
@@ -463,10 +452,6 @@ class MapSubsets(ItemTransform, CliPlugin):
 
     def transform_item(self, item):
         return self.wrap_item(item, subset=self._mapping.get(item.subset, item.subset))
-
-    def ids(self) -> Generator[Tuple[str, str], None, None]:
-        for item_id, subset in self._extractor.ids():
-            yield item_id, self._mapping.get(subset, subset)
 
 
 class RandomSplit(Transform, CliPlugin):
@@ -1219,11 +1204,6 @@ class RemoveItems(ItemTransform):
         if (item.id, item.subset) in self._ids:
             return None
         return item
-
-    def ids(self) -> Generator[Tuple[str, str], None, None]:
-        for item_id, subset in self._extractor.ids():
-            if (item_id, subset) not in self._ids:
-                yield item_id, subset
 
 
 class RemoveAnnotations(ItemTransform):

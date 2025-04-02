@@ -5,22 +5,7 @@
 
 from __future__ import annotations
 
-import logging
-from typing import (
-    Any,
-    Dict,
-    Generator,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Set, Type, TypeVar, Union, cast
 
 import attr
 from attr import attrs, field
@@ -138,15 +123,6 @@ class IDataset:
         If the dataset is a stream, the dataset item is generated on demand from its iterator.
         """
         return False
-
-    def ids(self) -> Generator[Tuple[str, str], None, None]:
-        """
-        Returns item ids and subsets as tuples
-        """
-        if self.is_stream:
-            logging.debug(f"Class {type(self)} needs to iterate items to get ids.")
-        for item in self:
-            yield item.id, item.subset
 
 
 class _DatasetBase(IDataset):
@@ -311,12 +287,8 @@ class StreamingSubsetBase(SubsetBase):
     """
     A base class for simple, single-subset extractors adapted for streaming.
 
-    ids() method should be redefined to generate ids without iterating items
     __iter__() method should be redefined
     """
-
-    def ids(self) -> Generator[Tuple[str, str], None, None]:
-        raise NotImplementedError()
 
     def __iter__(self):
         raise NotImplementedError()
@@ -327,7 +299,7 @@ class StreamingSubsetBase(SubsetBase):
 
     def __len__(self):
         if self._length is None:
-            self._length = sum(1 for _ in self.ids())
+            self._length = sum(1 for _ in self)
         return self._length
 
     def get(self, id, subset=None) -> Optional[DatasetItem]:
@@ -366,7 +338,7 @@ class StreamingDatasetBase(DatasetBase):
 
     def __len__(self):
         if self._length is None:
-            self._length = sum(1 for _ in self.ids())
+            self._length = sum(1 for _ in self)
         return self._length
 
     def get(self, id, subset=None) -> Optional[DatasetItem]:
@@ -381,7 +353,3 @@ class StreamingDatasetBase(DatasetBase):
 
     def get_subset(self, name) -> StreamingSubsetBase:
         raise NotImplementedError()
-
-    def ids(self) -> Generator[Tuple[str, str], None, None]:
-        for subset in self.subsets().values():
-            yield from subset.ids()

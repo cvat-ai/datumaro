@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 from collections import defaultdict
-from typing import Generator, Sequence, Tuple
+from typing import Sequence
 
 from datumaro.components.contexts.importer import _ImportFail
 from datumaro.components.dataset_base import SubsetBase
@@ -50,9 +50,6 @@ class COCOTaskMergedBase(SubsetBase):
             return len(self._sources[0])
         else:
             return len(self.item_keys)
-
-    def ids(self) -> Generator[Tuple[str, str], None, None]:
-        yield from self._sources[0].ids()
 
     @property
     def item_keys(self):

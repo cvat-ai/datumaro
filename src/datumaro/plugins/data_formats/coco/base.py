@@ -191,15 +191,6 @@ class _CocoBase(SubsetBase):
         else:
             yield from self._items.values()
 
-    def ids(self) -> Generator[Tuple[str, str], None, None]:
-        if self.is_stream:
-            for img_info, _ in self._page_mapper:
-                file_name = self._parse_field(img_info, "file_name", str)
-                yield osp.splitext(file_name)[0], self._subset
-        else:
-            for item in self._items.values():
-                yield item.id, item.subset
-
     def _load_categories(self, json_data, *, keep_original_ids):
         self._categories = {}
 

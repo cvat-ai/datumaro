@@ -640,6 +640,11 @@ class StreamSubset(IDataset):
             if item.subset == self._subset:
                 yield item
 
+    def shallow_items(self) -> Generator[DatasetItem, None, None]:
+        for item in self._source.shallow_items():
+            if item.subset == self._subset:
+                yield item
+
     def __len__(self) -> int:
         if self._length is None:
             self._length = sum(1 for _ in self.shallow_items())
@@ -730,10 +735,11 @@ class StreamDatasetStorage(DatasetStorage):
         for item in self.stacked_transform:
             yield item
 
-            for ann in item.annotations:
-                if ann.type == AnnotationType.hash_key:
-                    continue
-                self._ann_types.add(ann.type)
+            if item.annotations_are_initialized:
+                for ann in item.annotations:
+                    if ann.type == AnnotationType.hash_key:
+                        continue
+                    self._ann_types.add(ann.type)
 
     def shallow_items(self) -> Generator[DatasetItem, None, None]:
         yield from self.stacked_transform.shallow_items()

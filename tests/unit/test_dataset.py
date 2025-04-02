@@ -25,14 +25,7 @@ from datumaro.components.contexts.importer import (
     ProgressReporter,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, StreamDataset, eager_mode
-from datumaro.components.dataset_base import (
-    DatasetBase,
-    DatasetItem,
-    IDataset,
-    StreamingDatasetBase,
-    StreamingSubsetBase,
-    SubsetBase,
-)
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
@@ -2422,19 +2415,11 @@ class DatasetInfosTest:
 
 class StreamDatasetTest:
     @staticmethod
-    def _make_extractor(
-        items_for_subsets: Dict[str, Tuple[int, int]], streaming_base: bool = False
-    ):
-        class SrcExtractor(StreamingDatasetBase if streaming_base else DatasetBase):
+    def _make_extractor(items_for_subsets: Dict[str, Tuple[int, int]]):
+        class SrcExtractor(DatasetBase):
             def __init__(self):
-                super().__init__(
-                    length=sum(
-                        end_id - start_id for start_id, end_id in items_for_subsets.values()
-                    ),
-                    subsets=list(items_for_subsets.keys()),
-                )
+                super().__init__()
                 self.iter_counter = 0
-                self.iter_subset_counter = 0
                 self.ann_init_counter = 0
 
             @property
@@ -2451,7 +2436,7 @@ class StreamDatasetTest:
                         id=id,
                         subset=subset,
                         media=Image.from_numpy(data=np.ones((5, 5, 3))),
-                        annotations=lambda: self._get_anns(),
+                        annotations=self._get_anns,
                     )
 
             def __iter__(self):
@@ -2459,123 +2444,79 @@ class StreamDatasetTest:
                 for subset, (start_id, end_id) in items_for_subsets.items():
                     yield from self._gen_items(start_id, end_id, subset)
 
-        if streaming_base:
-
-            class SrcExtractor(SrcExtractor):
-                def __iter__(self):
-                    self.iter_counter += 1
-                    yield from StreamingDatasetBase.__iter__(self)
-
-                def get_subset(self, name: str) -> IDataset:
-                    assert name in items_for_subsets
-
-                    class _SubsetExtractor(StreamingSubsetBase):
-                        def __init__(self, parent):
-                            super().__init__(subset=name)
-                            self.parent = parent
-
-                        def __iter__(self):
-                            self.parent.iter_subset_counter += 1
-                            yield from self.parent._gen_items(
-                                items_for_subsets[name][0], items_for_subsets[name][1], name
-                            )
-
-                    return _SubsetExtractor(self)
-
         return SrcExtractor()
 
-    @pytest.mark.parametrize("streaming_base", [True, False])
-    def test_single_subset(self, streaming_base):
-        extractor = self._make_extractor({"train": (1, 3)}, streaming_base)
+    def test_single_subset(self):
+        extractor = self._make_extractor({"train": (1, 3)})
         dataset = StreamDataset.from_extractors(extractor)
 
         assert list(dataset.subsets().keys()) == ["train"]
-        assert len(dataset) == 2
-        # does not iterate items to get any of the above info
-        assert extractor.iter_counter == 0
-        assert extractor.iter_subset_counter == 0
+        dataset_length = len(dataset)
+        assert dataset_length == 2
+        # iterates items to get the info above, but does not init annotations
+        assert extractor.iter_counter == 1
+        assert extractor.ann_init_counter == 0
+
+        list(dataset.shallow_items())
+        assert extractor.iter_counter == 2
+        assert extractor.ann_init_counter == 0
+
+        # inits annotations when they are accessed
+        assert len(list([item.annotations for item in dataset])) == dataset_length
+        assert extractor.iter_counter == 3
+        assert extractor.ann_init_counter == dataset_length
 
         # does not cache items
-        assert len(list(dataset)) == 2
-        assert extractor.iter_counter == 1
-        assert extractor.iter_subset_counter == (1 if streaming_base else 0)
-        assert len(list(dataset)) == 2
-        assert extractor.iter_counter == 2
-        assert extractor.iter_subset_counter == (2 if streaming_base else 0)
-
-        # when accessing items through subsets
-        assert (
-            len([item for subset_name, subset in dataset.subsets().items() for item in subset]) == 2
-        )
-        if streaming_base:
-            # iterates only over subset items
-            assert extractor.iter_counter == 2
-            assert extractor.iter_subset_counter == 3
-        else:
-            assert extractor.iter_counter == 3
-
-        # does not init annotations when iterating shallow items
-        before_iteration = extractor.ann_init_counter
-        list(dataset.shallow_items())
-        assert extractor.ann_init_counter == before_iteration
+        assert len(list([item.annotations for item in dataset])) == dataset_length
+        assert extractor.iter_counter == 4
+        assert extractor.ann_init_counter == dataset_length * 2
 
     def test_subset_keeping_transforms_do_not_trigger_subset_recollection(self):
         extractor = self._make_extractor({"train": (1, 3), "val": (3, 5)})
         dataset = StreamDataset.from_extractors(extractor)
+        assert extractor.iter_counter == 1
         dataset = dataset.transform(BoxesToMasks)
         assert set(dataset.subsets().keys()) == {"train", "val"}
-        assert extractor.iter_counter == 0
-        assert extractor.iter_subset_counter == 0
+        assert extractor.iter_counter == 1
+        assert extractor.ann_init_counter == 0
 
     def test_subset_changing_transforms_trigger_subset_recollection(self):
         extractor = self._make_extractor({"train": (1, 3), "val": (3, 6)})
         dataset = StreamDataset.from_extractors(extractor)
+        assert extractor.iter_counter == 1
         dataset = dataset.transform(RandomSplit, splits=[("another", 0.5), ("val", 0.5)])
         assert set(dataset.subsets().keys()) == {"another", "val"}
-        assert extractor.iter_counter == 1
+        assert extractor.iter_counter == 2
+        assert extractor.ann_init_counter == 0
         # subset names now cached
         assert set(dataset.subsets().keys()) == {"another", "val"}
-        assert extractor.iter_counter == 1
+        assert extractor.iter_counter == 2
+        assert extractor.ann_init_counter == 0
 
-    @pytest.mark.parametrize("streaming_base", [True, False])
-    def test_several_subsets(self, streaming_base):
-        extractor = self._make_extractor(
-            {"train": (1, 3), "val": (3, 6), "test": (9, 13)}, streaming_base=streaming_base
-        )
+    def test_several_subsets(self):
+        extractor = self._make_extractor({"train": (1, 3), "val": (3, 6), "test": (9, 13)})
 
         dataset = StreamDataset.from_extractors(extractor)
         dataset = dataset.transform(BoxesToMasks)
         dataset = dataset.transform(MasksToPolygons)
 
         assert set(dataset.subsets().keys()) == {"train", "val", "test"}
-        assert len(dataset) == 9
-        # does not iterate items to get any of the above info
-        assert extractor.iter_counter == 0
-        assert extractor.iter_subset_counter == 0
+        dataset_length = len(dataset)
+        assert dataset_length == 9
+        # iterates items to get the info above, but does not init annotations
+        assert extractor.iter_counter == 1
+        assert extractor.ann_init_counter == 0
+
+        list(dataset.shallow_items())
+        assert extractor.iter_counter == 2
+        assert extractor.ann_init_counter == 0
+
+        # inits annotations when they are accessed
+        assert len(list([item.annotations for item in dataset])) == dataset_length
+        assert extractor.iter_counter == 3
+        assert extractor.ann_init_counter == dataset_length
 
         # does not cache items
-        assert len(list(dataset)) == 9
-        assert extractor.iter_counter == 1
-        if streaming_base:
-            assert extractor.iter_subset_counter == 3
-        assert len(list(dataset)) == 9
-        assert extractor.iter_counter == 2
-        if streaming_base:
-            assert extractor.iter_subset_counter == 6
-
-        # when accessing items through subsets
-        assert (
-            len([item for subset_name, subset in dataset.subsets().items() for item in subset]) == 9
-        )
-        if streaming_base:
-            # does not iterate over all items, iterates over each subset once
-            assert extractor.iter_counter == 2
-            assert extractor.iter_subset_counter == 9
-        else:
-            # iterates over all items, once for every subset
-            assert extractor.iter_counter == 5
-
-        # does not init annotations when iterating shallow items
-        before_iteration = extractor.ann_init_counter
-        list(dataset.shallow_items())
-        assert extractor.ann_init_counter == before_iteration
+        assert len(list([item.annotations for item in dataset])) == dataset_length
+        assert extractor.iter_counter == 4
+        assert extractor.ann_init_counter == dataset_length * 2

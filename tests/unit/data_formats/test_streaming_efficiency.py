@@ -9,65 +9,60 @@ from datumaro import AnnotationType, CategoriesInfo, LabelCategories
 from datumaro.components import media
 from datumaro.components.annotation import Annotations
 from datumaro.components.dataset import Dataset, StreamDataset
-from datumaro.components.dataset_base import DatasetItem, StreamingDatasetBase, StreamingSubsetBase
+from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatasetExportError
+from datumaro.plugins.data_formats.coco.exporter import CocoImageInfoExporter
 
 
-class DummyStreamingExtractor(StreamingDatasetBase):
+class DummyStreamingExtractor(DatasetBase):
     def __init__(self):
-        super().__init__(subsets=["train", "test", "foo"])
-        self.iter_subset_call_dict = {subset: 0 for subset in self._subsets}
+        super().__init__()
         self.iter_call_count = 0
+        self.ann_init_counter = 0
+
+    def _generate_anns(self):
+        self.ann_init_counter += 1
+        return []
 
     def __iter__(self):
         self.iter_call_count += 1
-        yield from super().__iter__()
+        for subset_name in ["train", "test", "foo"]:
+            item = DatasetItem(
+                id=f"{subset_name}_1",
+                subset=subset_name,
+                media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
+                annotations=self._generate_anns,
+            )
+            # counting references to make sure that exporter is actually streaming
 
-    def get_subset(self, name: str) -> StreamingSubsetBase:
-        assert name in self._subsets
+            # before yielded, references are only here
+            assert sys.getrefcount(item) == 2
 
-        class _SubsetExtractor(StreamingSubsetBase):
-            def __init__(self, parent):
-                super().__init__(subset=name)
-                self.parent = parent
+            # after yielded, there are more references (e.g. where it's yielded from)
+            # number of references doesn't have to increase in general,
+            # but it should due to how our code works
+            yield item
+            assert sys.getrefcount(item) > 2
 
-            def __iter__(self):
-                self.parent.iter_subset_call_dict[name] += 1
-                item = DatasetItem(
-                    id=f"{name}_1",
-                    subset=name,
-                    media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
-                    annotations=[],
-                )
-                # counting references to make sure that exporter is actually streaming
-
-                # before yielded, references are only here
-                assert sys.getrefcount(item) == 2
-
-                # after yielded, there are more references (e.g. where it's yielded from)
-                # number of references doesn't have to increase in general,
-                # but it should due to how our code works
-                yield item
-                assert sys.getrefcount(item) > 2
-
-                # after next item yielded, ref count is 2 again - i.e. item was not saved anywhere
-                yield DatasetItem(
-                    id=f"{name}_2",
-                    subset=name,
-                    media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
-                    annotations=[],
-                )
-                assert sys.getrefcount(item) == 2
-
-        return _SubsetExtractor(self)
+            # after next item yielded, ref count is 2 again - i.e. item was not saved anywhere
+            yield DatasetItem(
+                id=f"{subset_name}_2",
+                subset=subset_name,
+                media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
+                annotations=self._generate_anns,
+            )
+            assert sys.getrefcount(item) == 2
 
     def categories(self) -> CategoriesInfo:
         return {AnnotationType.label: LabelCategories.from_iterable(["a", "b", "c"])}
 
+    def is_stream(self) -> bool:
+        return True
+
 
 @pytest.mark.parametrize("exporter_cls", DEFAULT_ENVIRONMENT.exporters.items.values())
-def test_streaming_exporters_only_iterate_items_once(test_dir, exporter_cls):
+def test_streaming_exporters_only_init_annotations_once(test_dir, exporter_cls):
     extractor = DummyStreamingExtractor()
     dataset = StreamDataset(source=extractor)
     try:
@@ -76,14 +71,12 @@ def test_streaming_exporters_only_iterate_items_once(test_dir, exporter_cls):
         assert "cannot export a dataset in a stream manner" in str(e)
         pytest.skip(f"{exporter_cls} does not support streaming")
 
-    # there was no full iterations
-    assert extractor.iter_call_count == 0
-    # each subset was iterated once
-    assert not {
-        subset: call_count
-        for subset, call_count in extractor.iter_subset_call_dict.items()
-        if call_count != 1
-    }
+    if exporter_cls is CocoImageInfoExporter:
+        assert extractor.ann_init_counter == 0
+        return
+
+    # annotations initialization was done only once per item
+    assert extractor.ann_init_counter == len(extractor)
 
 
 @pytest.fixture(scope="session")
@@ -157,10 +150,10 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         # inits on iteration
         for item in parsed_dataset:
             # annotations are not parsed if we do not access them
-            assert callable(item._annotations)
+            assert not item.annotations_are_initialized
             # annotations are parsed if we access them
             assert isinstance(item.annotations, Annotations)
-            assert isinstance(item._annotations, Annotations)
+            assert item.annotations_are_initialized
         assert init_counter.count == len(fxt_dataset)
 
         # inits again on iteration, i.e. not caching items

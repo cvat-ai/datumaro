@@ -27,8 +27,7 @@ from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatumaroError
 from datumaro.components.media import Image
-from datumaro.components.transformer import Transform
-from datumaro.util import is_method_redefined
+from datumaro.components.transformer import ItemTransform, Transform
 
 from tests.requirements import Requirements, mark_bug, mark_requirement
 from tests.utils.test_utils import compare_datasets
@@ -1149,13 +1148,17 @@ class CropCoveredSegmentsTest:
             assert "completely covered object removed" in str(capture.value)
 
 
-@pytest.mark.parametrize("transform_cls", DEFAULT_ENVIRONMENT.transforms.items.values())
-def test_transform_fields(transform_cls):
-    if transform_cls.__module__ != "datumaro.plugins.transforms":
-        pytest.skip()
+TRANSFORMS = [
+    transform_cls
+    for transform_cls in DEFAULT_ENVIRONMENT.transforms.items.values()
+    if transform_cls.__module__ == "datumaro.plugins.transforms"
+]
 
-    if transform_cls.__name__ == "RemoveItems":
-        assert not transform_cls.KEEPS_IDS_INTACT
+
+@pytest.mark.parametrize("transform_cls", TRANSFORMS)
+def test_transform_fields(transform_cls):
+    if transform_cls is transforms.RemoveItems:
+        assert transform_cls.IS_SHALLOW_FRIENDLY
         return
 
     modified_fields = set()
@@ -1191,5 +1194,9 @@ def test_transform_fields(transform_cls):
 
     assert len(list(dataset)) == 10
 
-    ids_modified = bool({"id", "subset"} & modified_fields)
-    assert ids_modified ^ transform_cls.KEEPS_IDS_INTACT
+    subsets_modified = bool({"subset"} & modified_fields)
+    assert (not subsets_modified) == transform_cls.KEEPS_SUBSETS_INTACT
+
+    if issubclass(transform_cls, ItemTransform):
+        if modified_fields == {"annotations"}:
+            assert transform_cls.IS_SHALLOW_FRIENDLY

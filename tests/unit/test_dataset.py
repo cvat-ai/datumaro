@@ -2422,18 +2422,6 @@ class DatasetInfosTest:
 
 class StreamDatasetTest:
     @staticmethod
-    def _gen_items(start_id, end_id, subset):
-        for id in range(start_id, end_id):
-            yield DatasetItem(
-                id=id,
-                subset=subset,
-                media=Image.from_numpy(data=np.ones((5, 5, 3))),
-                annotations=[
-                    Bbox(1, 2, 3, 4),
-                ],
-            )
-
-    @staticmethod
     def _make_extractor(
         items_for_subsets: Dict[str, Tuple[int, int]], streaming_base: bool = False
     ):
@@ -2447,15 +2435,29 @@ class StreamDatasetTest:
                 )
                 self.iter_counter = 0
                 self.iter_subset_counter = 0
+                self.ann_init_counter = 0
 
             @property
             def is_stream(self):
                 return True
 
+            def _get_anns(self):
+                self.ann_init_counter += 1
+                return [Bbox(1, 2, 3, 4)]
+
+            def _gen_items(self, start_id, end_id, subset):
+                for id in range(start_id, end_id):
+                    yield DatasetItem(
+                        id=id,
+                        subset=subset,
+                        media=Image.from_numpy(data=np.ones((5, 5, 3))),
+                        annotations=lambda: self._get_anns(),
+                    )
+
             def __iter__(self):
                 self.iter_counter += 1
                 for subset, (start_id, end_id) in items_for_subsets.items():
-                    yield from StreamDatasetTest._gen_items(start_id, end_id, subset)
+                    yield from self._gen_items(start_id, end_id, subset)
 
         if streaming_base:
 
@@ -2474,7 +2476,7 @@ class StreamDatasetTest:
 
                         def __iter__(self):
                             self.parent.iter_subset_counter += 1
-                            yield from StreamDatasetTest._gen_items(
+                            yield from self.parent._gen_items(
                                 items_for_subsets[name][0], items_for_subsets[name][1], name
                             )
 
@@ -2511,6 +2513,11 @@ class StreamDatasetTest:
             assert extractor.iter_subset_counter == 3
         else:
             assert extractor.iter_counter == 3
+
+        # does not init annotations when iterating shallow items
+        before_iteration = extractor.ann_init_counter
+        list(dataset.shallow_items())
+        assert extractor.ann_init_counter == before_iteration
 
     def test_subset_keeping_transforms_do_not_trigger_subset_recollection(self):
         extractor = self._make_extractor({"train": (1, 3), "val": (3, 5)})
@@ -2567,3 +2574,8 @@ class StreamDatasetTest:
         else:
             # iterates over all items, once for every subset
             assert extractor.iter_counter == 5
+
+        # does not init annotations when iterating shallow items
+        before_iteration = extractor.ann_init_counter
+        list(dataset.shallow_items())
+        assert extractor.ann_init_counter == before_iteration

@@ -9,6 +9,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generator,
     Iterator,
     List,
     Optional,
@@ -152,6 +153,13 @@ class IDataset:
         If the dataset is a stream, the dataset item is generated on demand from its iterator.
         """
         return False
+
+    def shallow_items(self) -> Generator[DatasetItem, None, None]:
+        """
+        Generates shallow versions of items - without annotations.
+        """
+        for item in self:
+            yield item.wrap(annotations=[])
 
 
 class _DatasetBase(IDataset):

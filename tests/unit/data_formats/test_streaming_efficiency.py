@@ -1,6 +1,5 @@
 import os.path
 import sys
-from typing import Generator, Tuple
 from unittest.mock import patch
 
 import numpy as np

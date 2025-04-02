@@ -14,7 +14,18 @@ from collections import Counter
 from copy import deepcopy
 from enum import Enum, auto
 from itertools import chain
-from typing import Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import (
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import cv2
 import numpy as np
@@ -55,7 +66,8 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
     the corresponding number of separate annotations joined into a group.
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     ALLOW_REMOVAL_ARG = "--allow-removal"
 
@@ -166,7 +178,8 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
     resulting mask takes properties from that annotation.
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -258,7 +271,8 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
 
 
 class PolygonsToMasks(ItemTransform, CliPlugin):
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     def transform_item(self, item):
         annotations = []
@@ -288,7 +302,8 @@ class PolygonsToMasks(ItemTransform, CliPlugin):
 
 
 class BoxesToMasks(ItemTransform, CliPlugin):
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     def transform_item(self, item):
         annotations = []
@@ -318,7 +333,8 @@ class BoxesToMasks(ItemTransform, CliPlugin):
 
 
 class MasksToPolygons(ItemTransform, CliPlugin):
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     def transform_item(self, item):
         annotations = []
@@ -355,7 +371,8 @@ class MasksToPolygons(ItemTransform, CliPlugin):
 
 
 class ShapesToBoxes(ItemTransform, CliPlugin):
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     def transform_item(self, item):
         annotations = []
@@ -390,6 +407,8 @@ class Reindex(Transform, CliPlugin):
     Replaces dataset item IDs with sequential indices.
     """
 
+    KEEPS_SUBSETS_INTACT = True
+
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
         parser = super().build_cmdline_parser(**kwargs)
@@ -405,11 +424,17 @@ class Reindex(Transform, CliPlugin):
         for i, item in enumerate(self._extractor):
             yield self.wrap_item(item, id=i + self._start)
 
+    def shallow_items(self) -> Generator[DatasetItem, None, None]:
+        for i, item in enumerate(self._extractor.shallow_items()):
+            yield self.wrap_item(item, id=i + self._start)
+
 
 class MapSubsets(ItemTransform, CliPlugin):
     """
     Renames subsets in the dataset.
     """
+
+    IS_SHALLOW_FRIENDLY = True
 
     @staticmethod
     def _mapping_arg(s):
@@ -544,6 +569,9 @@ class IdFromImageName(ItemTransform, CliPlugin):
     Renames items in the dataset using image file name (without extension).
     """
 
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
+
     def transform_item(self, item):
         if isinstance(item.media, Image) and hasattr(item.media, "path"):
             name = osp.splitext(osp.basename(item.media.path))[0]
@@ -582,6 +610,7 @@ class Rename(ItemTransform, CliPlugin):
 
     |s|s|s|srename -e '|frame_(\d+)_extra|{item.subset}_id_\1|'
     """
+    KEEPS_SUBSETS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -642,7 +671,8 @@ class RemapLabels(ItemTransform, CliPlugin):
     |s|s|s|s%(prog)s -l person:car -l bus:bus -l cat:dog --default delete
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     class DefaultAction(Enum):
         keep = auto()
@@ -782,7 +812,7 @@ class UpdateInfos(Transform, CliPlugin):
     Infos values do not affect the dataset structure, so any metadata can be added freely.
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -850,7 +880,8 @@ class ProjectLabels(ItemTransform):
     |s|s|s|s%(prog)s -l person -l cat -l dog
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -974,7 +1005,8 @@ class AnnsToLabels(ItemTransform, CliPlugin):
     transforms them into a set of annotations of type Label
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     def transform_item(self, item):
         labels = set(p.label for p in item.annotations if getattr(p, "label") is not None)
@@ -990,7 +1022,8 @@ class BboxValuesDecrement(ItemTransform, CliPlugin):
     Subtracts one from the coordinates of bounding boxes
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     def transform_item(self, item):
         annotations = [p for p in item.annotations if p.type != AnnotationType.bbox]
@@ -1029,7 +1062,8 @@ class ResizeTransform(ItemTransform):
         |s|s%(prog)s -sx 2 -sy 2
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -1174,6 +1208,9 @@ class RemoveItems(ItemTransform):
         |s|s%(prog)s --id 'image1:train' --id 'image2:test'
     """
 
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
+
     @staticmethod
     def _parse_id(s):
         full_id = s.split(":")
@@ -1220,7 +1257,8 @@ class RemoveAnnotations(ItemTransform):
         |s|s%(prog)s --id 'image1:train' --id 'image2:test'
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     @staticmethod
     def _parse_id(s):
@@ -1276,7 +1314,8 @@ class RemoveAttributes(ItemTransform):
         |s|s%(prog)s --id '2010_001705:train' --attr 'occluded'
     """
 
-    KEEPS_IDS_INTACT = True
+    KEEPS_SUBSETS_INTACT = True
+    IS_SHALLOW_FRIENDLY = True
 
     @staticmethod
     def _parse_id(s):

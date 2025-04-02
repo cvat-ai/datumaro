@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import logging as log
-from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type, Union
+from typing import Dict, Generator, Iterable, Iterator, List, Optional, Set, Tuple, Type, Union
 
 from datumaro.components.annotation import AnnotationType, LabelCategories
 from datumaro.components.contexts.importer import _ImportFail
@@ -117,6 +117,9 @@ class _StackedTransform(Transform):
 
     def __iter__(self) -> Iterator[DatasetItem]:
         yield from self.transforms[-1]
+
+    def shallow_items(self) -> Generator[DatasetItem, None, None]:
+        yield from self.transforms[-1].shallow_items()
 
     def infos(self) -> DatasetInfo:
         return self.transforms[-1].infos()
@@ -639,7 +642,7 @@ class StreamSubset(IDataset):
 
     def __len__(self) -> int:
         if self._length is None:
-            self._length = sum(1 for _ in self)
+            self._length = sum(1 for _ in self.shallow_items())
         return self._length
 
     def subsets(self) -> Dict[str, IDataset]:
@@ -732,6 +735,9 @@ class StreamDatasetStorage(DatasetStorage):
                     continue
                 self._ann_types.add(ann.type)
 
+    def shallow_items(self) -> Generator[DatasetItem, None, None]:
+        yield from self.stacked_transform.shallow_items()
+
     def __len__(self) -> int:
         if self._length is None:
             self._length = len(self._source)
@@ -750,7 +756,7 @@ class StreamDatasetStorage(DatasetStorage):
         raise NotAvailableError("Drop-in removal is not allowed in streaming.")
 
     def get_subset(self, name: str) -> IDataset:
-        if all(t[0].KEEPS_IDS_INTACT for t in self._transforms):
+        if all(t[0].KEEPS_SUBSETS_INTACT for t in self._transforms):
             transformed_subset = self._apply_stacked_transform(self._source.get_subset(name))
             if transformed_subset.is_stream:
                 return StreamSubset(transformed_subset, name)
@@ -760,10 +766,11 @@ class StreamDatasetStorage(DatasetStorage):
     @property
     def subset_names(self):
         if any(
-            id(t) not in self._transform_ids_for_latest_subset_names and not t[0].KEEPS_IDS_INTACT
+            id(t) not in self._transform_ids_for_latest_subset_names
+            and not t[0].KEEPS_SUBSETS_INTACT
             for t in self._transforms
         ):
-            self._subset_names = set(item.subset for item in self)
+            self._subset_names = set(item.subset for item in self.shallow_items())
             self._transform_ids_for_latest_subset_names = [id(t) for t in self._transforms]
         return self._subset_names
 

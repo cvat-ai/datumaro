@@ -15,6 +15,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generator,
     Iterable,
     Iterator,
     List,
@@ -1046,6 +1047,9 @@ class StreamDataset(Dataset):
             return _MergedStreamDataset(*sources)
 
         return dataset
+
+    def shallow_items(self) -> Generator[DatasetItem, None, None]:
+        yield from self._data.shallow_items()
 
 
 @contextmanager

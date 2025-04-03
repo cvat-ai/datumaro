@@ -486,6 +486,9 @@ class DatasetStorage(IDataset):
         id = str(id)
         subset = subset or DEFAULT_SUBSET_NAME
 
+        if self._source is not None and self._source.is_stream and not self.is_cache_initialized():
+            self.init_cache()
+
         item = self._storage.get(id, subset)
         if item is None and not self.is_cache_initialized():
             if self._source.get.__func__ == DatasetBase.get:

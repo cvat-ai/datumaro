@@ -2093,6 +2093,21 @@ class DatasetTest(TestCase):
         with self.assertRaises(MediaTypeError):
             dataset.init_cache()
 
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_works_with_streaming_extractor(self):
+        class Extractor(StreamingSubsetBase):
+            def __iter__(_):
+                for id in range(5):
+                    yield DatasetItem(
+                        id=f"item_{id}",
+                        subset="train",
+                        media=Image.from_numpy(data=np.ones((5, 5, 3))),
+                        annotations=[],
+                    )
+
+        dataset = Dataset.from_extractors(Extractor())
+        assert dataset.get("item_1", "train") is not None
+
 
 class DatasetItemTest(TestCase):
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -2451,6 +2466,7 @@ class StreamDatasetTest:
 
         return SrcExtractor()
 
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     @pytest.mark.parametrize(
         "items_for_subsets", [{"train": (1, 3)}, {"train": (1, 3), "val": (3, 6), "test": (9, 13)}]
     )

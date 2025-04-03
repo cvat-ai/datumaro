@@ -72,8 +72,8 @@ class ItemTransform(Transform):
     A base class for dataset transformations where changes to item depends
     only on the same item data
 
-    IS_SHALLOW_FRIENDLY should be set to True for subclasses which do not change
-    id, subset, media or attributes based on annotations
+    IS_SHALLOW_FRIENDLY should be False only for transforms which use annotations data
+    to change non-annotations data, and should be set to True for all the other transforms.
     """
 
     IS_SHALLOW_FRIENDLY = False

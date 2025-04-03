@@ -27,6 +27,7 @@ from attr import attrs, field
 from datumaro.components.annotation import Annotation, Annotations, AnnotationType, Categories
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.contexts.importer import ImportContext, NullImportContext
+from datumaro.components.errors import DatumaroError, NotAvailableError
 from datumaro.components.media import Image, MediaElement
 from datumaro.util.attrs_util import default_if_none, not_empty
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
@@ -324,3 +325,79 @@ class SubsetBase(DatasetBase):
     def subset(self) -> str:
         """Subset name of this instance."""
         return self._subset
+
+
+class StreamingSubsetBase(SubsetBase):
+    """
+    A base class for simple, single-subset extractors adapted for streaming.
+
+    __iter__() method should be redefined
+    """
+
+    def __iter__(self):
+        raise NotImplementedError()
+
+    @property
+    def is_stream(self):
+        return True
+
+    def __len__(self):
+        if self._length is None:
+            self._length = sum(1 for _ in self.shallow_items())
+        return self._length
+
+    def get(self, id, subset=None) -> Optional[DatasetItem]:
+        raise NotAvailableError("Random access to items is not allowed in streaming.")
+
+    def _init_cache(self):
+        raise NotAvailableError()
+
+
+class StreamingDatasetBase(DatasetBase):
+    """
+    A base class for multi-subset extractors adapted for streaming export.
+    Should be used in cases when subsets are known beforehand and can be accessed independently.
+
+    get_subset method should be redefined
+    """
+
+    def __init__(
+        self,
+        *,
+        length: Optional[int] = None,
+        subsets: Optional[Sequence[str]] = None,
+        media_type: Type[MediaElement] = Image,
+        ann_types: Optional[Set[AnnotationType]] = None,
+        ctx: Optional[ImportContext] = None,
+    ):
+        if subsets is None:
+            raise DatumaroError("StreamingDatasetBase should receive non-empty subsets")
+        super().__init__(
+            length=length, subsets=subsets, media_type=media_type, ann_types=ann_types, ctx=ctx
+        )
+
+    def __iter__(self):
+        for subset in self.subsets().values():
+            yield from subset
+
+    def shallow_items(self) -> Generator[DatasetItem, None, None]:
+        for subset in self.subsets().values():
+            yield from subset.shallow_items()
+
+    def __len__(self):
+        if self._length is None:
+            self._length = sum(len(subset) for subset in self.subsets().values())
+        return self._length
+
+    def get(self, id, subset=None) -> Optional[DatasetItem]:
+        raise NotAvailableError("Random access to items is not allowed in streaming.")
+
+    def _init_cache(self):
+        raise NotAvailableError()
+
+    @property
+    def is_stream(self) -> bool:
+        return True
+
+    def get_subset(self, name) -> StreamingSubsetBase:
+        raise NotImplementedError()

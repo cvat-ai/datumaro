@@ -25,7 +25,13 @@ from datumaro.components.contexts.importer import (
     ProgressReporter,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, StreamDataset, eager_mode
-from datumaro.components.dataset_base import DatasetBase, DatasetItem, SubsetBase
+from datumaro.components.dataset_base import (
+    DatasetBase,
+    DatasetItem,
+    StreamingDatasetBase,
+    StreamingSubsetBase,
+    SubsetBase,
+)
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
@@ -2416,14 +2422,10 @@ class DatasetInfosTest:
 class StreamDatasetTest:
     @staticmethod
     def _make_extractor(items_for_subsets: Dict[str, Tuple[int, int]]):
-        class SrcExtractor(DatasetBase):
+        class SrcExtractor(StreamingDatasetBase):
             def __init__(self):
-                super().__init__()
+                super().__init__(subsets=list(items_for_subsets.keys()))
                 self.ann_init_counter = 0
-
-            @property
-            def is_stream(self):
-                return True
 
             def _get_anns(self):
                 self.ann_init_counter += 1
@@ -2438,9 +2440,14 @@ class StreamDatasetTest:
                         annotations=self._get_anns,
                     )
 
-            def __iter__(self):
-                for subset, (start_id, end_id) in items_for_subsets.items():
-                    yield from self._gen_items(start_id, end_id, subset)
+            def get_subset(self, name: str) -> StreamingSubsetBase:
+                class _SubsetExtractor(StreamingSubsetBase):
+                    def __iter__(_):
+                        yield from self._gen_items(
+                            items_for_subsets[name][0], items_for_subsets[name][1], name
+                        )
+
+                return _SubsetExtractor()
 
         return SrcExtractor()
 
@@ -2455,6 +2462,12 @@ class StreamDatasetTest:
 
         # iteration does not init annotations
         assert len(list(dataset)) == dataset_length
+        assert extractor.ann_init_counter == 0
+
+        # when iterating subsets also does not init annotations
+        for subset in dataset.subsets():
+            subset_dataset = dataset.get_subset(subset).as_dataset()
+            len(list(subset_dataset))
         assert extractor.ann_init_counter == 0
 
         # adding transforms which access annotations
@@ -2482,3 +2495,9 @@ class StreamDatasetTest:
         # does not cache items
         assert len(list(dataset)) == dataset_length
         assert extractor.ann_init_counter == dataset_length * 2
+
+        # when iterating subsets, only inits relevant annotations
+        for subset in dataset.subsets():
+            subset_dataset = dataset.get_subset(subset).as_dataset()
+            len(list(subset_dataset))
+        assert extractor.ann_init_counter == dataset_length * 3

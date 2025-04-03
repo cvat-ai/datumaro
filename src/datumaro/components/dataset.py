@@ -85,6 +85,9 @@ class DatasetSubset(IDataset):  # non-owning view
     def __iter__(self):
         yield from self.parent._data.get_subset(self.name)
 
+    def shallow_items(self) -> Generator[DatasetItem, None, None]:
+        yield from self.parent._data.get_subset(self.name).shallow_items()
+
     def __len__(self):
         subset: DatasetItemStorageDatasetView.Subset = self.parent._data.get_subset(self.name)
 
@@ -133,10 +136,14 @@ class DatasetSubset(IDataset):  # non-owning view
         return sum(t["count"] for t in annotations_by_type.values())
 
     def as_dataset(self) -> Dataset:
-        dataset = Dataset.from_extractors(self, env=self.parent.env)
+        dataset_cls = StreamDataset if self.is_stream else Dataset
+        dataset = dataset_cls.from_extractors(self, env=self.parent.env)
         dataset._format = self.parent._format
         dataset._source_path = self.parent._source_path
         return dataset
+
+    def is_stream(self) -> bool:
+        return self.parent.is_stream
 
 
 class Dataset(IDataset):

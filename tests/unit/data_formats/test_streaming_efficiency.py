@@ -18,7 +18,6 @@ from datumaro.plugins.data_formats.coco.exporter import CocoImageInfoExporter
 class DummyStreamingExtractor(DatasetBase):
     def __init__(self):
         super().__init__()
-        self.iter_call_count = 0
         self.ann_init_counter = 0
 
     def _generate_anns(self):
@@ -26,7 +25,6 @@ class DummyStreamingExtractor(DatasetBase):
         return []
 
     def __iter__(self):
-        self.iter_call_count += 1
         for subset_name in ["train", "test", "foo"]:
             item = DatasetItem(
                 id=f"{subset_name}_1",
@@ -147,7 +145,6 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         # nothing initialized yet
         assert init_counter.count == 0
 
-        # inits on iteration
         for item in parsed_dataset:
             # annotations are not parsed if we do not access them
             assert not item.annotations_are_initialized

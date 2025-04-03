@@ -228,6 +228,9 @@ class _DatasetBase(IDataset):
             def ann_types(_):
                 return self.ann_types()
 
+            def is_stream(_) -> bool:
+                return self.is_stream
+
         return _DatasetFilter()
 
     def infos(self) -> DatasetInfo:

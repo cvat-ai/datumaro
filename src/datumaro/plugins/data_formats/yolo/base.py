@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 import os.path as osp
 import re
-from functools import cached_property
+from functools import cached_property, partial
 from itertools import cycle
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
@@ -124,7 +124,9 @@ class _YoloBase(SubsetBase):
 
                 image = Image.from_file(path=image_path, size=image_size)
 
-                annotations = lambda: self._parse_annotations(image, item_id=(item_id, subset_name))
+                annotations = partial(
+                    self._parse_annotations, image, item_id=(item_id, subset_name)
+                )
                 if not self.is_stream:
                     annotations = annotations()
 

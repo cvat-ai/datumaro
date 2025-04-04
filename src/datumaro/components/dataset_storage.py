@@ -778,8 +778,9 @@ class StreamDatasetStorage(DatasetStorage):
             and not t[0].KEEPS_SUBSETS_INTACT
             for t in self._transforms
         ):
-            self._subset_names = set(item.subset for item in self.shallow_items())
+            self._subset_names = {item.subset for item in self.shallow_items()}
             self._transform_ids_for_latest_subset_names = [id(t) for t in self._transforms]
+
         return self._subset_names
 
     def subsets(self) -> Dict[str, IDataset]:

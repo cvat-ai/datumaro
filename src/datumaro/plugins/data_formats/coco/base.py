@@ -6,6 +6,7 @@ import errno
 import logging as log
 import os.path as osp
 from collections.abc import Generator
+from functools import partial
 from inspect import isclass
 from typing import Any, Dict, Iterator, Optional, Tuple, Type, TypeVar, Union, overload
 
@@ -297,13 +298,13 @@ class _CocoBase(SubsetBase):
 
             _, item = parsed
 
-            def parse_all_anns():
+            def parse_all_anns(image_info, annotations_infos):
                 parsed_annotations = []
-                for ann_info in ann_infos:
-                    self._parse_anns(img_info, ann_info, parsed_annotations)
+                for ann_info in annotations_infos:
+                    self._parse_anns(image_info, ann_info, parsed_annotations)
                 return parsed_annotations
 
-            item.annotations = parse_all_anns
+            item.annotations = partial(parse_all_anns, img_info, ann_infos)
 
             yield item
             length += 1

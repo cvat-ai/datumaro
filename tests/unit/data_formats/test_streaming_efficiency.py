@@ -156,3 +156,13 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         # inits again on iteration, i.e. not caching items
         assert len(list(parsed_dataset)) == len(fxt_dataset)
         assert init_counter.count == len(fxt_dataset) * 2
+
+        # subsets can be accessed
+        for subset in parsed_dataset.subsets().values():
+            assert subset.is_stream
+            for item in subset:
+                # annotations are not parsed if we do not access them
+                assert not item.annotations_are_initialized
+                # annotations are parsed if we access them
+                assert isinstance(item.annotations, Annotations)
+                assert item.annotations_are_initialized

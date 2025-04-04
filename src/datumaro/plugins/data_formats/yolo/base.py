@@ -75,6 +75,10 @@ class _YoloBase(SubsetBase):
         def categories(self):
             return self._parent.categories()
 
+        @property
+        def is_stream(self) -> bool:
+            return self._parent.is_stream
+
     def __init__(
         self,
         rootpath: str,

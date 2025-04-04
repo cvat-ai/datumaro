@@ -142,6 +142,7 @@ class DatasetSubset(IDataset):  # non-owning view
         dataset._source_path = self.parent._source_path
         return dataset
 
+    @property
     def is_stream(self) -> bool:
         return self.parent.is_stream
 

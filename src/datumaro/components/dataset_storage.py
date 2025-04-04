@@ -767,8 +767,7 @@ class StreamDatasetStorage(DatasetStorage):
     def get_subset(self, name: str) -> IDataset:
         if all(t[0].KEEPS_SUBSETS_INTACT for t in self._transforms):
             transformed_subset = self._apply_stacked_transform(self._source.get_subset(name))
-            if transformed_subset.is_stream:
-                return StreamSubset(transformed_subset, name)
+            return StreamSubset(transformed_subset, name)
 
         return StreamSubset(self, name)
 

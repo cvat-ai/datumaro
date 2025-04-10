@@ -34,8 +34,10 @@ from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 MediaType = TypeVar("MediaType", bound=MediaElement)
 
+AnnotationsCallable = Callable[[], list[Annotation]]
 
-@attrs(order=False, init=False, slots=True)
+
+@attrs(order=False, init=False, slots=True, eq=False)
 class DatasetItem:
     id: str = field(converter=lambda x: str(x).replace("\\", "/"), validator=not_empty)
 
@@ -45,7 +47,7 @@ class DatasetItem:
         default=None, validator=attr.validators.optional(attr.validators.instance_of(MediaElement))
     )
 
-    _annotations: Annotations | Callable[[], list[Annotation]] = field(
+    _annotations: Annotations | AnnotationsCallable = field(
         factory=Annotations,
         validator=default_if_none(lambda val: val if callable(val) else Annotations(val)),
     )
@@ -65,7 +67,7 @@ class DatasetItem:
         *,
         subset: Optional[str] = None,
         media: Union[str, MediaElement, None] = None,
-        annotations: Optional[List[Annotation] | Callable[[], list[Annotation]]] = None,
+        annotations: Optional[List[Annotation] | AnnotationsCallable] = None,
         attributes: Dict[str, Any] = None,
     ):
         self.__attrs_init__(
@@ -86,8 +88,19 @@ class DatasetItem:
         return self._annotations
 
     @annotations.setter
-    def annotations(self, value: Annotations | Callable[[], list[Annotation]]):
+    def annotations(self, value: Annotations | AnnotationsCallable):
         self._annotations = value
+
+    def __eq__(self, other):
+        if not isinstance(other, DatasetItem):
+            return False
+        return (
+            self.id == other.id
+            and self.subset == other.subset
+            and self.media == other.media
+            and self.attributes == other.attributes
+            and self.annotations == other.annotations
+        )
 
 
 DatasetInfo = Dict[str, Any]

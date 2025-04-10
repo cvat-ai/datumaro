@@ -25,8 +25,8 @@ from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
-from datumaro.plugins.data_formats.datumaro.base import DatumaroImporter
 from datumaro.plugins.data_formats.datumaro.exporter import DatumaroExporter
+from datumaro.plugins.data_formats.datumaro.importer import DatumaroImporter
 from datumaro.util import parse_json_file
 from datumaro.util.mask_tools import generate_colormap
 
@@ -552,9 +552,7 @@ class DatumaroExporterTest(TestCase):
                                 Image.from_numpy(data=np.ones((5, 4, 3))),
                                 Image.from_file(
                                     size=(5, 3),
-                                    path=osp.join(
-                                        test_dir, "related_images", "test", "1", "image_2.jpg"
-                                    ),
+                                    path=osp.join(test_dir, "test", "1", "extra_image_2.jpg"),
                                 ),
                             ],
                         ),

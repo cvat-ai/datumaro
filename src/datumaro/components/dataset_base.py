@@ -9,7 +9,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    Generator,
     Iterator,
     List,
     Optional,
@@ -79,7 +78,7 @@ class DatasetItem:
         return not callable(self._annotations)
 
     @property
-    def annotations(self):
+    def annotations(self) -> Annotations:
         if not self.annotations_are_initialized:
             annotations = self._annotations()
             if not isinstance(annotations, Annotations):
@@ -171,13 +170,6 @@ class IDataset:
         """
         return False
 
-    def shallow_items(self) -> Generator[DatasetItem, None, None]:
-        """
-        Generates shallow versions of items - without annotations.
-        """
-        for item in self:
-            yield item.wrap(annotations=[])
-
 
 class _DatasetBase(IDataset):
     def __init__(self, *, length: Optional[int] = None, subsets: Optional[Sequence[str]] = None):
@@ -188,7 +180,7 @@ class _DatasetBase(IDataset):
     def _init_cache(self):
         subsets = set()
         length = -1
-        for length, item in enumerate(self.shallow_items()):
+        for length, item in enumerate(self):
             subsets.add(item.subset)
         length += 1
 
@@ -356,7 +348,7 @@ class StreamingSubsetBase(SubsetBase):
 
     def __len__(self):
         if self._length is None:
-            self._length = sum(1 for _ in self.shallow_items())
+            self._length = sum(1 for _ in self)
         return self._length
 
     def get(self, id, subset=None) -> Optional[DatasetItem]:
@@ -392,10 +384,6 @@ class StreamingDatasetBase(DatasetBase):
     def __iter__(self):
         for subset in self.subsets().values():
             yield from subset
-
-    def shallow_items(self) -> Generator[DatasetItem, None, None]:
-        for subset in self.subsets().values():
-            yield from subset.shallow_items()
 
     def __len__(self):
         if self._length is None:

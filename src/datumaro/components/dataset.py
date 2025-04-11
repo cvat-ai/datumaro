@@ -15,7 +15,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    Generator,
     Iterable,
     Iterator,
     List,
@@ -84,9 +83,6 @@ class DatasetSubset(IDataset):  # non-owning view
 
     def __iter__(self):
         yield from self.parent._data.get_subset(self.name)
-
-    def shallow_items(self) -> Generator[DatasetItem, None, None]:
-        yield from self.parent._data.get_subset(self.name).shallow_items()
 
     def __len__(self):
         subset: DatasetItemStorageDatasetView.Subset = self.parent._data.get_subset(self.name)
@@ -967,9 +963,6 @@ class Dataset(IDataset):
         if not self._data.is_stream:
             return self._data[idx]
         raise StreamedItemError()
-
-    def shallow_items(self) -> Generator[DatasetItem, None, None]:
-        yield from self._data.shallow_items()
 
 
 class StreamDataset(Dataset):

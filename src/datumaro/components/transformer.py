@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 from multiprocessing.pool import ThreadPool
-from typing import Dict, Generator, Iterator, List, Optional, Type
+from typing import Dict, Iterator, List, Optional, Type
 
 import numpy as np
 
@@ -68,16 +68,6 @@ class Transform(DatasetBase, CliPlugin):
 
 
 class ItemTransform(Transform):
-    """
-    A base class for dataset transformations where changes to item depends
-    only on the same item data
-
-    IS_SHALLOW_FRIENDLY should be False only for transforms which use annotations data
-    to change non-annotations data, and should be set to True for all the other transforms.
-    """
-
-    IS_SHALLOW_FRIENDLY = False
-
     def transform_item(self, item: DatasetItem) -> Optional[DatasetItem]:
         """
         Returns a modified copy of the input item.
@@ -93,15 +83,6 @@ class ItemTransform(Transform):
             item = self.transform_item(item)
             if item is not None:
                 yield item
-
-    def shallow_items(self) -> Generator[DatasetItem, None, None]:
-        if self.IS_SHALLOW_FRIENDLY:
-            for item in self._extractor.shallow_items():
-                item = self.transform_item(item)
-                if item is not None:
-                    yield item
-        else:
-            yield from super().shallow_items()
 
 
 class TabularTransform(Transform):

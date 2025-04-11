@@ -1158,14 +1158,16 @@ TRANSFORMS = [
 @pytest.mark.parametrize("transform_cls", TRANSFORMS)
 def test_transform_fields(transform_cls):
     if transform_cls is transforms.RemoveItems:
-        assert transform_cls.IS_SHALLOW_FRIENDLY
-        return
+        pytest.skip()
 
     modified_fields = set()
 
     class _DatasetItem(DatasetItem):
         def wrap(self, **kwargs):
+            if "annotations" in kwargs and transform_cls is not transforms.RemoveAnnotations:
+                assert callable(kwargs["annotations"])
             modified_fields.update(kwargs.keys())
+
             return super().wrap(**kwargs)
 
     source_dataset = Dataset.from_iterable(
@@ -1196,7 +1198,3 @@ def test_transform_fields(transform_cls):
 
     subsets_modified = bool({"subset"} & modified_fields)
     assert (not subsets_modified) == transform_cls.KEEPS_SUBSETS_INTACT
-
-    if issubclass(transform_cls, ItemTransform):
-        if modified_fields == {"annotations"}:
-            assert transform_cls.IS_SHALLOW_FRIENDLY

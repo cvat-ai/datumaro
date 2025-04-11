@@ -2492,28 +2492,33 @@ class StreamDatasetTest:
 
         assert set(dataset.subsets().keys()) == set(items_for_subsets.keys())
         assert len(dataset) == dataset_length
-        list(dataset.shallow_items())
-        # does not init annotations to get the data above and shallow items
+        assert len(list(dataset)) == dataset_length
+        # does not init annotations to get the data above or to iterate items
         assert extractor.ann_init_counter == 0
 
         # does not init annotations to get properties of subsets
         for subset in dataset.subsets():
             subset_dataset = dataset.get_subset(subset).as_dataset()
             len(subset_dataset)
-            len(list(subset_dataset.shallow_items()))
             len(list(dataset.subsets().keys()))
         assert extractor.ann_init_counter == 0
 
-        # inits annotations on iteration
-        assert len(list(dataset)) == dataset_length
+        # inits annotations if they are accessed
+        assert len([item.annotations for item in dataset]) == dataset_length
         assert extractor.ann_init_counter == dataset_length
 
         # does not cache items
-        assert len(list(dataset)) == dataset_length
+        assert len([item.annotations for item in dataset]) == dataset_length
         assert extractor.ann_init_counter == dataset_length * 2
 
-        # when iterating subsets, only inits relevant annotations
+        # when iterating subsets, does not init annotations
         for subset in dataset.subsets():
             subset_dataset = dataset.get_subset(subset).as_dataset()
             len(list(subset_dataset))
+        assert extractor.ann_init_counter == dataset_length * 2
+
+        # when iterating subsets and accessing annotations, only inits relevant annotations
+        for subset in dataset.subsets():
+            subset_dataset = dataset.get_subset(subset).as_dataset()
+            len([item.annotations for item in subset_dataset])
         assert extractor.ann_init_counter == dataset_length * 3

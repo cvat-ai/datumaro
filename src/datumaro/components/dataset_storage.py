@@ -483,6 +483,9 @@ class DatasetStorage(IDataset):
         id = str(id)
         subset = subset or DEFAULT_SUBSET_NAME
 
+        if self._source is not None and self._source.is_stream and not self.is_cache_initialized():
+            self.init_cache()
+
         item = self._storage.get(id, subset)
         if item is None and not self.is_cache_initialized():
             if self._source.get.__func__ == DatasetBase.get:
@@ -727,10 +730,11 @@ class StreamDatasetStorage(DatasetStorage):
         for item in self.stacked_transform:
             yield item
 
-            for ann in item.annotations:
-                if ann.type == AnnotationType.hash_key:
-                    continue
-                self._ann_types.add(ann.type)
+            if item.annotations_are_initialized:
+                for ann in item.annotations:
+                    if ann.type == AnnotationType.hash_key:
+                        continue
+                    self._ann_types.add(ann.type)
 
     def __len__(self) -> int:
         if self._length is None:
@@ -752,8 +756,7 @@ class StreamDatasetStorage(DatasetStorage):
     def get_subset(self, name: str) -> IDataset:
         if all(t[0].KEEPS_SUBSETS_INTACT for t in self._transforms):
             transformed_subset = self._apply_stacked_transform(self._source.get_subset(name))
-            if transformed_subset.is_stream:
-                return StreamSubset(transformed_subset, name)
+            return StreamSubset(transformed_subset, name)
 
         return StreamSubset(self, name)
 

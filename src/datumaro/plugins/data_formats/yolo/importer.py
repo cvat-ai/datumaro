@@ -40,6 +40,10 @@ class YoloImporter(Importer):
     def find_sources(cls, path) -> List[Dict[str, Any]]:
         return cls._find_sources_recursive(path, ".data", "yolo")
 
+    @property
+    def can_stream(self) -> bool:
+        return True
+
 
 class YoloUltralyticsDetectionImporter(Importer):
     EXTRACTOR = YoloUltralyticsDetectionBase
@@ -93,6 +97,10 @@ class YoloUltralyticsDetectionImporter(Importer):
             if source["url"] == osp.join(path, YoloUltralyticsPath.DEFAULT_CONFIG_FILE)
         ]
 
+    @property
+    def can_stream(self) -> bool:
+        return True
+
 
 class YoloUltralyticsSegmentationImporter(YoloUltralyticsDetectionImporter):
     EXTRACTOR = YoloUltralyticsSegmentationBase
@@ -141,3 +149,7 @@ class YoloUltralyticsClassificationImporter(Importer):
                     return []
 
         return [{"url": path, "format": cls._FORMAT}]
+
+    @property
+    def can_stream(self) -> bool:
+        return True

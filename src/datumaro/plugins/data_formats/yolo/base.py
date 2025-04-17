@@ -127,8 +127,6 @@ class _YoloBase(SubsetBase):
                 annotations = partial(
                     self._parse_annotations, image, item_id=(item_id, subset_name)
                 )
-                if not self.is_stream:
-                    annotations = annotations()
 
                 item = DatasetItem(
                     id=item_id, subset=subset_name, media=image, annotations=annotations

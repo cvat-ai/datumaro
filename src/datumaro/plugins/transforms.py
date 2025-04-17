@@ -74,7 +74,7 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
 
         self._allow_removal = allow_removal
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         segments = []
         for ann in item.annotations:
@@ -94,7 +94,7 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @classmethod
@@ -183,7 +183,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
 
         self._include_polygons = include_polygons
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         segments = []
         for ann in item.annotations:
@@ -205,7 +205,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @classmethod
@@ -268,7 +268,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
 class PolygonsToMasks(ItemTransform, CliPlugin):
     KEEPS_SUBSETS_INTACT = True
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if ann.type == AnnotationType.polygon:
@@ -281,7 +281,7 @@ class PolygonsToMasks(ItemTransform, CliPlugin):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
@@ -301,7 +301,7 @@ class PolygonsToMasks(ItemTransform, CliPlugin):
 class BoxesToMasks(ItemTransform, CliPlugin):
     KEEPS_SUBSETS_INTACT = True
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if ann.type == AnnotationType.bbox:
@@ -314,7 +314,7 @@ class BoxesToMasks(ItemTransform, CliPlugin):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
@@ -334,7 +334,7 @@ class BoxesToMasks(ItemTransform, CliPlugin):
 class MasksToPolygons(ItemTransform, CliPlugin):
     KEEPS_SUBSETS_INTACT = True
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if ann.type == AnnotationType.mask:
@@ -351,7 +351,7 @@ class MasksToPolygons(ItemTransform, CliPlugin):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
@@ -374,7 +374,7 @@ class MasksToPolygons(ItemTransform, CliPlugin):
 class ShapesToBoxes(ItemTransform, CliPlugin):
     KEEPS_SUBSETS_INTACT = True
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if ann.type in {
@@ -389,7 +389,7 @@ class ShapesToBoxes(ItemTransform, CliPlugin):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
@@ -563,7 +563,7 @@ class RandomSplit(Transform, CliPlugin):
 
 class IdFromImageName(ItemTransform, CliPlugin):
     """
-    Renames items in the dataset using image file name (without extension).
+    Renames items in the dataset using media file name (without extension).
     """
 
     KEEPS_SUBSETS_INTACT = True
@@ -788,7 +788,7 @@ class RemapLabels(ItemTransform, CliPlugin):
     def categories(self):
         return self._categories
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if getattr(ann, "label", None) is not None:
@@ -800,7 +800,7 @@ class RemapLabels(ItemTransform, CliPlugin):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return item.wrap(annotations=annotations)
 
 
@@ -985,7 +985,7 @@ class ProjectLabels(ItemTransform):
     def categories(self) -> CategoriesInfo:
         return self._categories
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if getattr(ann, "label", None) is not None:
@@ -997,7 +997,7 @@ class ProjectLabels(ItemTransform):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return item.wrap(annotations=annotations)
 
 
@@ -1009,7 +1009,7 @@ class AnnsToLabels(ItemTransform, CliPlugin):
 
     KEEPS_SUBSETS_INTACT = True
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         labels = set(p.label for p in item.annotations if getattr(p, "label") is not None)
         annotations = []
         for label in labels:
@@ -1017,7 +1017,7 @@ class AnnsToLabels(ItemTransform, CliPlugin):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return item.wrap(annotations=annotations)
 
 
@@ -1028,7 +1028,7 @@ class BboxValuesDecrement(ItemTransform, CliPlugin):
 
     KEEPS_SUBSETS_INTACT = True
 
-    def convert_annotations(self, item: DatasetItem) -> list[Annotation]:
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = [p for p in item.annotations if p.type != AnnotationType.bbox]
         bboxes = [p for p in item.annotations if p.type == AnnotationType.bbox]
         for bbox in bboxes:
@@ -1045,7 +1045,7 @@ class BboxValuesDecrement(ItemTransform, CliPlugin):
         return annotations
 
     def transform_item(self, item):
-        annotations = lambda: self.convert_annotations(item)
+        annotations = lambda: self._convert_annotations(item)
         return item.wrap(annotations=annotations)
 
 
@@ -1164,43 +1164,44 @@ class ResizeTransform(ItemTransform):
         if item.media.has_data:
             resized_image = self._lazy_resize_image(item.media, new_size)
 
-        def resize_annotations():
-            resized_annotations = []
-            for ann in item.annotations:
-                if isinstance(ann, Bbox):
-                    resized_annotations.append(
-                        ann.wrap(
-                            x=ann.x * xscale,
-                            y=ann.y * yscale,
-                            w=ann.w * xscale,
-                            h=ann.h * yscale,
-                        )
-                    )
-                elif isinstance(ann, (Polygon, Points, PolyLine)):
-                    resized_annotations.append(
-                        ann.wrap(
-                            points=[
-                                p
-                                for t in (
-                                    (x * xscale, y * yscale) for x, y in take_by(ann.points, 2)
-                                )
-                                for p in t
-                            ]
-                        )
-                    )
-                elif isinstance(ann, Mask):
-                    lazy_mask = self._lazy_resize_mask(ann, new_size)
-                    if isinstance(ann, RleMask):
-                        resized_annotations.append(ann.wrap(rle=self._lazy_rle_encode(lazy_mask)))
-                    else:
-                        resized_annotations.append(ann.wrap(image=lazy_mask))
-                elif isinstance(ann, (Caption, Label)):
-                    resized_annotations.append(ann)
-                else:
-                    assert False, f"Unexpected annotation type {type(ann)}"
-            return resized_annotations
+        resized_annotations = lambda: self._resize_annotations(item, xscale, yscale, new_size)
+        return self.wrap_item(item, media=resized_image, annotations=resized_annotations)
 
-        return self.wrap_item(item, media=resized_image, annotations=resize_annotations)
+    def _resize_annotations(
+        self, item: DatasetItem, xscale: float, yscale: float, new_size: Tuple[int, int]
+    ):
+        resized_annotations = []
+        for ann in item.annotations:
+            if isinstance(ann, Bbox):
+                resized_annotations.append(
+                    ann.wrap(
+                        x=ann.x * xscale,
+                        y=ann.y * yscale,
+                        w=ann.w * xscale,
+                        h=ann.h * yscale,
+                    )
+                )
+            elif isinstance(ann, (Polygon, Points, PolyLine)):
+                resized_annotations.append(
+                    ann.wrap(
+                        points=[
+                            p
+                            for t in ((x * xscale, y * yscale) for x, y in take_by(ann.points, 2))
+                            for p in t
+                        ]
+                    )
+                )
+            elif isinstance(ann, Mask):
+                lazy_mask = self._lazy_resize_mask(ann, new_size)
+                if isinstance(ann, RleMask):
+                    resized_annotations.append(ann.wrap(rle=self._lazy_rle_encode(lazy_mask)))
+                else:
+                    resized_annotations.append(ann.wrap(image=lazy_mask))
+            elif isinstance(ann, (Caption, Label)):
+                resized_annotations.append(ann)
+            else:
+                assert False, f"Unexpected annotation type {type(ann)}"
+        return resized_annotations
 
 
 class RemoveItems(ItemTransform):
@@ -1374,12 +1375,10 @@ class RemoveAttributes(ItemTransform):
         if not self._ids or (item.id, item.subset) in self._ids:
 
             def filter_annotations():
-                filtered_annotations = []
-                for ann in item.annotations:
-                    filtered_annotations.append(
-                        ann.wrap(attributes=self._filter_attrs(ann.attributes))
-                    )
-                return filtered_annotations
+                return [
+                    ann.wrap(attributes=self._filter_attrs(ann.attributes))
+                    for ann in item.annotations
+                ]
 
             return item.wrap(
                 attributes=self._filter_attrs(item.attributes), annotations=filter_annotations

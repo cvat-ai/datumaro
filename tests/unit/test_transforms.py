@@ -1157,16 +1157,22 @@ TRANSFORMS = [
 
 @pytest.mark.parametrize("transform_cls", TRANSFORMS)
 def test_transform_fields(transform_cls):
-    if transform_cls is transforms.RemoveItems:
+    if transform_cls in (transforms.RemoveItems, transforms.UpdateInfos):
         pytest.skip()
 
-    modified_fields = set()
+    subsets_modified = False
+    wrap_called = False
 
     class _DatasetItem(DatasetItem):
         def wrap(self, **kwargs):
             if "annotations" in kwargs and transform_cls is not transforms.RemoveAnnotations:
                 assert callable(kwargs["annotations"])
-            modified_fields.update(kwargs.keys())
+
+            nonlocal wrap_called
+            nonlocal subsets_modified
+            wrap_called = True
+            if "subset" in kwargs:
+                subsets_modified = True
 
             return super().wrap(**kwargs)
 
@@ -1184,7 +1190,6 @@ def test_transform_fields(transform_cls):
     )
 
     parameters = {
-        "UpdateInfos": dict(dst_infos={}),
         "Rename": dict(regex="|item|foo|"),
         "RemapLabels": dict(mapping={}),
         "ProjectLabels": dict(dst_labels={}),
@@ -1195,6 +1200,5 @@ def test_transform_fields(transform_cls):
     dataset = source_dataset.transform(transform_cls, **parameters)
 
     assert len(list(dataset)) == 10
-
-    subsets_modified = bool({"subset"} & modified_fields)
+    assert wrap_called
     assert (not subsets_modified) == transform_cls.KEEPS_SUBSETS_INTACT

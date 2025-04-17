@@ -1648,19 +1648,16 @@ class YoloExtractorTest:
         self._prepare_dataset(test_dir)
         os.remove(osp.join(test_dir, self._get_annotation_dir(), "a.txt"))
 
-        with pytest.raises(ItemImportError) as capture:
+        with pytest.raises(FileNotFoundError) as capture:
             Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
-        assert isinstance(capture.value.__cause__, FileNotFoundError)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_image_info(self, test_dir):
         self._prepare_dataset(test_dir)
         os.remove(osp.join(test_dir, self._get_image_dir(), "a.jpg"))
 
-        with pytest.raises(ItemImportError) as capture:
+        with pytest.raises(DatasetImportError, match="Can't find image info") as capture:
             Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
-        assert isinstance(capture.value.__cause__, DatasetImportError)
-        assert "Can't find image info" in str(capture.value.__cause__)
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_subset_info(self, test_dir):

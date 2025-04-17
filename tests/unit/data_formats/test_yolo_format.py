@@ -1648,7 +1648,7 @@ class YoloExtractorTest:
         self._prepare_dataset(test_dir)
         os.remove(osp.join(test_dir, self._get_annotation_dir(), "a.txt"))
 
-        with pytest.raises(FileNotFoundError) as capture:
+        with pytest.raises(FileNotFoundError):
             Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
@@ -1656,7 +1656,7 @@ class YoloExtractorTest:
         self._prepare_dataset(test_dir)
         os.remove(osp.join(test_dir, self._get_image_dir(), "a.jpg"))
 
-        with pytest.raises(DatasetImportError, match="Can't find image info") as capture:
+        with pytest.raises(DatasetImportError, match="Can't find image info"):
             Dataset.import_from(test_dir, self.IMPORTER.NAME).init_cache()
 
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)

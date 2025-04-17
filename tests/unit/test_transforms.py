@@ -1158,7 +1158,7 @@ TRANSFORMS = [
 @pytest.mark.parametrize("transform_cls", TRANSFORMS)
 def test_transform_fields(transform_cls):
     if transform_cls in (transforms.RemoveItems, transforms.UpdateInfos):
-        pytest.skip()
+        pytest.skip("These transforms do not transform items")
 
     subsets_modified = False
     wrap_called = False

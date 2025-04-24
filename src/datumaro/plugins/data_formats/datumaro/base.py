@@ -76,7 +76,7 @@ class JsonReader:
         return MediaType(media_type).media
 
     @staticmethod
-    def _load_dm_format_version(parsed) -> Type[MediaElement]:
+    def _load_dm_format_version(parsed) -> str:
         return parsed.get("dm_format_version", LEGACY_VERSION)
 
     @staticmethod
@@ -254,12 +254,10 @@ class JsonReader:
             )
             return None
 
-        annotations = self._load_annotations(item_desc)
-
         return DatasetItem(
             id=item_id,
             subset=self._subset,
-            annotations=annotations,
+            annotations=lambda: self._load_annotations(item_desc),
             media=media,
             attributes=item_desc.get("attr"),
         )
@@ -531,6 +529,10 @@ class StreamJsonReader(JsonReader):
 
     def _load_items(self, parsed) -> List:
         return []
+
+    @staticmethod
+    def _load_dm_format_version(page_mapper: DatumPageMapper) -> str:
+        return page_mapper.dm_format_version or LEGACY_VERSION
 
 
 class DatumaroBase(SubsetBase):

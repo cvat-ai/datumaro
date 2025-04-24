@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import logging as log
 from unittest import TestCase
 
@@ -23,8 +24,10 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.dataset import Dataset
 from datumaro.components.dataset_base import DatasetItem
+from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatumaroError
 from datumaro.components.media import Image
+from datumaro.components.transformer import ItemTransform, Transform
 
 from tests.requirements import Requirements, mark_bug, mark_requirement
 from tests.utils.test_utils import compare_datasets
@@ -1143,3 +1146,59 @@ class CropCoveredSegmentsTest:
                 Dataset(actual).init_cache()
 
             assert "completely covered object removed" in str(capture.value)
+
+
+TRANSFORMS = [
+    transform_cls
+    for transform_cls in DEFAULT_ENVIRONMENT.transforms.items.values()
+    if transform_cls.__module__ == "datumaro.plugins.transforms"
+]
+
+
+@pytest.mark.parametrize("transform_cls", TRANSFORMS)
+def test_transform_fields(transform_cls):
+    if transform_cls in (transforms.RemoveItems, transforms.UpdateInfos):
+        pytest.skip("These transforms do not transform items")
+
+    subsets_modified = False
+    wrap_called = False
+
+    class _DatasetItem(DatasetItem):
+        def wrap(self, **kwargs):
+            if "annotations" in kwargs and transform_cls is not transforms.RemoveAnnotations:
+                assert callable(kwargs["annotations"])
+
+            nonlocal wrap_called
+            nonlocal subsets_modified
+            wrap_called = True
+            if "subset" in kwargs:
+                subsets_modified = True
+
+            return super().wrap(**kwargs)
+
+    source_dataset = Dataset.from_iterable(
+        [
+            _DatasetItem(
+                id=f"item_{index}",
+                subset="subset",
+                media=Image.from_file(path=f"image_path_{index}.jpg", size=(100, 100)),
+                annotations=[],
+            )
+            for index in range(10)
+        ],
+        categories=["aaa", "bbbb"],
+    )
+
+    parameters = {
+        "Rename": dict(regex="|item|foo|"),
+        "RemapLabels": dict(mapping={}),
+        "ProjectLabels": dict(dst_labels={}),
+        "ResizeTransform": dict(width=10, height=10),
+        "RandomSplit": dict(splits=[("train", 0.67), ("test", 0.33)]),
+    }.get(transform_cls.__name__, {})
+
+    dataset = source_dataset.transform(transform_cls, **parameters)
+
+    assert len(list(dataset)) == 10
+    assert wrap_called
+    assert (not subsets_modified) == transform_cls.KEEPS_SUBSETS_INTACT

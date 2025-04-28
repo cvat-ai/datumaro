@@ -21,6 +21,7 @@ from datumaro.components.annotation import (
     PolyLine,
     Skeleton,
 )
+from datumaro.components.dataset import StreamDataset
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.media import Image, PointCloud
@@ -42,6 +43,8 @@ from tests.utils.test_utils import (
 
 
 class DatumaroExporterTest(TestCase):
+    STREAM = False
+
     def _test_save_and_load(
         self,
         source_dataset,
@@ -61,8 +64,13 @@ class DatumaroExporterTest(TestCase):
             target_dataset=target_dataset,
             importer_args=importer_args,
             compare=compare,
+            stream=self.STREAM,
             **kwargs,
         )
+
+    @property
+    def dataset_cls(self):
+        return StreamDataset if self.STREAM else Dataset
 
     @property
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -250,7 +258,7 @@ class DatumaroExporterTest(TestCase):
             media_type=PointCloud,
         )
 
-        compare_datasets_strict(self, expected, Dataset.load(dataset_path))
+        compare_datasets_strict(self, expected, self.dataset_cls.load(dataset_path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_skeleton_dataset(self):
@@ -311,7 +319,7 @@ class DatumaroExporterTest(TestCase):
                 AnnotationType.points: points_categories,
             },
         )
-        compare_datasets_strict(self, expected, Dataset.load(dataset_path))
+        compare_datasets_strict(self, expected, self.dataset_cls.load(dataset_path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_detect(self):
@@ -461,7 +469,7 @@ class DatumaroExporterTest(TestCase):
 
             self.assertEqual({"a.json", "b.json"}, set(os.listdir(osp.join(path, "annotations"))))
             self.assertEqual({"2.jpg"}, set(os.listdir(osp.join(path, "images", "a"))))
-            compare_datasets_strict(self, expected, Dataset.load(path))
+            compare_datasets_strict(self, expected, self.dataset_cls.load(path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_inplace_save_writes_only_updated_data_with_transforms(self):
@@ -499,7 +507,7 @@ class DatumaroExporterTest(TestCase):
             self.assertEqual({"train", "c", "d", "test"}, set(os.listdir(osp.join(path, "images"))))
             self.assertEqual(set(), set(os.listdir(osp.join(path, "images", "c"))))
             self.assertEqual(set(), set(os.listdir(osp.join(path, "images", "d"))))
-            compare_datasets(self, expected, Dataset.load(path))
+            compare_datasets(self, expected, self.dataset_cls.load(path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_with_pointcloud(self):
@@ -656,3 +664,7 @@ class DatumaroExporterTest(TestCase):
                 test_dir,
                 target_dataset=target_dataset,
             )
+
+
+class DatumaroStreamExporterTest(DatumaroExporterTest):
+    STREAM = True

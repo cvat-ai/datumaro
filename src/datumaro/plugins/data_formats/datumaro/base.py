@@ -4,7 +4,7 @@
 
 import os.path as osp
 import re
-from typing import Dict, List, Optional, Set, Type, Union
+from typing import Dict, Generator, List, Optional, Set, Type, Union
 
 from datumaro.components.annotation import (
     NO_OBJECT_ID,
@@ -134,7 +134,7 @@ class JsonReader:
 
         return categories
 
-    def _load_items(self, parsed) -> List:
+    def _load_items(self, parsed) -> List[DatasetItem]:
         item_descs: List = parsed["items"]
         pbar = self._ctx.progress_reporter
 
@@ -462,7 +462,7 @@ class JsonReader:
     def __len__(self):
         return len(self.items)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[DatasetItem, None, None]:
         yield from self.items
 
 
@@ -479,11 +479,16 @@ class StreamJsonReader(JsonReader):
     ) -> None:
         super().__init__(path, subset, rootpath, images_dir, pcd_dir, video_dir, ctx)
         self._length = None
+        if self.dm_format_version == LEGACY_VERSION:
+            try:
+                self.media_type = next(item.media.type.media for item in iter(self) if item.media)
+            except StopIteration:
+                pass
 
     def __len__(self):
         return len(self._reader)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[DatasetItem, None, None]:
         ann_types = set()
         pbar = self._ctx.progress_reporter
         for item_desc in pbar.iter(

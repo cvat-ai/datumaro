@@ -4,7 +4,6 @@
 
 # pylint: disable=no-self-use
 
-import json
 import os
 import os.path as osp
 import shutil
@@ -14,7 +13,7 @@ from typing import Dict, Optional
 
 import numpy as np
 import pycocotools.mask as mask_utils
-from json_stream.writer import streamable_dict, streamable_list
+import rapidjson
 
 from datumaro.components.annotation import (
     Annotation,
@@ -507,23 +506,16 @@ class _StreamSubsetWriter(_SubsetWriter):
         super().__init__(context, subset, ann_file, export_context)
 
     def write(self, *args, **kwargs):
-        @streamable_list
         def _item_list():
             subset = self._context._extractor.get_subset(self._subset)
             pbar = self._context._ctx.progress_reporter
             for item in pbar.iter(subset, desc=f"Exporting '{self._subset}'"):
                 yield self._gen_item_desc(item)
 
-        @streamable_dict
-        def _data():
-            yield "dm_format_version", self._data["dm_format_version"]
-            yield "media_type", self._data["media_type"]
-            yield "infos", self._data["infos"]
-            yield "categories", self._data["categories"]
-            yield "items", _item_list()
+        data = dict(self._data, items=_item_list())
 
         with open(self.ann_file, "w", encoding="utf-8") as fp:
-            json.dump(_data(), fp)
+            rapidjson.dump(data, fp, indent=None)
 
     def is_empty(self):
         # TODO: Force empty to be False, but it should be fixed with refactoring `_SubsetWriter`.`

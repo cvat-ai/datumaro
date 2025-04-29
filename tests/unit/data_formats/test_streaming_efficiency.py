@@ -9,13 +9,13 @@ from datumaro import AnnotationType, CategoriesInfo, LabelCategories
 from datumaro.components import media
 from datumaro.components.annotation import Annotations
 from datumaro.components.dataset import Dataset, StreamDataset
-from datumaro.components.dataset_base import DatasetItem, StreamingDatasetBase, StreamingSubsetBase
+from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatasetExportError
 from datumaro.plugins.data_formats.coco.exporter import CocoImageInfoExporter
 
 
-class DummyStreamingExtractor(StreamingDatasetBase):
+class DummyStreamingExtractor(DatasetBase):
     def __init__(self):
         super().__init__(subsets=["train", "test", "foo"])
         self.ann_init_counter = 0
@@ -24,36 +24,37 @@ class DummyStreamingExtractor(StreamingDatasetBase):
         self.ann_init_counter += 1
         return []
 
-    def get_subset(self, name):
-        class _SubsetExtractor(StreamingSubsetBase):
-            def __iter__(_):
-                item = DatasetItem(
-                    id=f"{name}_1",
-                    subset=name,
-                    media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
-                    annotations=self._generate_anns,
-                )
-                # counting references to make sure that exporter is actually streaming
+    def __iter__(self):
+        for name in self._subsets:
+            item = DatasetItem(
+                id=f"{name}_1",
+                subset=name,
+                media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
+                annotations=self._generate_anns,
+            )
+            # counting references to make sure that exporter is actually streaming
 
-                # before yielded, references are only here
-                assert sys.getrefcount(item) == 2
+            # before yielded, references are only here
+            assert sys.getrefcount(item) == 2
 
-                # after yielded, there are more references (e.g. where it's yielded from)
-                # number of references doesn't have to increase in general,
-                # but it should due to how our code works
-                yield item
-                assert sys.getrefcount(item) > 2
+            # after yielded, there are more references (e.g. where it's yielded from)
+            # number of references doesn't have to increase in general,
+            # but it should due to how our code works
+            yield item
+            assert sys.getrefcount(item) > 2
 
-                # after next item yielded, ref count is 2 again - i.e. item was not saved anywhere
-                yield DatasetItem(
-                    id=f"{name}_2",
-                    subset=name,
-                    media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
-                    annotations=self._generate_anns,
-                )
-                assert sys.getrefcount(item) == 2
+            # after next item yielded, ref count is 2 again - i.e. item was not saved anywhere
+            yield DatasetItem(
+                id=f"{name}_2",
+                subset=name,
+                media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
+                annotations=self._generate_anns,
+            )
+            assert sys.getrefcount(item) == 2
 
-        return _SubsetExtractor()
+    @property
+    def is_stream(self) -> bool:
+        return True
 
     def categories(self) -> CategoriesInfo:
         return {AnnotationType.label: LabelCategories.from_iterable(["a", "b", "c"])}

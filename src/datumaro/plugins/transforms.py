@@ -590,6 +590,7 @@ class Rename(ItemTransform, CliPlugin):
 
     |s|s|s|srename -e '|frame_(\d+)_extra|{item.subset}_id_\1|'
     """
+
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
         parser = super().build_cmdline_parser(**kwargs)

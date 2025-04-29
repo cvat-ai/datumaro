@@ -72,7 +72,7 @@ from datumaro.util.scope import on_error_do, scoped
 
 DEFAULT_FORMAT = "datumaro"
 
-__all__ = ["Dataset", "eager_mode"]
+__all__ = ["Dataset", "StreamDataset", "eager_mode"]
 
 
 class DatasetSubset(IDataset):  # non-owning view

@@ -25,13 +25,7 @@ from datumaro.components.contexts.importer import (
     ProgressReporter,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, StreamDataset, eager_mode
-from datumaro.components.dataset_base import (
-    DatasetBase,
-    DatasetItem,
-    StreamingDatasetBase,
-    StreamingSubsetBase,
-    SubsetBase,
-)
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
@@ -2095,7 +2089,7 @@ class DatasetTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_works_with_streaming_extractor(self):
-        class Extractor(StreamingSubsetBase):
+        class Extractor(SubsetBase):
             def __iter__(_):
                 for id in range(5):
                     yield DatasetItem(
@@ -2104,6 +2098,10 @@ class DatasetTest(TestCase):
                         media=Image.from_numpy(data=np.ones((5, 5, 3))),
                         annotations=[],
                     )
+
+            @property
+            def is_stream(self) -> bool:
+                return True
 
         dataset = Dataset.from_extractors(Extractor())
         assert dataset.get("item_1", "train") is not None
@@ -2437,7 +2435,7 @@ class DatasetInfosTest:
 class StreamDatasetTest:
     @staticmethod
     def _make_extractor(items_for_subsets: Dict[str, Tuple[int, int]]):
-        class SrcExtractor(StreamingDatasetBase):
+        class SrcExtractor(DatasetBase):
             def __init__(self):
                 super().__init__(subsets=list(items_for_subsets.keys()))
                 self.ann_init_counter = 0
@@ -2455,14 +2453,15 @@ class StreamDatasetTest:
                         annotations=self._get_anns,
                     )
 
-            def get_subset(self, name: str) -> StreamingSubsetBase:
-                class _SubsetExtractor(StreamingSubsetBase):
-                    def __iter__(_):
-                        yield from self._gen_items(
-                            items_for_subsets[name][0], items_for_subsets[name][1], name
-                        )
+            @property
+            def is_stream(self) -> bool:
+                return True
 
-                return _SubsetExtractor()
+            def __iter__(self):
+                for name in items_for_subsets:
+                    yield from self._gen_items(
+                        items_for_subsets[name][0], items_for_subsets[name][1], name
+                    )
 
         return SrcExtractor()
 

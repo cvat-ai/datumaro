@@ -92,7 +92,7 @@ class Annotation:
     # single object. The value of 0 means there is no group.
     group: int = field(default=NO_GROUP, validator=default_if_none(int))
 
-    # obeject identifier over the multiple items
+    # object identifier over the multiple items
     # e.g.) in a video, person 'A' could be annotated on the multiple frame images
     #   the user could assign >=0 value as id of person 'A'.
     object_id: int = field(default=NO_OBJECT_ID, validator=default_if_none(int))

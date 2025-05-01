@@ -155,7 +155,8 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         assert init_counter.count == len(fxt_dataset)
 
         # inits again on iteration, i.e. not caching items
-        assert len(list(parsed_dataset)) == len(fxt_dataset)
+        for _ in parsed_dataset:
+            pass
         assert init_counter.count == len(fxt_dataset) * 2
 
         # subsets can be accessed

@@ -733,7 +733,7 @@ class StreamDatasetStorage(DatasetStorage):
 
     def __len__(self) -> int:
         if self._length is None:
-            self._length = len(self._source)
+            self._length = sum(1 for _ in self)
         return self._length
 
     def put(self, item: DatasetItem) -> None:

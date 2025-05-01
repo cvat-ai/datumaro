@@ -171,7 +171,7 @@ class _SubsetWriter:
     @contextmanager
     def context_save_media(
         item: DatasetItem, context: ExportContextComponent, encryption: bool = False
-    ) -> None:
+    ):
         """Implicitly change the media path and save it if save_media=True.
         When done, revert it's path as before.
 

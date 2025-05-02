@@ -20,7 +20,7 @@ from datumaro.components.annotation import (
     Polygon,
     Skeleton,
 )
-from datumaro.components.dataset import Dataset
+from datumaro.components.dataset import Dataset, StreamDataset
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
@@ -44,7 +44,7 @@ from datumaro.plugins.data_formats.coco.exporter import (
     CocoPersonKeypointsExporter,
     CocoStuffExporter,
 )
-from datumaro.util import dump_json_file
+from datumaro.util import dump_json_file, parse_json, parse_json_file
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path
@@ -59,6 +59,8 @@ DUMMY_DATASET_DIR = get_test_asset_path("coco_dataset")
 
 
 class CocoImporterTest(TestCase):
+    DATASET_CLS = Dataset
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_instances(self):
         expected_dataset = Dataset.from_iterable(
@@ -119,7 +121,7 @@ class CocoImporterTest(TestCase):
                 expected = expected_dataset
 
             with self.subTest(path=path, format=format, subset=subset):
-                dataset = Dataset.import_from(path, format)
+                dataset = self.DATASET_CLS.import_from(path, format)
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -148,7 +150,7 @@ class CocoImporterTest(TestCase):
                 osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
             )
 
-            imported_dataset = Dataset.import_from(dataset_dir, format)
+            imported_dataset = self.DATASET_CLS.import_from(dataset_dir, format)
             compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -168,7 +170,7 @@ class CocoImporterTest(TestCase):
             categories=["class-0", "a", "b", "class-3", "c"],
         )
 
-        actual_dataset = Dataset.import_from(
+        actual_dataset = self.DATASET_CLS.import_from(
             osp.join(DUMMY_DATASET_DIR, "coco_instances", "annotations", "instances_train.json"),
             "coco_instances",
             keep_original_category_ids=True,
@@ -220,7 +222,7 @@ class CocoImporterTest(TestCase):
                 expected = expected_dataset
 
             with self.subTest(path=path, format=format, subset=subset):
-                dataset = Dataset.import_from(path, format)
+                dataset = self.DATASET_CLS.import_from(path, format)
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -248,7 +250,7 @@ class CocoImporterTest(TestCase):
                 osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
             )
 
-            imported_dataset = Dataset.import_from(dataset_dir, format)
+            imported_dataset = self.DATASET_CLS.import_from(dataset_dir, format)
             compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -294,7 +296,7 @@ class CocoImporterTest(TestCase):
                 expected = expected_dataset
 
             with self.subTest(path=path, format=format, subset=subset):
-                dataset = Dataset.import_from(path, format)
+                dataset = self.DATASET_CLS.import_from(path, format)
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -323,7 +325,7 @@ class CocoImporterTest(TestCase):
                 osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
             )
 
-            imported_dataset = Dataset.import_from(dataset_dir, format)
+            imported_dataset = self.DATASET_CLS.import_from(dataset_dir, format)
             compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -426,7 +428,7 @@ class CocoImporterTest(TestCase):
                 expected = expected_dataset
 
             with self.subTest(path=path, format=format, subset=subset):
-                dataset = Dataset.import_from(path, format)
+                dataset = self.DATASET_CLS.import_from(path, format)
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -469,7 +471,7 @@ class CocoImporterTest(TestCase):
                 osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
             )
 
-            imported_dataset = Dataset.import_from(dataset_dir, format)
+            imported_dataset = self.DATASET_CLS.import_from(dataset_dir, format)
             compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -503,7 +505,7 @@ class CocoImporterTest(TestCase):
             },
         )
 
-        actual_dataset = Dataset.import_from(
+        actual_dataset = self.DATASET_CLS.import_from(
             osp.join(
                 DUMMY_DATASET_DIR,
                 "coco_person_keypoints",
@@ -558,7 +560,7 @@ class CocoImporterTest(TestCase):
                 expected = expected_dataset
 
             with self.subTest(path=path, format=format, subset=subset):
-                dataset = Dataset.import_from(path, format)
+                dataset = self.DATASET_CLS.import_from(path, format)
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -583,7 +585,7 @@ class CocoImporterTest(TestCase):
                 osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
             )
 
-            imported_dataset = Dataset.import_from(dataset_dir, format)
+            imported_dataset = self.DATASET_CLS.import_from(dataset_dir, format)
             compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -650,7 +652,7 @@ class CocoImporterTest(TestCase):
                 expected = expected_dataset
 
             with self.subTest(path=path, format=format, subset=subset):
-                dataset = Dataset.import_from(path, format)
+                dataset = self.DATASET_CLS.import_from(path, format)
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -689,7 +691,7 @@ class CocoImporterTest(TestCase):
                 osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
             )
 
-            imported_dataset = Dataset.import_from(dataset_dir, format)
+            imported_dataset = self.DATASET_CLS.import_from(dataset_dir, format)
             compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -715,7 +717,7 @@ class CocoImporterTest(TestCase):
             categories=["class-0", "a", "b"],
         )
 
-        actual_dataset = Dataset.import_from(
+        actual_dataset = self.DATASET_CLS.import_from(
             osp.join(DUMMY_DATASET_DIR, "coco_panoptic", "annotations", "panoptic_train.json"),
             "coco_panoptic",
             keep_original_category_ids=True,
@@ -773,7 +775,7 @@ class CocoImporterTest(TestCase):
                 expected = expected_dataset
 
             with self.subTest(path=path, format=format, subset=subset):
-                dataset = Dataset.import_from(path, format)
+                dataset = self.DATASET_CLS.import_from(path, format)
                 compare_datasets(self, expected, dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -808,7 +810,7 @@ class CocoImporterTest(TestCase):
                 osp.join(dataset_dir, "annotations", "aa_bbbb_cccc.json"),
             )
 
-            imported_dataset = Dataset.import_from(dataset_dir, format)
+            imported_dataset = self.DATASET_CLS.import_from(dataset_dir, format)
             compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -852,11 +854,44 @@ class CocoImporterTest(TestCase):
         for subdir in subdirs:
             with self.subTest(fmt=subdir, subdir=subdir):
                 dataset_dir = osp.join(DUMMY_DATASET_DIR, subdir)
-                source = Dataset.import_from(dataset_dir, format=subdir)
+                source = self.DATASET_CLS.import_from(dataset_dir, format=subdir)
 
                 parsed = pickle.loads(pickle.dumps(source))  # nosec
 
                 compare_datasets_strict(self, source, parsed)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_without_licenses_and_info_fields(self):
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="a",
+                    subset="default",
+                    media=Image.from_numpy(data=np.ones((5, 10, 3))),
+                    attributes={"id": 5},
+                    annotations=[
+                        Bbox(2, 2, 3, 1, label=1, group=1, id=1, attributes={"is_crowd": False})
+                    ],
+                ),
+            ],
+            categories=["a", "b", "c"],
+        )
+
+        format = "coco_instances"
+        with TestDir() as test_dir:
+            dataset_dir = osp.join(test_dir, "dataset")
+            expected_dataset.export(dataset_dir, format, save_media=True)
+            json_path = osp.join(dataset_dir, "annotations", "instances_default.json")
+            data = parse_json_file(json_path)
+            del data["licenses"]
+            del data["info"]
+            dump_json_file(json_path, data)
+            imported_dataset = self.DATASET_CLS.import_from(dataset_dir, format)
+            compare_datasets(self, expected_dataset, imported_dataset, require_media=True)
+
+
+class CocoStreamImporterTest(CocoImporterTest):
+    DATASET_CLS = StreamDataset
 
 
 class CocoExtractorTests(TestCase):

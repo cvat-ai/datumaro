@@ -142,7 +142,7 @@ impl CocoPageMapperImpl {
             }
         }
 
-        let licenses = licenses.unwrap_or(json!({}));
+        let licenses = licenses.unwrap_or(json!([]));
         let info = info.unwrap_or(json!({}));
         let categories = categories.ok_or(invalid_data("Cannot find the categories section."))?;
         let images = images.ok_or(invalid_data("Cannot find the images section."))?;

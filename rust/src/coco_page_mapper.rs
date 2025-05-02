@@ -14,6 +14,7 @@ use crate::{
     utils::{convert_to_py_object, invalid_data, parse_serde_json_value, read_skipping_ws},
 };
 use pyo3::{prelude::*, types::PyList};
+use serde_json::json;
 use std::{fs::File, io::BufReader, path::Path};
 
 #[derive(EnumString, Debug)]
@@ -141,8 +142,8 @@ impl CocoPageMapperImpl {
             }
         }
 
-        let licenses = licenses.ok_or(invalid_data("Cannot find the licenses section."))?;
-        let info = info.ok_or(invalid_data("Cannot find the info section."))?;
+        let licenses = licenses.unwrap_or(json!({}));
+        let info = info.unwrap_or(json!({}));
         let categories = categories.ok_or(invalid_data("Cannot find the categories section."))?;
         let images = images.ok_or(invalid_data("Cannot find the images section."))?;
         let annotations =

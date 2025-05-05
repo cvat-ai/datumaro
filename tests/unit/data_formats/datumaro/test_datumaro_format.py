@@ -11,6 +11,7 @@ from datumaro.components.annotation import (
     Bbox,
     Caption,
     Cuboid3d,
+    Ellipse,
     Label,
     LabelCategories,
     Mask,
@@ -163,6 +164,7 @@ class DatumaroExporterTest(TestCase):
                     annotations=[
                         PolyLine([1, 2, 3, 4, 5, 6, 7, 8], id=11, z_order=1),
                         Polygon([1, 2, 3, 4, 5, 6, 7, 8], id=12, z_order=4),
+                        Ellipse(x1=1, x2=2, y1=3, y2=4),
                     ],
                 ),
                 DatasetItem(

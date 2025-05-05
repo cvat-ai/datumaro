@@ -29,6 +29,9 @@
       "id": "0000000001",
       "annotations": [],
       "attr": { "frame": 1 },
+      "related_images": [
+        {"path": "image_0.jpg", "size": [10, 6]}
+      ],
       "point_cloud": { "path": "0000000001.pcd" }
     },
     {

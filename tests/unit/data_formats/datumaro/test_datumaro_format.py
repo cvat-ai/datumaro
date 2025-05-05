@@ -241,7 +241,18 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id="0000000001",
                     media=PointCloud.from_file(
-                        os.path.join(dataset_path, "point_clouds", "default", "0000000001.pcd")
+                        os.path.join(dataset_path, "point_clouds", "default", "0000000001.pcd"),
+                        extra_images=[
+                            Image.from_file(
+                                os.path.join(
+                                    dataset_path,
+                                    "related_images",
+                                    "default",
+                                    "0000000001",
+                                    "image_0.jpg",
+                                )
+                            )
+                        ],
                     ),
                     attributes={"frame": 1},
                 ),

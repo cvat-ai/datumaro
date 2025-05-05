@@ -4,6 +4,7 @@
 
 import os.path as osp
 import re
+from functools import cached_property
 from typing import Dict, Generator, List, Optional, Set, Type, Union
 
 from datumaro.components.annotation import (
@@ -66,6 +67,14 @@ class JsonReader:
         self.infos = self._load_infos(self._reader)
         self.categories = self._load_categories(self._reader)
         self.items = self._load_items(self._reader)
+
+    @cached_property
+    def _legacy_related_images_dir(self) -> str:
+        if self._rootpath:
+            related_images_dir = osp.join(self._rootpath, "related_images")
+            if osp.isdir(related_images_dir):
+                return related_images_dir
+        return ""
 
     def _init_reader(self, path: str):
         return parse_json_file(path)
@@ -202,13 +211,20 @@ class JsonReader:
             if pcd_info and (pcd_path := pcd_info.get("path")):
                 point_cloud = osp.join(self._pcd_dir, self._subset, pcd_path)
 
+                def make_related_image_path(ri_path):
+                    if self.dm_format_version == LEGACY_VERSION:
+                        return osp.join(
+                            self._legacy_related_images_dir, self._subset, item_id, ri_path
+                        )
+                    return osp.join(self._images_dir, self._subset, ri_path)
+
                 related_images = None
                 ri_info = item_desc.get("related_images")
                 if ri_info:
                     related_images = [
                         Image.from_file(
                             size=ri.get("size"),
-                            path=osp.join(self._images_dir, self._subset, ri.get("path")),
+                            path=make_related_image_path(ri.get("path")),
                         )
                         for ri in ri_info
                     ]

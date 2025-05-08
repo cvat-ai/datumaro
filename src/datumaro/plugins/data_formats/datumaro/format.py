@@ -15,3 +15,5 @@ class DatumaroPath:
     ANNOTATION_EXT = ".json"
     IMAGE_EXT = ".jpg"
     MASK_EXT = ".png"
+
+    LEGACY_RELATED_IMAGES_DIR = "related_images"

@@ -7,7 +7,7 @@ import os
 import os.path as osp
 import shutil
 from tempfile import mkdtemp
-from typing import NoReturn, Optional, Tuple, TypeVar, Union
+from typing import Callable, NoReturn, Optional, Tuple, TypeVar, Union
 
 import attr
 from attrs import define, field
@@ -382,6 +382,7 @@ class ExportContextComponent:
         basedir: Optional[str] = None,
         subdir: Optional[str] = None,
         fname: Optional[str] = None,
+        extra_image_path_maker: Optional[Callable[[int, Image], str]] = None,
     ):
         if not item.media or not isinstance(item.media, PointCloud):
             log.warning("Item '%s' has no pcd", item.id)
@@ -396,6 +397,8 @@ class ExportContextComponent:
         os.makedirs(osp.dirname(path), exist_ok=True)
 
         def helper(i, image):
+            if extra_image_path_maker is not None:
+                return {"fp": extra_image_path_maker(i, image)}
             basedir = self._images_dir
             basedir = osp.join(basedir, subdir) if subdir is not None else basedir
             return {"fp": osp.join(basedir, self.make_pcd_extra_image_filename(item, i, image))}

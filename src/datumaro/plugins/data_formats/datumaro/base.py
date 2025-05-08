@@ -71,7 +71,7 @@ class JsonReader:
     @cached_property
     def _legacy_related_images_dir(self) -> str:
         if self._rootpath:
-            related_images_dir = osp.join(self._rootpath, "related_images")
+            related_images_dir = osp.join(self._rootpath, DatumaroPath.LEGACY_RELATED_IMAGES_DIR)
             if osp.isdir(related_images_dir):
                 return related_images_dir
         return ""

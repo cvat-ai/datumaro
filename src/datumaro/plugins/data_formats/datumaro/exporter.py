@@ -44,7 +44,7 @@ from datumaro.components.exporter import ExportContextComponent, Exporter
 from datumaro.components.media import Image, MediaElement, PointCloud, Video, VideoFrame
 from datumaro.util import cast, dump_json_file
 
-from .format import DATUMARO_FORMAT_VERSION, DatumaroPath
+from .format import DatumaroPath
 
 
 class JsonWriter:
@@ -142,9 +142,7 @@ class _SubsetWriter:
         self._subset = subset
 
         self._data = {
-            "dm_format_version": DATUMARO_FORMAT_VERSION,
-            "media_type": context._extractor.media_type()._type,
-            "infos": {},
+            "info": {},
             "categories": {},
             "items": [],
         }
@@ -154,7 +152,7 @@ class _SubsetWriter:
 
     @property
     def infos(self):
-        return self._data["infos"]
+        return self._data["info"]
 
     @property
     def categories(self):
@@ -229,15 +227,29 @@ class _SubsetWriter:
                 pcd_name = str(item.id).replace(os.sep, "_")
                 pcd_fname = context.make_pcd_filename(item, name=pcd_name)
                 subdir = item.subset.replace(os.sep, "_") if item.subset else None
-                context.save_point_cloud(item, fname=pcd_fname, subdir=subdir)
+
+                def make_extra_image_path(i, image) -> str:
+                    subdir = osp.join(
+                        context._save_dir,
+                        DatumaroPath.LEGACY_RELATED_IMAGES_DIR,
+                        item.subset,
+                    )
+                    return context.make_pcd_extra_image_filename(
+                        item, i, image, name=f"{pcd_name}/image_{i}", subdir=subdir
+                    )
+
+                context.save_point_cloud(
+                    item,
+                    fname=pcd_fname,
+                    subdir=subdir,
+                    extra_image_path_maker=make_extra_image_path,
+                )
 
                 extra_images = []
                 for i, extra_image in enumerate(pcd.extra_images):
                     extra_images.append(
                         Image.from_file(
-                            path=context.make_pcd_extra_image_filename(
-                                item, i, extra_image, name=f"{pcd_name}/extra_image_{i}"
-                            ),
+                            path=make_extra_image_path(i, extra_image),
                             size=extra_image.size if extra_image.has_size else None,
                         )
                     )
@@ -334,7 +346,7 @@ class _SubsetWriter:
         return item_desc
 
     def add_infos(self, infos):
-        self._data["infos"].update(infos)
+        self.infos.update(infos)
 
     def add_categories(self, categories):
         self._data["categories"] = JsonWriter.write_categories(categories)
@@ -644,7 +656,9 @@ class DatumaroExporter(Exporter):
             if osp.isfile(pcd_path):
                 os.unlink(pcd_path)
 
-            related_images_path = osp.join(save_dir, cls.PATH_CLS.IMAGES_DIR, item.subset, item.id)
+            related_images_path = osp.join(
+                save_dir, DatumaroPath.LEGACY_RELATED_IMAGES_DIR, item.subset, item.id
+            )
             if osp.isdir(related_images_path):
                 shutil.rmtree(related_images_path)
 

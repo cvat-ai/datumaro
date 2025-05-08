@@ -162,8 +162,8 @@ class DatumaroExporterTest(TestCase):
                     id=2,
                     subset="val",
                     annotations=[
-                        PolyLine([1, 2, 3, 4, 5, 6, 7, 8], id=11, z_order=1),
-                        Polygon([1, 2, 3, 4, 5, 6, 7, 8], id=12, z_order=4),
+                        PolyLine([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], id=11, z_order=1),
+                        Polygon([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], id=12, z_order=4),
                         Ellipse(x1=1, x2=2, y1=3, y2=4),
                     ],
                 ),
@@ -333,6 +333,16 @@ class DatumaroExporterTest(TestCase):
             },
         )
         compare_datasets_strict(self, expected, self.dataset_cls.load(dataset_path))
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_legacy_dataset(self):
+        dataset_path = get_test_asset_path("datumaro_dataset", "diverse")
+        compare_datasets_strict(self, self.test_dataset, self.dataset_cls.load(dataset_path))
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_v10_dataset(self):
+        dataset_path = get_test_asset_path("datumaro_dataset", "v1.0")
+        compare_datasets_strict(self, self.test_dataset, self.dataset_cls.load(dataset_path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_detect(self):

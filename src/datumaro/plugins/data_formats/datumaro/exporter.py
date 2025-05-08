@@ -228,28 +228,30 @@ class _SubsetWriter:
                 pcd_fname = context.make_pcd_filename(item, name=pcd_name)
                 subdir = item.subset.replace(os.sep, "_") if item.subset else None
 
-                def make_extra_image_path(i, image) -> str:
-                    subdir = osp.join(
+                def make_extra_image_base_path(i, image) -> str:
+                    return f"image_{i}{context.find_image_ext(image)}"
+
+                def make_extra_image_full_path(i, image) -> str:
+                    return osp.join(
                         context._save_dir,
                         DatumaroPath.LEGACY_RELATED_IMAGES_DIR,
                         item.subset,
-                    )
-                    return context.make_pcd_extra_image_filename(
-                        item, i, image, name=f"{pcd_name}/image_{i}", subdir=subdir
+                        item.id,
+                        make_extra_image_base_path(i, image),
                     )
 
                 context.save_point_cloud(
                     item,
                     fname=pcd_fname,
                     subdir=subdir,
-                    extra_image_path_maker=make_extra_image_path,
+                    extra_image_path_maker=make_extra_image_full_path,
                 )
 
                 extra_images = []
                 for i, extra_image in enumerate(pcd.extra_images):
                     extra_images.append(
                         Image.from_file(
-                            path=make_extra_image_path(i, extra_image),
+                            path=make_extra_image_base_path(i, extra_image),
                             size=extra_image.size if extra_image.has_size else None,
                         )
                     )

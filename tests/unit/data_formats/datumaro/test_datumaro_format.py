@@ -11,6 +11,7 @@ from datumaro.components.annotation import (
     Bbox,
     Caption,
     Cuboid3d,
+    Ellipse,
     Label,
     LabelCategories,
     Mask,
@@ -21,12 +22,13 @@ from datumaro.components.annotation import (
     PolyLine,
     Skeleton,
 )
+from datumaro.components.dataset import StreamDataset
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
-from datumaro.plugins.data_formats.datumaro.base import DatumaroImporter
 from datumaro.plugins.data_formats.datumaro.exporter import DatumaroExporter
+from datumaro.plugins.data_formats.datumaro.importer import DatumaroImporter
 from datumaro.util import parse_json_file
 from datumaro.util.mask_tools import generate_colormap
 
@@ -42,6 +44,8 @@ from tests.utils.test_utils import (
 
 
 class DatumaroExporterTest(TestCase):
+    STREAM = False
+
     def _test_save_and_load(
         self,
         source_dataset,
@@ -61,8 +65,13 @@ class DatumaroExporterTest(TestCase):
             target_dataset=target_dataset,
             importer_args=importer_args,
             compare=compare,
+            stream=self.STREAM,
             **kwargs,
         )
+
+    @property
+    def dataset_cls(self):
+        return StreamDataset if self.STREAM else Dataset
 
     @property
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
@@ -146,15 +155,16 @@ class DatumaroExporterTest(TestCase):
                     annotations=[
                         Caption("test"),
                         Label(2),
-                        Bbox(1, 2, 3, 4, label=5, id=42, group=42),
+                        Bbox(1, 2, 3, 4, label=4, id=42, group=42),
                     ],
                 ),
                 DatasetItem(
                     id=2,
                     subset="val",
                     annotations=[
-                        PolyLine([1, 2, 3, 4, 5, 6, 7, 8], id=11, z_order=1),
-                        Polygon([1, 2, 3, 4, 5, 6, 7, 8], id=12, z_order=4),
+                        PolyLine([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], id=11, z_order=1),
+                        Polygon([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], id=12, z_order=4),
+                        Ellipse(x1=1, x2=2, y1=3, y2=4),
                     ],
                 ),
                 DatasetItem(
@@ -231,7 +241,18 @@ class DatumaroExporterTest(TestCase):
                 DatasetItem(
                     id="0000000001",
                     media=PointCloud.from_file(
-                        os.path.join(dataset_path, "point_clouds", "default", "0000000001.pcd")
+                        os.path.join(dataset_path, "point_clouds", "default", "0000000001.pcd"),
+                        extra_images=[
+                            Image.from_file(
+                                os.path.join(
+                                    dataset_path,
+                                    "related_images",
+                                    "default",
+                                    "0000000001",
+                                    "image_0.jpg",
+                                )
+                            )
+                        ],
                     ),
                     attributes={"frame": 1},
                 ),
@@ -250,7 +271,7 @@ class DatumaroExporterTest(TestCase):
             media_type=PointCloud,
         )
 
-        compare_datasets_strict(self, expected, Dataset.load(dataset_path))
+        compare_datasets_strict(self, expected, self.dataset_cls.load(dataset_path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_skeleton_dataset(self):
@@ -311,7 +332,17 @@ class DatumaroExporterTest(TestCase):
                 AnnotationType.points: points_categories,
             },
         )
-        compare_datasets_strict(self, expected, Dataset.load(dataset_path))
+        compare_datasets_strict(self, expected, self.dataset_cls.load(dataset_path))
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_legacy_dataset(self):
+        dataset_path = get_test_asset_path("datumaro_dataset", "diverse")
+        compare_datasets_strict(self, self.test_dataset, self.dataset_cls.load(dataset_path))
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_v10_dataset(self):
+        dataset_path = get_test_asset_path("datumaro_dataset", "v1.0")
+        compare_datasets_strict(self, self.test_dataset, self.dataset_cls.load(dataset_path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_detect(self):
@@ -461,7 +492,7 @@ class DatumaroExporterTest(TestCase):
 
             self.assertEqual({"a.json", "b.json"}, set(os.listdir(osp.join(path, "annotations"))))
             self.assertEqual({"2.jpg"}, set(os.listdir(osp.join(path, "images", "a"))))
-            compare_datasets_strict(self, expected, Dataset.load(path))
+            compare_datasets_strict(self, expected, self.dataset_cls.load(path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_inplace_save_writes_only_updated_data_with_transforms(self):
@@ -499,7 +530,7 @@ class DatumaroExporterTest(TestCase):
             self.assertEqual({"train", "c", "d", "test"}, set(os.listdir(osp.join(path, "images"))))
             self.assertEqual(set(), set(os.listdir(osp.join(path, "images", "c"))))
             self.assertEqual(set(), set(os.listdir(osp.join(path, "images", "d"))))
-            compare_datasets(self, expected, Dataset.load(path))
+            compare_datasets(self, expected, self.dataset_cls.load(path))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_and_load_with_pointcloud(self):
@@ -658,3 +689,7 @@ class DatumaroExporterTest(TestCase):
                 test_dir,
                 target_dataset=target_dataset,
             )
+
+
+class DatumaroStreamExporterTest(DatumaroExporterTest):
+    STREAM = True

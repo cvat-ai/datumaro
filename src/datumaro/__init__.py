@@ -18,6 +18,7 @@ from .components.annotation import (
     CompiledMask,
     CompiledMaskImage,
     Cuboid3d,
+    Ellipse,
     IndexMaskImage,
     Label,
     LabelCategories,

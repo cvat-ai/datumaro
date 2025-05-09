@@ -24,6 +24,8 @@ pub enum DatumJsonSection {
     #[strum(ascii_case_insensitive)]
     MEDIA_TYPE(i64),
     #[strum(ascii_case_insensitive)]
+    INFO(Option<JsonDict>), // needed to parse LEGACY datumaro format
+    #[strum(ascii_case_insensitive)]
     INFOS(JsonDict),
     #[strum(ascii_case_insensitive)]
     CATEGORIES(JsonDict),
@@ -58,6 +60,9 @@ impl ParsedJsonSection for DatumJsonSection {
                             .as_i64()
                             .ok_or(invalid_data("Cannot parse media type from the json file"))?;
                         Ok(Box::new(DatumJsonSection::MEDIA_TYPE(v)))
+                    }
+                    DatumJsonSection::INFO(_) => {
+                        Ok(Box::new(DatumJsonSection::INFO(None)))
                     }
                     DatumJsonSection::INFOS(_) => {
                         let v = parse_serde_json_value(reader)?;
@@ -134,6 +139,7 @@ impl DatumPageMapperImpl {
                 DatumJsonSection::MEDIA_TYPE(v) => {
                     media_type = Some(v);
                 }
+                DatumJsonSection::INFO(_) => {}
                 DatumJsonSection::INFOS(v) => {
                     infos = Some(v);
                 }

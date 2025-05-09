@@ -142,8 +142,12 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
     # checking streaming importer
     with MediaElementInitCounter() as init_counter:
         parsed_dataset = StreamDataset.import_from(dataset_folder, format=import_format)
-        # nothing initialized yet
-        assert init_counter.count == 0
+        # nothing initialized yet (except for datumaro format
+        # which needs to init some (not all) items to determine media type)
+        assert init_counter.count == 0 or (
+            import_format == "datumaro" and 0 < init_counter.count < len(fxt_dataset)
+        )
+        init_counter.count = 0
 
         for item in parsed_dataset:
             # annotations are not parsed if we do not access them

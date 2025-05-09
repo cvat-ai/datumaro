@@ -1,4 +1,5 @@
 # Copyright (C) 2025 Intel Corporation
+# Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -43,6 +44,7 @@ from datumaro.components.errors import PathSeparatorInSubsetNameError
 from datumaro.components.exporter import ExportContextComponent, Exporter
 from datumaro.components.media import Image, MediaElement, PointCloud, Video, VideoFrame
 from datumaro.util import cast, dump_json_file
+from datumaro.util.os_util import OS_PATH_SEPARATORS
 
 from .format import DatumaroPath
 
@@ -558,7 +560,7 @@ class DatumaroExporter(Exporter):
             default_image_ext=self._default_image_ext,
         )
 
-        if os.path.sep in subset:
+        if any(sep in subset for sep in OS_PATH_SEPARATORS):
             raise PathSeparatorInSubsetNameError(subset)
 
         return (

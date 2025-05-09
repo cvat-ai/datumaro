@@ -155,7 +155,7 @@ class DatumaroExporterTest(TestCase):
                     annotations=[
                         Caption("test"),
                         Label(2),
-                        Bbox(1, 2, 3, 4, label=5, id=42, group=42),
+                        Bbox(1, 2, 3, 4, label=4, id=42, group=42),
                     ],
                 ),
                 DatasetItem(

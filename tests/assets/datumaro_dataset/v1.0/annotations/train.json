@@ -119,7 +119,7 @@
           "type": "bbox",
           "attributes": {},
           "group": 42,
-          "label_id": 5,
+          "label_id": 4,
           "z_order": 0,
           "bbox": [1.0, 2.0, 3.0, 4.0]
         }

@@ -396,7 +396,7 @@ class SuperviselyPointCloudExporter(Exporter):
 
     def apply(self):
         if self._extractor.media_type() and self._extractor.media_type() is not PointCloud:
-            raise MediaTypeError("Media type is not an image")
+            raise MediaTypeError("Media type is not a point cloud")
 
         if 1 < len(self._extractor.subsets()):
             log.warning(

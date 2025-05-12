@@ -9,13 +9,13 @@ from datumaro import AnnotationType, CategoriesInfo, LabelCategories
 from datumaro.components import media
 from datumaro.components.annotation import Annotations
 from datumaro.components.dataset import Dataset, StreamDataset
-from datumaro.components.dataset_base import DatasetItem, StreamingDatasetBase, StreamingSubsetBase
+from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.environment import DEFAULT_ENVIRONMENT
 from datumaro.components.errors import DatasetExportError
 from datumaro.plugins.data_formats.coco.exporter import CocoImageInfoExporter
 
 
-class DummyStreamingExtractor(StreamingDatasetBase):
+class DummyStreamingExtractor(DatasetBase):
     def __init__(self):
         super().__init__(subsets=["train", "test", "foo"])
         self.ann_init_counter = 0
@@ -24,36 +24,37 @@ class DummyStreamingExtractor(StreamingDatasetBase):
         self.ann_init_counter += 1
         return []
 
-    def get_subset(self, name):
-        class _SubsetExtractor(StreamingSubsetBase):
-            def __iter__(_):
-                item = DatasetItem(
-                    id=f"{name}_1",
-                    subset=name,
-                    media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
-                    annotations=self._generate_anns,
-                )
-                # counting references to make sure that exporter is actually streaming
+    def __iter__(self):
+        for name in self._subsets:
+            item = DatasetItem(
+                id=f"{name}_1",
+                subset=name,
+                media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
+                annotations=self._generate_anns,
+            )
+            # counting references to make sure that exporter is actually streaming
 
-                # before yielded, references are only here
-                assert sys.getrefcount(item) == 2
+            # before yielded, references are only here
+            assert sys.getrefcount(item) == 2
 
-                # after yielded, there are more references (e.g. where it's yielded from)
-                # number of references doesn't have to increase in general,
-                # but it should due to how our code works
-                yield item
-                assert sys.getrefcount(item) > 2
+            # after yielded, there are more references (e.g. where it's yielded from)
+            # number of references doesn't have to increase in general,
+            # but it should due to how our code works
+            yield item
+            assert sys.getrefcount(item) > 2
 
-                # after next item yielded, ref count is 2 again - i.e. item was not saved anywhere
-                yield DatasetItem(
-                    id=f"{name}_2",
-                    subset=name,
-                    media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
-                    annotations=self._generate_anns,
-                )
-                assert sys.getrefcount(item) == 2
+            # after next item yielded, ref count is 2 again - i.e. item was not saved anywhere
+            yield DatasetItem(
+                id=f"{name}_2",
+                subset=name,
+                media=media.Image.from_numpy(data=np.ones((4, 2, 3))),
+                annotations=self._generate_anns,
+            )
+            assert sys.getrefcount(item) == 2
 
-        return _SubsetExtractor()
+    @property
+    def is_stream(self) -> bool:
+        return True
 
     def categories(self) -> CategoriesInfo:
         return {AnnotationType.label: LabelCategories.from_iterable(["a", "b", "c"])}
@@ -132,10 +133,17 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
     # checking baseline non-streaming importer
     with MediaElementInitCounter() as init_counter:
         parsed_dataset = Dataset.import_from(dataset_folder, format=import_format)
+
+        # the dataset cache is not initialized yet,
+        # but items can be parsed depending on the format extractors
+        assert parsed_dataset.is_cache_initialized == False
+
+        # after the first iteration all items are initialized
         assert len(list(parsed_dataset)) == len(fxt_dataset)
-        # after first iteration all items are initialized
         assert init_counter.count == len(fxt_dataset)
-        # no inits on second iteration
+        assert parsed_dataset.is_cache_initialized == True
+
+        # no extra inits after the first iteration
         assert len(list(parsed_dataset)) == len(fxt_dataset)
         assert init_counter.count == len(fxt_dataset)
 
@@ -144,24 +152,35 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         parsed_dataset = StreamDataset.import_from(dataset_folder, format=import_format)
         # nothing initialized yet (except for datumaro format
         # which needs to init some (not all) items to determine media type)
-        assert init_counter.count == 0 or (
-            import_format == "datumaro" and 0 < init_counter.count < len(fxt_dataset)
-        )
-        init_counter.count = 0
+        if import_format == "datumaro":
+            assert 0 < init_counter.count < len(fxt_dataset)
+            init_counter.count = 0
+        else:
+            assert init_counter.count == 0
 
         for item in parsed_dataset:
             # annotations are not parsed if we do not access them
             assert not item.annotations_are_initialized
+
             # annotations are parsed if we access them
             assert isinstance(item.annotations, Annotations)
             assert item.annotations_are_initialized
+
         assert init_counter.count == len(fxt_dataset)
 
-        # inits again on iteration, i.e. not caching items
-        assert len(list(parsed_dataset)) == len(fxt_dataset)
+        # inits again on iteration, i.e. does not cache items
+        for _ in parsed_dataset:
+            pass
         assert init_counter.count == len(fxt_dataset) * 2
 
-        # subsets can be accessed
+        # subset list can be accessed without making extra item iterations
+        for _ in parsed_dataset.subsets().values():
+            pass
+        assert init_counter.count == len(fxt_dataset) * 2
+
+        # subset access DOES ITERATE over ALL items in the dataset,
+        # though item annotations and media data are not parsed before access
+        # (depending on the extractor support)
         for subset in parsed_dataset.subsets().values():
             assert subset.is_stream
             for item in subset:
@@ -170,3 +189,5 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
                 # annotations are parsed if we access them
                 assert isinstance(item.annotations, Annotations)
                 assert item.annotations_are_initialized
+
+        assert init_counter.count == len(fxt_dataset) * (2 + len(parsed_dataset.subsets()))

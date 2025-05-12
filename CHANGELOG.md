@@ -99,7 +99,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/41>)
 
 ### Removed
-- TBD
+- `KEEPS_SUBSETS_INTACT` is not used anymore
+  (<https://github.com/cvat-ai/datumaro/pull/102>)
 
 ### Fixed
 - Collision between parents and names in LabelCategories

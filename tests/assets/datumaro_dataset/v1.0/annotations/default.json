@@ -1,5 +1,7 @@
 {
-  "info": {},
+  "dm_format_version": "1.0",
+  "media_type": 2,
+  "infos": {},
   "categories": {
     "label": {
       "labels": [
@@ -31,35 +33,11 @@
     }
   },
   "items": [
+    { "id": "42", "annotations": [] },
     {
-      "id": "2",
-      "annotations": [
-        {
-          "id": 11,
-          "type": "polyline",
-          "attributes": {},
-          "group": 0,
-          "label_id": null,
-          "points": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-          "z_order": 1
-        },
-        {
-          "id": 12,
-          "type": "polygon",
-          "attributes": {},
-          "group": 0,
-          "label_id": null,
-          "points": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-          "z_order": 4
-        },
-        {
-          "type": "ellipse",
-          "attributes": {},
-          "group": 0,
-          "label_id": null,
-          "points": [1.0, 3.0, 2.0, 4.0]
-        }
-      ]
+      "id": "43",
+      "annotations": [],
+      "image": { "path": "43.qq", "size": [2, 4] }
     }
   ]
 }

@@ -4,6 +4,7 @@
 
 import os
 import os.path as osp
+from typing import Optional
 
 from datumaro.components.annotation import AnnotationType, CompiledMask
 from datumaro.components.errors import DatumaroError, MediaTypeError
@@ -92,6 +93,12 @@ class IcdarTextSegmentationExporter(Exporter):
             for item in subset:
                 self._save_item(subset_name, subset, item)
 
+    @staticmethod
+    def _make_instance_labels_from_indexes(indexes: list[Optional[int]]) -> list[int]:
+        all_indexes = set(range(len(indexes)))
+        missing_indexes = sorted(all_indexes - {i for i in indexes if i is not None})
+        return [(i if i is not None else missing_indexes.pop(0)) + 1 for i in indexes]
+
     def _save_item(self, subset_name, subset, item):
         if self._save_media and item.media:
             self._save_image(item, subdir=osp.join(subset_name, IcdarPath.IMAGES_DIR))
@@ -143,7 +150,10 @@ class IcdarTextSegmentationExporter(Exporter):
                 group = ann.group
 
             mask = CompiledMask.from_instance_masks(
-                anns, instance_labels=[m.attributes["index"] + 1 for m in anns]
+                anns,
+                instance_labels=self._make_instance_labels_from_indexes(
+                    [m.attributes.get("index") for m in anns]
+                ),
             )
             mask = paint_mask(mask.class_mask, {i: colormap[i] for i in range(len(colormap))})
             save_image(

@@ -4,6 +4,7 @@ from unittest import TestCase
 
 import numpy as np
 
+from datumaro import ItemTransform
 from datumaro.components.annotation import Bbox, Caption, Mask, Polygon
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
@@ -19,6 +20,8 @@ from datumaro.plugins.data_formats.icdar.exporter import (
     IcdarTextSegmentationExporter,
     IcdarWordRecognitionExporter,
 )
+from datumaro.plugins.transforms import RemoveAttributes
+from datumaro.util import filter_dict
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path
@@ -301,9 +304,9 @@ class IcdarExporterTest(TestCase):
                 "icdar_text_localization",
             )
 
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_save_and_load_masks(self):
-        expected_dataset = Dataset.from_iterable(
+    @staticmethod
+    def _make_masks_dataset():
+        return Dataset.from_iterable(
             [
                 DatasetItem(
                     id="a/b/1",
@@ -382,12 +385,54 @@ class IcdarExporterTest(TestCase):
             ]
         )
 
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_masks(self):
+        expected_dataset = self._make_masks_dataset()
+
         with TestDir() as test_dir:
             self._test_save_and_load(
                 expected_dataset,
                 partial(IcdarTextSegmentationExporter.convert, save_media=True),
                 test_dir,
                 "icdar_text_segmentation",
+            )
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_masks_with_missing_indexes(self):
+        source_dataset = self._make_masks_dataset().transform(
+            RemoveAttributes, attributes=["index"]
+        )
+
+        with TestDir() as test_dir:
+            IcdarTextSegmentationExporter.convert(source_dataset, test_dir)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_masks_with_partially_missing_indexes(self):
+        expected_dataset = self._make_masks_dataset()
+
+        class RemoveAttributeIndex1(ItemTransform):
+            def transform_item(self, item):
+                annotations = [
+                    ann.wrap(
+                        attributes=(
+                            filter_dict(ann.attributes, exclude_keys=["index"])
+                            if ann.attributes["index"] == 1
+                            else ann.attributes
+                        )
+                    )
+                    for ann in item.annotations
+                ]
+                return item.wrap(annotations=annotations)
+
+        source_dataset = RemoveAttributeIndex1(expected_dataset)
+
+        with TestDir() as test_dir:
+            self._test_save_and_load(
+                source_dataset,
+                partial(IcdarTextSegmentationExporter.convert, save_media=True),
+                test_dir,
+                "icdar_text_segmentation",
+                target_dataset=expected_dataset,
             )
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)

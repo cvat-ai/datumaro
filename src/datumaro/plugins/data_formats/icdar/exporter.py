@@ -5,7 +5,7 @@
 import os
 import os.path as osp
 
-from datumaro.components.annotation import AnnotationType, CompiledMask
+from datumaro.components.annotation import Annotation, AnnotationType, CompiledMask
 from datumaro.components.errors import DatumaroError, MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image
@@ -92,6 +92,16 @@ class IcdarTextSegmentationExporter(Exporter):
             for item in subset:
                 self._save_item(subset_name, subset, item)
 
+    @staticmethod
+    def _fill_missing_indexes(anns: list[Annotation]) -> list[Annotation]:
+        indexes = [ann.attributes.get("index") for ann in anns]
+        missing_indexes = sorted(set(range(len(anns))) - set(indexes))
+        new_indexes = [index if index is not None else missing_indexes.pop(0) for index in indexes]
+        return [
+            ann.wrap(attributes=dict(ann.attributes, index=index))
+            for ann, index in zip(anns, new_indexes)
+        ]
+
     def _save_item(self, subset_name, subset, item):
         if self._save_media and item.media:
             self._save_image(item, subdir=osp.join(subset_name, IcdarPath.IMAGES_DIR))
@@ -105,7 +115,8 @@ class IcdarTextSegmentationExporter(Exporter):
         used_colors = set(colormap)
 
         if anns:
-            anns = sorted(anns, key=lambda a: int(a.attributes.get("index", 0)))
+            anns = self._fill_missing_indexes(anns)
+            anns = sorted(anns, key=lambda a: int(a.attributes["index"]))
             group = anns[0].group
             for i, ann in enumerate(anns):
                 # Assign new color if it is not defined

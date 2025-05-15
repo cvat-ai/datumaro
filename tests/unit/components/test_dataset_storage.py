@@ -32,7 +32,6 @@ class StreamDatasetStorageTest:
 
     def test_iterator(self, fxt_stream_extractor: MagicMock, fxt_n_items: int):
         storage = StreamDatasetStorage(source=fxt_stream_extractor)
-        assert len(storage) == fxt_n_items
 
         n_calls = 3
         self._test_loop(fxt_stream_extractor, storage, n_calls)

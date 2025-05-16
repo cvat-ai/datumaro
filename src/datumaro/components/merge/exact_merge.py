@@ -5,7 +5,7 @@
 from typing import Any, Dict, Iterable, List, Sequence, Tuple, Union
 
 from datumaro.components.annotation import Annotation
-from datumaro.components.dataset_base import DatasetBase, DatasetInfo, DatasetItem, IDataset
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, IDataset
 from datumaro.components.dataset_item_storage import DatasetItemStorage
 from datumaro.components.errors import (
     DatasetMergeError,
@@ -19,6 +19,33 @@ from datumaro.components.media import Image, MediaElement, MultiframeImage, Poin
 from datumaro.components.merge import Merger
 
 __all__ = ["ExactMerge"]
+
+
+class ExactMergedStreams(DatasetBase):
+    def __init__(self, merger: Merger, source_datasets: Sequence[IDataset]):
+        self._source_datasets = source_datasets
+        self._infos = merger.merge_infos(d.infos() for d in source_datasets)
+        self._categories = merger.merge_categories(d.categories() for d in source_datasets)
+        super().__init__(
+            length=sum(len(dataset) for dataset in source_datasets),
+            subsets=list(subset_name for ds in source_datasets for subset_name in ds.subsets()),
+            media_type=merger.merge_media_types(source_datasets),
+            ann_types=merger.merge_ann_types(source_datasets),
+        )
+
+    def __iter__(self):
+        for dataset in self._source_datasets:
+            yield from dataset
+
+    def infos(self):
+        return self._infos
+
+    def categories(self):
+        return self._categories
+
+    @property
+    def is_stream(self) -> bool:
+        return True
 
 
 class ExactMerge(Merger):
@@ -59,30 +86,7 @@ class ExactMerge(Merger):
             set(subset_names)
         ):
             # there is no need to merge individual items, we can just stream everything
-            infos = self.merge_infos(d.infos() for d in datasets)
-            categories = self.merge_categories(d.categories() for d in datasets)
-
-            class _ExactMergedStreams(DatasetBase):
-                def __iter__(_):
-                    for dataset in datasets:
-                        yield from dataset
-
-                def infos(_) -> DatasetInfo:
-                    return infos
-
-                def categories(self):
-                    return categories
-
-                @property
-                def is_stream(_) -> bool:
-                    return True
-
-            return _ExactMergedStreams(
-                length=sum(len(dataset) for dataset in datasets),
-                subsets=subset_names,
-                media_type=self.merge_media_types(datasets),
-                ann_types=self.merge_ann_types(datasets),
-            )
+            return ExactMergedStreams(merger=self, source_datasets=datasets)
 
         return super().__call__(*datasets)
 

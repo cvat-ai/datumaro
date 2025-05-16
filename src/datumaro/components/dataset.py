@@ -254,7 +254,10 @@ class Dataset(IDataset):
         else:
             from datumaro.components.hl_ops import HLOps
 
-            return HLOps.merge(*sources, merge_policy=merge_policy)
+            merged = HLOps.merge(*sources, merge_policy=merge_policy)
+            if merged.is_stream:
+                merged = Dataset(source=merged, env=merged.env)
+            return merged
 
         return dataset
 

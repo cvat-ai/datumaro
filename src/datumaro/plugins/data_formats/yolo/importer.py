@@ -131,24 +131,37 @@ class YoloUltralyticsClassificationImporter(Importer):
     _FORMAT = YoloUltralyticsClassificationBase.NAME
     DETECT_CONFIDENCE = FormatDetectionConfidence.LOW
 
-    @classmethod
-    def find_sources(cls, path):
+    @staticmethod
+    def is_valid_source_folder(path: str) -> bool:
         if not osp.isdir(path):
-            return []
+            return False
         subfolders = [
             subfolder for name in os.listdir(path) if osp.isdir(subfolder := osp.join(path, name))
         ]
         if not subfolders:
-            return []
+            return False
         for subset_folder in subfolders:
             for name in os.listdir(subset_folder):
                 if name in [YoloUltralyticsClassificationFormat.LABELS_FILE, DATASET_META_FILE]:
                     continue
                 label_folder = osp.join(subset_folder, name)
                 if not osp.isdir(label_folder) or not contains_only_images(label_folder):
-                    return []
+                    return False
+        return True
 
-        return [{"url": path, "format": cls._FORMAT}]
+    @classmethod
+    def find_sources(cls, path) -> list[dict]:
+        if not osp.isdir(path):
+            return []
+
+        if cls.is_valid_source_folder(path):
+            return [{"url": path, "format": cls._FORMAT}]
+
+        return [
+            source
+            for source in cls._find_sources_recursive(path, "", cls._FORMAT)
+            if cls.is_valid_source_folder(source["url"])
+        ]
 
     @property
     def can_stream(self) -> bool:

@@ -1043,7 +1043,7 @@ class StreamDataset(Dataset):
 
                 @property
                 def is_stream(self):
-                    return True
+                    return self._merged.is_stream
 
                 def subsets(self) -> Dict[str, DatasetSubset]:
                     return self._merged.subsets()

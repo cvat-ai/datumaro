@@ -8,7 +8,7 @@ import numpy as np
 
 import datumaro.plugins.data_formats.camvid as Camvid
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, MaskCategories
-from datumaro.components.dataset import Dataset
+from datumaro.components.dataset import Dataset, StreamDataset
 from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.media import Image
@@ -59,6 +59,8 @@ class TestExtractorBase(DatasetBase):
 
 
 class CamvidImportTest(TestCase):
+    DATASET_CLS = Dataset
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import(self):
         source_dataset = Dataset.from_iterable(
@@ -105,7 +107,7 @@ class CamvidImportTest(TestCase):
             categories=Camvid.make_camvid_categories(),
         )
 
-        parsed_dataset = Dataset.import_from(DUMMY_DATASET_DIR, "camvid")
+        parsed_dataset = self.DATASET_CLS.import_from(DUMMY_DATASET_DIR, "camvid")
 
         compare_datasets(self, source_dataset, parsed_dataset)
 
@@ -113,6 +115,10 @@ class CamvidImportTest(TestCase):
     def test_can_detect_camvid(self):
         detected_formats = Environment().detect_dataset(DUMMY_DATASET_DIR)
         self.assertEqual([CamvidImporter.NAME], detected_formats)
+
+
+class CamvidStreamingImportTest(CamvidImportTest):
+    DATASET_CLS = StreamDataset
 
 
 class CamvidExporterTest(TestCase):

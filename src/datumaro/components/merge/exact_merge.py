@@ -5,7 +5,7 @@
 from typing import Any, Dict, Iterable, List, Sequence, Tuple, Union
 
 from datumaro.components.annotation import Annotation
-from datumaro.components.dataset_base import DatasetItem, IDataset
+from datumaro.components.dataset_base import DatasetBase, DatasetInfo, DatasetItem, IDataset
 from datumaro.components.dataset_item_storage import DatasetItemStorage
 from datumaro.components.errors import (
     DatasetMergeError,
@@ -52,6 +52,39 @@ class ExactMerge(Merger):
 
                 items.put(item)
         return items
+
+    def __call__(self, *datasets: IDataset) -> IDataset:
+        subset_names = list(subset_name for ds in datasets for subset_name in ds.subsets())
+        if all(dataset.is_stream for dataset in datasets) and len(subset_names) == len(
+            set(subset_names)
+        ):
+            # there is no need to merge individual items, we can just stream everything
+            infos = self.merge_infos(d.infos() for d in datasets)
+            categories = self.merge_categories(d.categories() for d in datasets)
+
+            class _ExactMergedStreams(DatasetBase):
+                def __iter__(_):
+                    for dataset in datasets:
+                        yield from dataset
+
+                def infos(_) -> DatasetInfo:
+                    return infos
+
+                def categories(self):
+                    return categories
+
+                @property
+                def is_stream(_) -> bool:
+                    return True
+
+            return _ExactMergedStreams(
+                length=sum(len(dataset) for dataset in datasets),
+                subsets=subset_names,
+                media_type=self.merge_media_types(datasets),
+                ann_types=self.merge_ann_types(datasets),
+            )
+
+        return super().__call__(*datasets)
 
     @classmethod
     def _match_annotations_equal(cls, a, b):

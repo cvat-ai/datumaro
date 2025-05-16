@@ -81,7 +81,7 @@ class Merger(IMergerContext, CliPlugin):
             ann_types = ann_types.union(source.ann_types())
         return ann_types
 
-    def __call__(self, *datasets: IDataset) -> DatasetItemStorageDatasetView:
+    def __call__(self, *datasets: IDataset) -> IDataset:
         infos = self.merge_infos(d.infos() for d in datasets)
         categories = self.merge_categories(d.categories() for d in datasets)
         media_type = self.merge_media_types(datasets)

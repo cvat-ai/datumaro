@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Callable, Dict, Iterable, Optional, Type, Unio
 
 from datumaro.cli.util.compare import DistanceCompareVisualizer
 from datumaro.components.comparator import DistanceComparator, EqualityComparator, TableComparator
-from datumaro.components.dataset import Dataset, IDataset
+from datumaro.components.dataset import Dataset, IDataset, StreamDataset
 from datumaro.components.environment import Environment
 from datumaro.components.errors import DatasetError
 from datumaro.components.exporter import Exporter
@@ -296,7 +296,8 @@ class HLOps:
         )
         if report_path:
             merger.save_merge_report(report_path)
-        return Dataset(source=merged, env=env)
+        dataset_cls = StreamDataset if merged.is_stream else Dataset
+        return dataset_cls(source=merged, env=env)
 
     @staticmethod
     def run_model(

@@ -9,11 +9,13 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from enum import Enum, auto
+from functools import partial
 from typing import List, Optional, Tuple
 
 import numpy as np
 
 from datumaro.components.annotation import (
+    Annotation,
     AnnotationType,
     CompiledMask,
     ExtractedMask,
@@ -180,6 +182,7 @@ class CamvidBase(SubsetBase):
         *,
         subset: Optional[str] = None,
         ctx: Optional[ImportContext] = None,
+        stream: bool = False,
     ):
         assert osp.isfile(path), path
         self._path = path
@@ -191,7 +194,10 @@ class CamvidBase(SubsetBase):
         super().__init__(subset=subset, ctx=ctx)
 
         self._categories = self._load_categories(self._dataset_dir)
-        self._items = list(self._load_items(path).values())
+        self._stream = stream
+
+        with open(self._path, encoding="utf-8") as f:
+            self._length = sum(1 for _ in f)
 
     def _load_categories(self, path):
         label_map = None
@@ -206,20 +212,18 @@ class CamvidBase(SubsetBase):
         self._labels = [label for label in label_map]
         return make_camvid_categories(label_map)
 
-    def _load_items(self, path):
-        items = {}
-
+    def __iter__(self):
         labels = self._categories[AnnotationType.label].labels
 
-        with open(path, encoding="utf-8") as f:
+        with open(self._path, encoding="utf-8") as f:
             for line in f:
                 image, gt = _parse_annotation_line(line)
                 item_id = osp.splitext(osp.join(*image.split("/")[2:]))[0]
                 image_path = osp.join(self._dataset_dir, image.lstrip("/"))
 
-                item_annotations = []
-                if gt is not None:
-                    gt_path = osp.join(self._dataset_dir, gt)
+                def parse_annotations(mask_path: str) -> list[Annotation]:
+                    item_annotations = []
+                    gt_path = osp.join(self._dataset_dir, mask_path)
                     mask = lazy_mask(
                         gt_path, self._categories[AnnotationType.mask].inverse_colormap
                     )
@@ -237,15 +241,21 @@ class CamvidBase(SubsetBase):
                             )
 
                             self._ann_types.add(AnnotationType.mask)
+                    return item_annotations
 
-                items[item_id] = DatasetItem(
+                yield DatasetItem(
                     id=item_id,
                     subset=self._subset,
                     media=Image.from_file(path=image_path),
-                    annotations=item_annotations,
+                    annotations=[] if gt is None else partial(parse_annotations, gt),
                 )
 
-        return items
+    def __len__(self):
+        return self._length
+
+    @property
+    def is_stream(self) -> bool:
+        return self._stream
 
 
 class CamvidImporter(Importer):
@@ -284,6 +294,10 @@ class CamvidImporter(Importer):
     @classmethod
     def get_file_extensions(cls) -> List[str]:
         return [cls._ANNO_EXT]
+
+    @property
+    def can_stream(self) -> bool:
+        return True
 
 
 class LabelmapType(Enum):

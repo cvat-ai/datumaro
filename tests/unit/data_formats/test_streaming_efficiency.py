@@ -150,6 +150,8 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
     # checking streaming importer
     with MediaElementInitCounter() as init_counter:
         parsed_dataset = StreamDataset.import_from(dataset_folder, format=import_format)
+        assert parsed_dataset.is_stream
+
         # nothing initialized yet (except for datumaro format
         # which needs to init some (not all) items to determine media type)
         if import_format == "datumaro":
@@ -160,7 +162,7 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
 
         for item in parsed_dataset:
             # annotations are not parsed if we do not access them
-            assert not item.annotations_are_initialized
+            assert not item.annotations_are_initialized or item.annotations == []
 
             # annotations are parsed if we access them
             assert isinstance(item.annotations, Annotations)
@@ -185,7 +187,7 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
             assert subset.is_stream
             for item in subset:
                 # annotations are not parsed if we do not access them
-                assert not item.annotations_are_initialized
+                assert not item.annotations_are_initialized or item.annotations == []
                 # annotations are parsed if we access them
                 assert isinstance(item.annotations, Annotations)
                 assert item.annotations_are_initialized

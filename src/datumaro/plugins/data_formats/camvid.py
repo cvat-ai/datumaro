@@ -524,3 +524,7 @@ class CamvidExporter(Exporter):
             img_dir = osp.join(save_dir, subset)
             if osp.isdir(img_dir) and not os.listdir(img_dir):
                 os.rmdir(img_dir)
+
+    @property
+    def can_stream(self) -> bool:
+        return True

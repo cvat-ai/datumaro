@@ -122,6 +122,8 @@ class CamvidStreamingImportTest(CamvidImportTest):
 
 
 class CamvidExporterTest(TestCase):
+    STREAM = False
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def _test_save_and_load(
         self, source_dataset, converter, test_dir, target_dataset=None, importer_args=None, **kwargs
@@ -134,6 +136,7 @@ class CamvidExporterTest(TestCase):
             importer="camvid",
             target_dataset=target_dataset,
             importer_args=importer_args,
+            stream=self.STREAM,
             **kwargs,
         )
 
@@ -539,3 +542,7 @@ class CamvidExporterTest(TestCase):
                 target_dataset=DstExtractor(),
             )
             self.assertTrue(osp.isfile(osp.join(test_dir, "dataset_meta.json")))
+
+
+class CamvidStreamExporterTest(CamvidExporterTest):
+    STREAM = True

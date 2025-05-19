@@ -1,25 +1,30 @@
-# Copyright (C) 2019-2022 Intel Corporation
+# Copyright (C) 2025 Intel Corporation
 # Copyright (C) 2022-2024 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
 # pylint: disable=no-self-use
 
-from __future__ import annotations
-
 import os
 import os.path as osp
 import shutil
+from contextlib import contextmanager
+from multiprocessing.pool import Pool
+from typing import Dict, Optional
 
 import numpy as np
 import pycocotools.mask as mask_utils
+import rapidjson
 
 from datumaro.components.annotation import (
     Annotation,
     AnnotationType,
     Bbox,
     Caption,
+    Cuboid2D,
     Cuboid3d,
+    Ellipse,
+    HashKey,
     Label,
     LabelCategories,
     Mask,
@@ -32,25 +37,124 @@ from datumaro.components.annotation import (
     Shape,
     Skeleton,
 )
-from datumaro.components.dataset_base import CategoriesInfo, DatasetItem
+from datumaro.components.crypter import NULL_CRYPTER
+from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.dataset_item_storage import ItemStatus
-from datumaro.components.exporter import Exporter
-from datumaro.components.media import Image, MediaElement, PointCloud
+from datumaro.components.errors import PathSeparatorInSubsetNameError
+from datumaro.components.exporter import ExportContextComponent, Exporter
+from datumaro.components.media import Image, MediaElement, PointCloud, Video, VideoFrame
 from datumaro.util import cast, dump_json_file
-from datumaro.util.definitions import DEFAULT_SUBSET_NAME
+from datumaro.util.os_util import OS_PATH_SEPARATORS
 
 from .format import DatumaroPath
 
 
+class JsonWriter:
+    @classmethod
+    def _convert_attribute_categories(cls, attributes):
+        return sorted(attributes)
+
+    @classmethod
+    def _convert_labels_label_groups(cls, labels):
+        return sorted(labels)
+
+    @classmethod
+    def _convert_label_categories(cls, obj):
+        converted = {
+            "labels": [],
+            "label_groups": [],
+            "attributes": cls._convert_attribute_categories(obj.attributes),
+        }
+        for label in obj.items:
+            converted["labels"].append(
+                {
+                    "name": cast(label.name, str),
+                    "parent": cast(label.parent, str),
+                    "attributes": cls._convert_attribute_categories(label.attributes),
+                }
+            )
+        for label_group in obj.label_groups:
+            converted["label_groups"].append(
+                {
+                    "name": cast(label_group.name, str),
+                    "group_type": label_group.group_type.to_str(),
+                    "labels": cls._convert_labels_label_groups(label_group.labels),
+                }
+            )
+        return converted
+
+    @classmethod
+    def _convert_mask_categories(cls, obj):
+        converted = {
+            "colormap": [],
+        }
+        for label_id, color in obj.colormap.items():
+            converted["colormap"].append(
+                {
+                    "label_id": int(label_id),
+                    "r": int(color[0]),
+                    "g": int(color[1]),
+                    "b": int(color[2]),
+                }
+            )
+        return converted
+
+    @classmethod
+    def _convert_points_categories(cls, obj):
+        converted = {
+            "items": [],
+        }
+        for label_id, item in obj.items.items():
+            converted["items"].append(
+                {
+                    "label_id": int(label_id),
+                    "labels": [cast(label, str) for label in item.labels],
+                    "joints": [list(map(int, j)) for j in item.joints],
+                    "positions": list(map(float, item.positions)),
+                }
+            )
+        return converted
+
+    @classmethod
+    def write_categories(cls, categories) -> Dict[str, Dict]:
+        dict_cat = {}
+        for ann_type, desc in categories.items():
+            if isinstance(desc, LabelCategories):
+                converted_desc = cls._convert_label_categories(desc)
+            elif isinstance(desc, MaskCategories):
+                converted_desc = cls._convert_mask_categories(desc)
+            elif isinstance(desc, PointsCategories):
+                converted_desc = cls._convert_points_categories(desc)
+            else:
+                raise NotImplementedError()
+            dict_cat[ann_type.name] = converted_desc
+
+        return dict_cat
+
+
 class _SubsetWriter:
-    def __init__(self, context: DatumaroExporter):
-        self._context: DatumaroExporter = context
+    def __init__(
+        self,
+        context: Exporter,
+        subset: str,
+        ann_file: str,
+        export_context: ExportContextComponent,
+    ):
+        self._context = context
+        self._subset = subset
 
         self._data = {
             "info": {},
             "categories": {},
             "items": [],
         }
+
+        self.ann_file = ann_file
+        self.export_context = export_context
+
+    @property
+    def infos(self):
+        return self._data["info"]
 
     @property
     def categories(self):
@@ -63,7 +167,109 @@ class _SubsetWriter:
     def is_empty(self):
         return not self.items
 
-    def add_item(self, item: DatasetItem):
+    @staticmethod
+    @contextmanager
+    def context_save_media(
+        item: DatasetItem, context: ExportContextComponent, encryption: bool = False
+    ):
+        """Implicitly change the media path and save it if save_media=True.
+        When done, revert it's path as before.
+
+        Parameters
+        ----------
+            item: Dataset item to save its media
+            context: Context instance to help the media export
+            encryption: If false, prevent the media from being encrypted
+        """
+        if item.media is None:
+            yield
+        elif isinstance(item.media, Video):
+            video = item.media_as(Video)
+
+            if context.save_media:
+                fname = context.make_video_filename(item)
+                subdir = item.subset.replace(os.sep, "_") if item.subset else None
+                context.save_video(item, fname=fname, subdir=subdir)
+                item.media = Video(
+                    path=fname,
+                    step=video._step,
+                    start_frame=video._start_frame,
+                    end_frame=video._end_frame,
+                )
+
+            yield
+            item.media = video
+        elif isinstance(item.media, VideoFrame):
+            video_frame = item.media_as(VideoFrame)
+
+            if context.save_media:
+                fname = context.make_video_filename(item)
+                subdir = item.subset.replace(os.sep, "_") if item.subset else None
+                context.save_video(item, fname=fname, subdir=subdir)
+                item.media = VideoFrame(Video(fname), video_frame.index)
+
+            yield
+            item.media = video_frame
+        elif isinstance(item.media, Image):
+            image = item.media_as(Image)
+
+            if context.save_media:
+                # Temporarily update image path and save it.
+                fname = context.make_image_filename(item, name=str(item.id).replace(os.sep, "_"))
+                subdir = item.subset.replace(os.sep, "_") if item.subset else None
+                context.save_image(item, encryption=encryption, fname=fname, subdir=subdir)
+                item.media = Image.from_file(path=fname, size=image._size)
+
+            yield
+            item.media = image
+        elif isinstance(item.media, PointCloud):
+            pcd = item.media_as(PointCloud)
+
+            if context.save_media:
+                pcd_name = str(item.id).replace(os.sep, "_")
+                pcd_fname = context.make_pcd_filename(item, name=pcd_name)
+                subdir = item.subset.replace(os.sep, "_") if item.subset else None
+
+                def make_extra_image_base_path(i, image) -> str:
+                    return f"image_{i}{context.find_image_ext(image)}"
+
+                def make_extra_image_full_path(i, image) -> str:
+                    return osp.join(
+                        context._save_dir,
+                        DatumaroPath.LEGACY_RELATED_IMAGES_DIR,
+                        item.subset,
+                        item.id,
+                        make_extra_image_base_path(i, image),
+                    )
+
+                context.save_point_cloud(
+                    item,
+                    fname=pcd_fname,
+                    subdir=subdir,
+                    extra_image_path_maker=make_extra_image_full_path,
+                )
+
+                extra_images = []
+                for i, extra_image in enumerate(pcd.extra_images):
+                    extra_images.append(
+                        Image.from_file(
+                            path=make_extra_image_base_path(i, extra_image),
+                            size=extra_image.size if extra_image.has_size else None,
+                        )
+                    )
+
+                # Temporarily update media with a new pcd saved into disk.
+                item.media = PointCloud.from_file(path=pcd_fname, extra_images=extra_images)
+
+            yield
+            item.media = pcd
+        else:
+            raise NotImplementedError
+
+    def add_item(self, item: DatasetItem, *args, **kwargs) -> None:
+        self.items.append(self._gen_item_desc(item))
+
+    def _gen_item_desc(self, item: DatasetItem, *args, **kwargs) -> Dict:
         annotations = []
         item_desc = {
             "id": item.id,
@@ -73,60 +279,44 @@ class _SubsetWriter:
         if item.attributes:
             item_desc["attr"] = item.attributes
 
-        if isinstance(item.media, Image):
-            image = item.media_as(Image)
-            path = getattr(image, "path", "")
-            if self._context._save_media:
-                path = self._context._make_image_filename(item)
-                self._context._save_image(
-                    item, osp.join(self._context._images_dir, item.subset, path)
-                )
+        with self.context_save_media(item, self.export_context):
+            # Since VideoFrame is a descendant of Image, this condition should be ahead of Image
+            if isinstance(item.media, VideoFrame):
+                video_frame = item.media_as(VideoFrame)
+                item_desc["video_frame"] = {
+                    "video_path": getattr(video_frame.video, "path", None),
+                    "frame_index": getattr(video_frame, "index", -1),
+                }
+            elif isinstance(item.media, Video):
+                video = item.media_as(Video)
+                item_desc["video"] = {
+                    "path": getattr(video, "path", None),
+                    "step": video._step,
+                    "start_frame": video._start_frame,
+                }
+                if video._end_frame is not None:
+                    item_desc["video"]["end_frame"] = video._end_frame
+            elif isinstance(item.media, Image):
+                image = item.media_as(Image)
+                item_desc["image"] = {"path": getattr(image, "path", None)}
+                if item.media.has_size:  # avoid occasional loading
+                    item_desc["image"]["size"] = image.size
+            elif isinstance(item.media, PointCloud):
+                pcd = item.media_as(PointCloud)
 
-            item_desc["image"] = {"path": path}
+                item_desc["point_cloud"] = {"path": getattr(pcd, "path", None)}
 
-            if item.media.has_size:  # avoid occasional loading
-                item_desc["image"]["size"] = item.media.size
-        elif isinstance(item.media, PointCloud):
-            pcd = item.media_as(PointCloud)
-            path = pcd.path
-            if self._context._save_media:
-                path = self._context._make_pcd_filename(item)
-                self._context._save_point_cloud(
-                    item, osp.join(self._context._pcd_dir, item.subset, path)
-                )
+                related_images = [
+                    {"path": getattr(img, "path", None), "size": img.size}
+                    if img.has_size
+                    else {"path": getattr(img, "path", None)}
+                    for img in pcd.extra_images
+                ]
 
-            item_desc["point_cloud"] = {"path": path}
-
-            if self._context._save_media:
-                related_images = []
-                for i, img in enumerate(pcd.extra_images):
-                    ri_desc = {}
-
-                    # Images can have completely the same names or don't
-                    # have them at all, so we just rename them
-                    ri_desc["path"] = f"image_{i}{self._context._find_image_ext(img)}"
-
-                    if img.has_data:
-                        img.save(
-                            osp.join(
-                                self._context._related_images_dir,
-                                item.subset,
-                                item.id,
-                                ri_desc["path"],
-                            )
-                        )
-                    if img.has_size:
-                        ri_desc["size"] = img.size
-                    related_images.append(ri_desc)
-            else:
-                related_images = [{"path": getattr(img, "path", "")} for img in pcd.extra_images]
-
-            if related_images:
-                item_desc["related_images"] = related_images
-        elif isinstance(item.media, MediaElement):
-            item_desc["media"] = {"path": item.media.path}
-
-        self.items.append(item_desc)
+                if related_images:
+                    item_desc["related_images"] = related_images
+            elif isinstance(item.media, MediaElement):
+                item_desc["media"] = {"path": getattr(item.media, "path", None)}
 
         for ann in item.annotations:
             if isinstance(ann, Label):
@@ -147,26 +337,28 @@ class _SubsetWriter:
                 converted_ann = self._convert_cuboid_3d_object(ann)
             elif isinstance(ann, Skeleton):
                 converted_ann = self._convert_skeleton_object(ann)
+            elif isinstance(ann, Ellipse):
+                converted_ann = self._convert_ellipse_object(ann)
+            elif isinstance(ann, HashKey):
+                continue
+            elif isinstance(ann, Cuboid2D):
+                converted_ann = self._convert_cuboid_2d_object(ann)
             else:
                 raise NotImplementedError()
             annotations.append(converted_ann)
 
-    def add_categories(self, categories: CategoriesInfo):
-        for ann_type, desc in categories.items():
-            if isinstance(desc, LabelCategories):
-                converted_desc = self._convert_label_categories(desc)
-            elif isinstance(desc, MaskCategories):
-                converted_desc = self._convert_mask_categories(desc)
-            elif isinstance(desc, PointsCategories):
-                converted_desc = self._convert_points_categories(desc)
-            else:
-                raise NotImplementedError()
-            self.categories[ann_type.name] = converted_desc
+        return item_desc
 
-    def write(self, ann_file):
-        dump_json_file(ann_file, self._data)
+    def add_infos(self, infos):
+        self.infos.update(infos)
 
-    def _convert_annotation(self, obj: Annotation) -> dict:
+    def add_categories(self, categories):
+        self._data["categories"] = JsonWriter.write_categories(categories)
+
+    def write(self, *args, **kwargs):
+        dump_json_file(self.ann_file, self._data)
+
+    def _convert_annotation(self, obj):
         assert isinstance(obj, Annotation)
 
         ann_json = {
@@ -175,6 +367,8 @@ class _SubsetWriter:
             "attributes": obj.attributes,
             "group": cast(obj.group, int, 0),
         }
+        if obj.object_id >= 0:
+            ann_json["object_id"] = cast(obj.object_id, int)
         return ann_json
 
     def _convert_label_object(self, obj):
@@ -301,89 +495,141 @@ class _SubsetWriter:
             points_attributes=points_attributes,
         )
 
-    def _convert_attribute_categories(self, attributes):
-        return sorted(attributes)
+    def _convert_ellipse_object(self, obj: Ellipse):
+        return self._convert_shape_object(obj)
 
-    def _convert_label_categories(self, obj):
-        converted = {
-            "labels": [],
-            "attributes": self._convert_attribute_categories(obj.attributes),
-        }
-        for label in obj.items:
-            converted["labels"].append(
-                {
-                    "name": cast(label.name, str),
-                    "parent": cast(label.parent, str),
-                    "attributes": self._convert_attribute_categories(label.attributes),
-                }
-            )
+    def _convert_cuboid_2d_object(self, obj: Cuboid2D):
+        converted = self._convert_annotation(obj)
+
+        converted.update(
+            {
+                "label_id": cast(obj.label, int),
+                "points": obj.points,
+                "z_order": obj.z_order,
+            }
+        )
         return converted
 
-    def _convert_mask_categories(self, obj):
-        converted = {
-            "colormap": [],
-        }
-        for label_id, color in obj.colormap.items():
-            converted["colormap"].append(
-                {
-                    "label_id": int(label_id),
-                    "r": int(color[0]),
-                    "g": int(color[1]),
-                    "b": int(color[2]),
-                }
-            )
-        return converted
 
-    def _convert_points_categories(self, obj):
-        converted = {
-            "items": [],
-        }
-        for label_id, item in obj.items.items():
-            converted["items"].append(
-                {
-                    "label_id": int(label_id),
-                    "labels": [cast(label, str) for label in item.labels],
-                    "joints": [list(map(int, j)) for j in item.joints],
-                }
-            )
-        return converted
+class _StreamSubsetWriter(_SubsetWriter):
+    def __init__(
+        self,
+        context: Exporter,
+        subset: str,
+        ann_file: str,
+        export_context: ExportContextComponent,
+    ):
+        super().__init__(context, subset, ann_file, export_context)
+
+    def write(self, *args, **kwargs):
+        def _item_list():
+            subset = self._context._extractor.get_subset(self._subset)
+            pbar = self._context._ctx.progress_reporter
+            for item in pbar.iter(subset, desc=f"Exporting '{self._subset}'"):
+                yield self._gen_item_desc(item)
+
+        data = dict(self._data, items=_item_list())
+
+        with open(self.ann_file, "w", encoding="utf-8") as fp:
+            rapidjson.dump(data, fp, indent=None)
+
+    def is_empty(self):
+        # TODO: Force empty to be False, but it should be fixed with refactoring `_SubsetWriter`.`
+        return False
 
 
 class DatumaroExporter(Exporter):
     DEFAULT_IMAGE_EXT = DatumaroPath.IMAGE_EXT
+    PATH_CLS = DatumaroPath
 
-    def apply(self):
+    def create_writer(
+        self,
+        subset: str,
+        images_dir: str,
+        pcd_dir: str,
+        video_dir: str,
+    ) -> _SubsetWriter:
+        export_context = ExportContextComponent(
+            save_dir=self._save_dir,
+            save_media=self._save_media,
+            images_dir=images_dir,
+            pcd_dir=pcd_dir,
+            video_dir=video_dir,
+            crypter=NULL_CRYPTER,
+            image_ext=self._image_ext,
+            default_image_ext=self._default_image_ext,
+        )
+
+        if any(sep in subset for sep in OS_PATH_SEPARATORS):
+            raise PathSeparatorInSubsetNameError(subset)
+
+        return (
+            _SubsetWriter(
+                context=self,
+                subset=subset,
+                ann_file=osp.join(
+                    self._annotations_dir,
+                    subset + self.PATH_CLS.ANNOTATION_EXT,
+                ),
+                export_context=export_context,
+            )
+            if not self._stream
+            else _StreamSubsetWriter(
+                context=self,
+                subset=subset,
+                ann_file=osp.join(
+                    self._annotations_dir,
+                    subset + self.PATH_CLS.ANNOTATION_EXT,
+                ),
+                export_context=export_context,
+            )
+        )
+
+    def _apply_impl(self, pool: Optional[Pool] = None, *args, **kwargs):
         os.makedirs(self._save_dir, exist_ok=True)
 
-        images_dir = osp.join(self._save_dir, DatumaroPath.IMAGES_DIR)
+        images_dir = osp.join(self._save_dir, self.PATH_CLS.IMAGES_DIR)
         os.makedirs(images_dir, exist_ok=True)
         self._images_dir = images_dir
 
-        annotations_dir = osp.join(self._save_dir, DatumaroPath.ANNOTATIONS_DIR)
+        annotations_dir = osp.join(self._save_dir, self.PATH_CLS.ANNOTATIONS_DIR)
         os.makedirs(annotations_dir, exist_ok=True)
         self._annotations_dir = annotations_dir
 
-        self._pcd_dir = osp.join(self._save_dir, DatumaroPath.PCD_DIR)
-        self._related_images_dir = osp.join(self._save_dir, DatumaroPath.RELATED_IMAGES_DIR)
+        self._pcd_dir = osp.join(self._save_dir, self.PATH_CLS.PCD_DIR)
+        self._video_dir = osp.join(self._save_dir, self.PATH_CLS.VIDEO_DIR)
 
-        writers = {s: _SubsetWriter(self) for s in self._extractor.subsets()}
+        writers = {
+            subset: self.create_writer(
+                subset,
+                self._images_dir,
+                self._pcd_dir,
+                self._video_dir,
+            )
+            for subset in self._extractor.subsets()
+        }
+
         for writer in writers.values():
+            writer.add_infos(self._extractor.infos())
             writer.add_categories(self._extractor.categories())
 
-        for item in self._extractor:
-            subset = item.subset or DEFAULT_SUBSET_NAME
-            writers[subset].add_item(item)
+        pbar = self._ctx.progress_reporter
+        for subset_name, subset in self._extractor.subsets().items():
+            if not self._stream:
+                for item in pbar.iter(subset, desc=f"Exporting '{subset_name}'"):
+                    writers[subset_name].add_item(item, pool)
 
         for subset, writer in writers.items():
-            ann_file = osp.join(self._annotations_dir, "%s.json" % subset)
-
             if self._patch and subset in self._patch.updated_subsets and writer.is_empty():
-                if osp.isfile(ann_file):
+                if osp.isfile(writer.ann_file):
                     # Remove subsets that became empty
-                    os.remove(ann_file)
+                    os.remove(writer.ann_file)
                 continue
 
-            writer.write(ann_file)
+            writer.write(pool)
+
+        if self._save_hashkey_meta:
+            self._save_hashkey_file(self._save_dir)
 
     @classmethod
     def patch(cls, dataset, patch, save_dir, **kwargs):
@@ -403,19 +649,23 @@ class DatumaroExporter(Exporter):
                 continue
 
             image_path = osp.join(
-                save_dir, DatumaroPath.IMAGES_DIR, item.subset, conv._make_image_filename(item)
+                save_dir, cls.PATH_CLS.IMAGES_DIR, item.subset, conv._make_image_filename(item)
             )
             if osp.isfile(image_path):
                 os.unlink(image_path)
 
             pcd_path = osp.join(
-                save_dir, DatumaroPath.PCD_DIR, item.subset, conv._make_pcd_filename(item)
+                save_dir, cls.PATH_CLS.PCD_DIR, item.subset, conv._make_pcd_filename(item)
             )
             if osp.isfile(pcd_path):
                 os.unlink(pcd_path)
 
             related_images_path = osp.join(
-                save_dir, DatumaroPath.RELATED_IMAGES_DIR, item.subset, item.id
+                save_dir, DatumaroPath.LEGACY_RELATED_IMAGES_DIR, item.subset, item.id
             )
             if osp.isdir(related_images_path):
                 shutil.rmtree(related_images_path)
+
+    @property
+    def can_stream(self) -> bool:
+        return True

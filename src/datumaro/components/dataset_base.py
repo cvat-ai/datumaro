@@ -5,7 +5,20 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Set, Type, TypeVar, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import attr
 from attr import attrs, field
@@ -13,15 +26,16 @@ from attr import attrs, field
 from datumaro.components.annotation import Annotation, Annotations, AnnotationType, Categories
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.contexts.importer import ImportContext, NullImportContext
-from datumaro.components.errors import DatumaroError, NotAvailableError
 from datumaro.components.media import Image, MediaElement
 from datumaro.util.attrs_util import default_if_none, not_empty
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
 MediaType = TypeVar("MediaType", bound=MediaElement)
 
+AnnotationsCallable = Callable[[], list[Annotation]]
 
-@attrs(order=False, init=False, slots=True)
+
+@attrs(order=False, init=False, slots=True, eq=False)
 class DatasetItem:
     id: str = field(converter=lambda x: str(x).replace("\\", "/"), validator=not_empty)
 
@@ -31,7 +45,10 @@ class DatasetItem:
         default=None, validator=attr.validators.optional(attr.validators.instance_of(MediaElement))
     )
 
-    annotations: Annotations = field(factory=Annotations, validator=default_if_none(Annotations))
+    _annotations: Annotations | AnnotationsCallable = field(
+        factory=Annotations,
+        validator=default_if_none(lambda val: val if callable(val) else Annotations(val)),
+    )
 
     attributes: Dict[str, Any] = field(factory=dict, validator=default_if_none(dict))
 
@@ -48,11 +65,39 @@ class DatasetItem:
         *,
         subset: Optional[str] = None,
         media: Union[str, MediaElement, None] = None,
-        annotations: Optional[List[Annotation]] = None,
+        annotations: Optional[List[Annotation] | AnnotationsCallable] = None,
         attributes: Dict[str, Any] = None,
     ):
         self.__attrs_init__(
             id=id, subset=subset, media=media, annotations=annotations, attributes=attributes
+        )
+
+    @property
+    def annotations_are_initialized(self):
+        return not callable(self._annotations)
+
+    @property
+    def annotations(self) -> Annotations:
+        if not self.annotations_are_initialized:
+            annotations = self._annotations()
+            if not isinstance(annotations, Annotations):
+                annotations = Annotations(annotations)
+            self._annotations = annotations
+        return self._annotations
+
+    @annotations.setter
+    def annotations(self, value: Annotations | AnnotationsCallable):
+        self._annotations = value
+
+    def __eq__(self, other):
+        if not isinstance(other, DatasetItem):
+            return False
+        return (
+            self.id == other.id
+            and self.subset == other.subset
+            and self.media == other.media
+            and self.attributes == other.attributes
+            and self.annotations == other.annotations
         )
 
 
@@ -188,6 +233,9 @@ class _DatasetBase(IDataset):
             def ann_types(_):
                 return self.ann_types()
 
+            def is_stream(_) -> bool:
+                return self.is_stream
+
         return _DatasetFilter()
 
     def infos(self) -> DatasetInfo:
@@ -281,45 +329,3 @@ class SubsetBase(DatasetBase):
     def subset(self) -> str:
         """Subset name of this instance."""
         return self._subset
-
-
-class StreamingDatasetBase(DatasetBase):
-    """
-    A base class for multi-subset extractors adapted for streaming export.
-    Should be used in cases when number of items and subsets are known beforehand
-    and subsets can be accessed independently.
-
-    get_subset method should be redefined
-    """
-
-    def __init__(
-        self,
-        *,
-        length: Optional[int] = None,
-        subsets: Optional[Sequence[str]] = None,
-        media_type: Type[MediaElement] = Image,
-        ann_types: Optional[Set[AnnotationType]] = None,
-        ctx: Optional[ImportContext] = None,
-    ):
-        if length is None or subsets is None:
-            raise DatumaroError("StreamingDatasetBase should receive non-empty length and subsets")
-        super().__init__(
-            length=length, subsets=subsets, media_type=media_type, ann_types=ann_types, ctx=ctx
-        )
-
-    def __iter__(self):
-        for subset in self.subsets().values():
-            yield from subset
-
-    def get(self, id, subset=None) -> Optional[DatasetItem]:
-        raise NotAvailableError("Random access to items is not allowed in streaming.")
-
-    def _init_cache(self):
-        raise NotAvailableError()
-
-    @property
-    def is_stream(self) -> bool:
-        return True
-
-    def get_subset(self, name) -> IDataset:
-        raise NotImplementedError()

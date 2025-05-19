@@ -40,7 +40,7 @@ from datumaro.components.annotation import (
 from datumaro.components.cli_plugin import CliPlugin
 from datumaro.components.dataset_base import CategoriesInfo, DatasetInfo, DatasetItem, IDataset
 from datumaro.components.errors import DatumaroError
-from datumaro.components.media import Image
+from datumaro.components.media import Image, VideoFrame
 from datumaro.components.transformer import ItemTransform, Transform
 from datumaro.util import NOTSET, filter_dict, parse_json, parse_str_enum_value, take_by
 from datumaro.util.annotation_util import find_group_leader, find_instances
@@ -54,8 +54,6 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
     into several independent parts by the segments above, produces
     the corresponding number of separate annotations joined into a group.
     """
-
-    KEEPS_SUBSETS_INTACT = True
 
     ALLOW_REMOVAL_ARG = "--allow-removal"
 
@@ -74,7 +72,7 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
 
         self._allow_removal = allow_removal
 
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         segments = []
         for ann in item.annotations:
@@ -83,7 +81,7 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
             else:
                 annotations.append(ann)
         if not segments:
-            return item
+            return item.annotations
 
         if not isinstance(item.media, Image):
             raise Exception("Image info is required for this transform")
@@ -91,6 +89,10 @@ class CropCoveredSegments(ItemTransform, CliPlugin):
         segments = self.crop_segments(segments, w, h, item=item, allow_removal=self._allow_removal)
 
         annotations += segments
+        return annotations
+
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @classmethod
@@ -166,8 +168,6 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
     resulting mask takes properties from that annotation.
     """
 
-    KEEPS_SUBSETS_INTACT = True
-
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
         parser = super().build_cmdline_parser(**kwargs)
@@ -179,7 +179,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
 
         self._include_polygons = include_polygons
 
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         segments = []
         for ann in item.annotations:
@@ -188,7 +188,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
             else:
                 annotations.append(ann)
         if not segments:
-            return item
+            return item.annotations
 
         if not isinstance(item.media, Image):
             raise Exception("Image info is required for this transform")
@@ -198,6 +198,10 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
         segments = sum(segments, [])
 
         annotations += segments
+        return annotations
+
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @classmethod
@@ -258,9 +262,7 @@ class MergeInstanceSegments(ItemTransform, CliPlugin):
 
 
 class PolygonsToMasks(ItemTransform, CliPlugin):
-    KEEPS_SUBSETS_INTACT = True
-
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if ann.type == AnnotationType.polygon:
@@ -270,7 +272,10 @@ class PolygonsToMasks(ItemTransform, CliPlugin):
                 annotations.append(self.convert_polygon(ann, h, w))
             else:
                 annotations.append(ann)
+        return annotations
 
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
@@ -288,9 +293,7 @@ class PolygonsToMasks(ItemTransform, CliPlugin):
 
 
 class BoxesToMasks(ItemTransform, CliPlugin):
-    KEEPS_SUBSETS_INTACT = True
-
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if ann.type == AnnotationType.bbox:
@@ -300,7 +303,10 @@ class BoxesToMasks(ItemTransform, CliPlugin):
                 annotations.append(self.convert_bbox(ann, h, w))
             else:
                 annotations.append(ann)
+        return annotations
 
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
@@ -318,9 +324,7 @@ class BoxesToMasks(ItemTransform, CliPlugin):
 
 
 class MasksToPolygons(ItemTransform, CliPlugin):
-    KEEPS_SUBSETS_INTACT = True
-
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if ann.type == AnnotationType.mask:
@@ -334,7 +338,10 @@ class MasksToPolygons(ItemTransform, CliPlugin):
                 annotations.extend(polygons)
             else:
                 annotations.append(ann)
+        return annotations
 
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
@@ -355,9 +362,7 @@ class MasksToPolygons(ItemTransform, CliPlugin):
 
 
 class ShapesToBoxes(ItemTransform, CliPlugin):
-    KEEPS_SUBSETS_INTACT = True
-
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if ann.type in {
@@ -369,7 +374,10 @@ class ShapesToBoxes(ItemTransform, CliPlugin):
                 annotations.append(self.convert_shape(ann))
             else:
                 annotations.append(ann)
+        return annotations
 
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return self.wrap_item(item, annotations=annotations)
 
     @staticmethod
@@ -541,17 +549,17 @@ class RandomSplit(Transform, CliPlugin):
 
 class IdFromImageName(ItemTransform, CliPlugin):
     """
-    Renames items in the dataset using image file name (without extension).
+    Renames items in the dataset using media file name (without extension).
     """
 
-    KEEPS_SUBSETS_INTACT = True
-
     def transform_item(self, item):
-        if isinstance(item.media, Image) and item.media.path:
+        if isinstance(item.media, Image) and hasattr(item.media, "path"):
             name = osp.splitext(osp.basename(item.media.path))[0]
+            if isinstance(item.media, VideoFrame):
+                name += f"_frame-{item.media.index}"
             return self.wrap_item(item, id=name)
         else:
-            log.debug("Can't change item id for item '%s': " "item has no image info" % item.id)
+            log.debug("Can't change item id for item '%s': " "item has no path info" % item.id)
             return item
 
 
@@ -582,7 +590,6 @@ class Rename(ItemTransform, CliPlugin):
 
     |s|s|s|srename -e '|frame_(\d+)_extra|{item.subset}_id_\1|'
     """
-    KEEPS_SUBSETS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -642,8 +649,6 @@ class RemapLabels(ItemTransform, CliPlugin):
 
     |s|s|s|s%(prog)s -l person:car -l bus:bus -l cat:dog --default delete
     """
-
-    KEEPS_SUBSETS_INTACT = True
 
     class DefaultAction(Enum):
         keep = auto()
@@ -764,7 +769,7 @@ class RemapLabels(ItemTransform, CliPlugin):
     def categories(self):
         return self._categories
 
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if getattr(ann, "label", None) is not None:
@@ -773,6 +778,10 @@ class RemapLabels(ItemTransform, CliPlugin):
                     annotations.append(ann.wrap(label=conv_label))
             elif self._default_action is self.DefaultAction.keep:
                 annotations.append(ann.wrap())
+        return annotations
+
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return item.wrap(annotations=annotations)
 
 
@@ -782,8 +791,6 @@ class UpdateInfos(Transform, CliPlugin):
     It's possible to add metadata of a dataset, such as author, comments, or related papers.
     Infos values do not affect the dataset structure, so any metadata can be added freely.
     """
-
-    KEEPS_SUBSETS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -850,8 +857,6 @@ class ProjectLabels(ItemTransform):
 
     |s|s|s|s%(prog)s -l person -l cat -l dog
     """
-
-    KEEPS_SUBSETS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -957,7 +962,7 @@ class ProjectLabels(ItemTransform):
     def categories(self) -> CategoriesInfo:
         return self._categories
 
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = []
         for ann in item.annotations:
             if getattr(ann, "label", None) is not None:
@@ -966,6 +971,10 @@ class ProjectLabels(ItemTransform):
                     annotations.append(ann.wrap(label=conv_label))
             else:
                 annotations.append(ann.wrap())
+        return annotations
+
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return item.wrap(annotations=annotations)
 
 
@@ -975,14 +984,15 @@ class AnnsToLabels(ItemTransform, CliPlugin):
     transforms them into a set of annotations of type Label
     """
 
-    KEEPS_SUBSETS_INTACT = True
-
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         labels = set(p.label for p in item.annotations if getattr(p, "label") is not None)
         annotations = []
         for label in labels:
             annotations.append(Label(label=label))
+        return annotations
 
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return item.wrap(annotations=annotations)
 
 
@@ -991,9 +1001,7 @@ class BboxValuesDecrement(ItemTransform, CliPlugin):
     Subtracts one from the coordinates of bounding boxes
     """
 
-    KEEPS_SUBSETS_INTACT = True
-
-    def transform_item(self, item):
+    def _convert_annotations(self, item: DatasetItem) -> list[Annotation]:
         annotations = [p for p in item.annotations if p.type != AnnotationType.bbox]
         bboxes = [p for p in item.annotations if p.type == AnnotationType.bbox]
         for bbox in bboxes:
@@ -1007,7 +1015,10 @@ class BboxValuesDecrement(ItemTransform, CliPlugin):
                     attributes=bbox.attributes,
                 )
             )
+        return annotations
 
+    def transform_item(self, item):
+        annotations = lambda: self._convert_annotations(item)
         return item.wrap(annotations=annotations)
 
 
@@ -1029,8 +1040,6 @@ class ResizeTransform(ItemTransform):
 
         |s|s%(prog)s -sx 2 -sy 2
     """
-
-    KEEPS_SUBSETS_INTACT = True
 
     @classmethod
     def build_cmdline_parser(cls, **kwargs):
@@ -1126,6 +1135,12 @@ class ResizeTransform(ItemTransform):
         if item.media.has_data:
             resized_image = self._lazy_resize_image(item.media, new_size)
 
+        resized_annotations = lambda: self._resize_annotations(item, xscale, yscale, new_size)
+        return self.wrap_item(item, media=resized_image, annotations=resized_annotations)
+
+    def _resize_annotations(
+        self, item: DatasetItem, xscale: float, yscale: float, new_size: Tuple[int, int]
+    ):
         resized_annotations = []
         for ann in item.annotations:
             if isinstance(ann, Bbox):
@@ -1157,8 +1172,7 @@ class ResizeTransform(ItemTransform):
                 resized_annotations.append(ann)
             else:
                 assert False, f"Unexpected annotation type {type(ann)}"
-
-        return self.wrap_item(item, media=resized_image, annotations=resized_annotations)
+        return resized_annotations
 
 
 class RemoveItems(ItemTransform):
@@ -1221,8 +1235,6 @@ class RemoveAnnotations(ItemTransform):
         |s|s%(prog)s --id 'image1:train' --id 'image2:test'
     """
 
-    KEEPS_SUBSETS_INTACT = True
-
     @staticmethod
     def _parse_id(s):
         full_id = s.split(":")
@@ -1277,8 +1289,6 @@ class RemoveAttributes(ItemTransform):
         |s|s%(prog)s --id '2010_001705:train' --attr 'occluded'
     """
 
-    KEEPS_SUBSETS_INTACT = True
-
     @staticmethod
     def _parse_id(s):
         full_id = s.split(":")
@@ -1328,11 +1338,14 @@ class RemoveAttributes(ItemTransform):
 
     def transform_item(self, item):
         if not self._ids or (item.id, item.subset) in self._ids:
-            filtered_annotations = []
-            for ann in item.annotations:
-                filtered_annotations.append(ann.wrap(attributes=self._filter_attrs(ann.attributes)))
+
+            def filter_annotations():
+                return [
+                    ann.wrap(attributes=self._filter_attrs(ann.attributes))
+                    for ann in item.annotations
+                ]
 
             return item.wrap(
-                attributes=self._filter_attrs(item.attributes), annotations=filtered_annotations
+                attributes=self._filter_attrs(item.attributes), annotations=filter_annotations
             )
         return item

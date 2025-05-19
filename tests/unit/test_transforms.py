@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import logging as log
 from unittest import TestCase
 

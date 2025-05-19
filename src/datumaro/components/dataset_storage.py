@@ -483,6 +483,9 @@ class DatasetStorage(IDataset):
         id = str(id)
         subset = subset or DEFAULT_SUBSET_NAME
 
+        if self._source is not None and self._source.is_stream and not self.is_cache_initialized():
+            self.init_cache()
+
         item = self._storage.get(id, subset)
         if item is None and not self.is_cache_initialized():
             if self._source.get.__func__ == DatasetBase.get:
@@ -703,22 +706,17 @@ class StreamDatasetStorage(DatasetStorage):
         log.debug("This function has no effect on streaming.")
         pass
 
-    def _apply_stacked_transform(self, source: IDataset):
+    @property
+    def stacked_transform(self) -> IDataset:
         if self._transforms:
             transform = _StackedTransform(
-                source,
+                self._source,
                 self._transforms,
                 raise_on_malformed_transform=self._raise_on_malformed_transform,
             )
             self._drop_malformed_transforms(transform.malformed_transform_indices)
         else:
-            transform = source
-
-        return transform
-
-    @property
-    def stacked_transform(self) -> IDataset:
-        transform = self._apply_stacked_transform(self._source)
+            transform = self._source
 
         self._flush_changes = True
         return transform
@@ -727,14 +725,15 @@ class StreamDatasetStorage(DatasetStorage):
         for item in self.stacked_transform:
             yield item
 
-            for ann in item.annotations:
-                if ann.type == AnnotationType.hash_key:
-                    continue
-                self._ann_types.add(ann.type)
+            if item.annotations_are_initialized:
+                for ann in item.annotations:
+                    if ann.type == AnnotationType.hash_key:
+                        continue
+                    self._ann_types.add(ann.type)
 
     def __len__(self) -> int:
         if self._length is None:
-            self._length = len(self._source)
+            self._length = sum(1 for _ in self)
         return self._length
 
     def put(self, item: DatasetItem) -> None:
@@ -750,27 +749,18 @@ class StreamDatasetStorage(DatasetStorage):
         raise NotAvailableError("Drop-in removal is not allowed in streaming.")
 
     def get_subset(self, name: str) -> IDataset:
-        if all(t[0].KEEPS_SUBSETS_INTACT for t in self._transforms):
-            transformed_subset = self._apply_stacked_transform(self._source.get_subset(name))
-            if transformed_subset.is_stream:
-                return StreamSubset(transformed_subset, name)
-
-        return StreamSubset(self, name)
+        return self.subsets()[name]
 
     @property
     def subset_names(self):
-        if any(
-            id(t) not in self._transform_ids_for_latest_subset_names
-            and not t[0].KEEPS_SUBSETS_INTACT
-            for t in self._transforms
-        ):
+        if self._transform_ids_for_latest_subset_names != [id(t) for t in self._transforms]:
             self._subset_names = {item.subset for item in self}
             self._transform_ids_for_latest_subset_names = [id(t) for t in self._transforms]
 
         return self._subset_names
 
     def subsets(self) -> Dict[str, IDataset]:
-        return {subset: self.get_subset(subset) for subset in self.subset_names}
+        return {subset: StreamSubset(self, subset) for subset in self.subset_names}
 
     def transform(self, method: Type[Transform], *args, **kwargs) -> None:
         super().transform(method, *args, **kwargs)

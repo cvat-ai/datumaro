@@ -72,7 +72,7 @@ from datumaro.util.scope import on_error_do, scoped
 
 DEFAULT_FORMAT = "datumaro"
 
-__all__ = ["Dataset", "eager_mode"]
+__all__ = ["Dataset", "StreamDataset", "eager_mode"]
 
 
 class DatasetSubset(IDataset):  # non-owning view
@@ -132,10 +132,15 @@ class DatasetSubset(IDataset):  # non-owning view
         return sum(t["count"] for t in annotations_by_type.values())
 
     def as_dataset(self) -> Dataset:
-        dataset = Dataset.from_extractors(self, env=self.parent.env)
+        dataset_cls = StreamDataset if self.is_stream else Dataset
+        dataset = dataset_cls.from_extractors(self, env=self.parent.env)
         dataset._format = self.parent._format
         dataset._source_path = self.parent._source_path
         return dataset
+
+    @property
+    def is_stream(self) -> bool:
+        return self.parent.is_stream
 
 
 class Dataset(IDataset):

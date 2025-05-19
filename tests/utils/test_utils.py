@@ -18,7 +18,7 @@ import pytest
 from typing_extensions import Literal
 
 from datumaro.components.annotation import Annotation, AnnotationType, Points
-from datumaro.components.dataset import Dataset, IDataset
+from datumaro.components.dataset import Dataset, IDataset, StreamDataset
 from datumaro.components.media import Image, MultiframeImage, PointCloud
 from datumaro.util import current_function_name, filter_dict, find
 from datumaro.util.os_util import rmfile, rmtree
@@ -283,7 +283,8 @@ def check_save_and_load(
 
     if importer_args is None:
         importer_args = {}
-    parsed_dataset = Dataset.import_from(test_dir, importer, **importer_args)
+    dataset_cls = StreamDataset if stream else Dataset
+    parsed_dataset = dataset_cls.import_from(test_dir, importer, **importer_args)
 
     if target_dataset is None:
         target_dataset = source_dataset

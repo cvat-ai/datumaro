@@ -434,11 +434,16 @@ class _InstancesExporter(_TaskExporter):
             if isinstance(data, np.ndarray):
                 if target_type is int and np.issubdtype(data.dtype, np.integer):
                     return data
-                if target_type is float and (
+                elif target_type is float and (
                     np.issubdtype(data.dtype, np.integer) or np.issubdtype(data.dtype, np.floating)
                 ):
                     return data
-            return list(target_type(c) for c in data)
+                # TODO make sure that ndarrays dont need any type transformations and remove
+                assert False
+
+            # TODO make sure that there are no other types and remove
+            assert isinstance(data, (list, tuple))
+            return list(map(target_type, c) for c in data)
 
         is_crowd = mask is not None
         if is_crowd:

@@ -34,7 +34,6 @@ from datumaro.components.errors import (
     DatasetImportError,
     DatasetNotFoundError,
     InvalidAnnotationError,
-    ItemImportError,
     UndeclaredLabelError,
 )
 from datumaro.components.format_detection import FormatDetectionContext, FormatRequirementsUnmet
@@ -1142,6 +1141,13 @@ class YoloImporterTest(CompareDatasetMixin):
     IMPORTER = YoloImporter
     ASSETS = ["yolo"]
 
+    def test_can_find_sources_in_subfolder(self, test_dir):
+        subfolder_path = osp.join(test_dir, "subfolder")
+        shutil.copytree(get_test_asset_path("yolo_dataset", self.ASSETS[0]), subfolder_path)
+        sources = self.IMPORTER()(test_dir)
+        assert len(sources) == 1
+        assert subfolder_path in sources[0]["url"]
+
     def test_can_detect(self):
         dataset_dir = get_test_asset_path("yolo_dataset", "yolo")
         detected_formats = Environment().detect_dataset(dataset_dir)
@@ -1469,6 +1475,14 @@ class YoloUltralyticsPoseImporterTest(YoloUltralyticsDetectionImporterTest):
 class YoloUltralyticsClassificationImporterTest(YoloImporterTest):
     IMPORTER = YoloUltralyticsClassificationImporter
     ASSETS = ["yolo_ultralytics_classification"]
+
+    def test_can_find_sources_in_subfolder(self, test_dir):
+        subfolder_path = osp.join(test_dir, "subfolder")
+        shutil.copytree(get_test_asset_path("yolo_dataset", self.ASSETS[0]), subfolder_path)
+        open(osp.join(subfolder_path, "random.file"), "w").close()
+        sources = self.IMPORTER()(test_dir)
+        assert len(sources) == 1
+        assert subfolder_path in sources[0]["url"]
 
     def test_can_detect(self):
         dataset_dir = get_test_asset_path("yolo_dataset", "yolo_ultralytics_classification")

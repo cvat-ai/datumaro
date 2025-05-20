@@ -430,7 +430,7 @@ class _InstancesExporter(_TaskExporter):
     def convert_instance(self, instance, item) -> Optional[Dict]:
         ann, polygons, mask, bbox = instance
 
-        def ensure_typed_list(data, target_type):
+        def ensure_typed_collection(data, target_type):
             if isinstance(data, np.ndarray):
                 if target_type is int and np.issubdtype(data.dtype, np.integer):
                     return data
@@ -438,21 +438,16 @@ class _InstancesExporter(_TaskExporter):
                     np.issubdtype(data.dtype, np.integer) or np.issubdtype(data.dtype, np.floating)
                 ):
                     return data
-                # TODO make sure that ndarrays dont need any type transformations and remove
-                assert False
-
-            # TODO make sure that there are no other types and remove
-            assert isinstance(data, (list, tuple))
-            return list(map(target_type, data))
+            return [target_type(v) for v in data]
 
         is_crowd = mask is not None
         if is_crowd:
             segmentation = {
-                "counts": ensure_typed_list(mask["counts"], int),
-                "size": ensure_typed_list(mask["size"], int),
+                "counts": ensure_typed_collection(mask["counts"], int),
+                "size": ensure_typed_collection(mask["size"], int),
             }
         else:
-            segmentation = [ensure_typed_list(p, float) for p in polygons]
+            segmentation = [ensure_typed_collection(p, float) for p in polygons]
 
         area = 0
         if segmentation:

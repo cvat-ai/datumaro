@@ -443,7 +443,7 @@ class _InstancesExporter(_TaskExporter):
 
             # TODO make sure that there are no other types and remove
             assert isinstance(data, (list, tuple))
-            return list(map(target_type, c) for c in data)
+            return list(map(target_type, data))
 
         is_crowd = mask is not None
         if is_crowd:

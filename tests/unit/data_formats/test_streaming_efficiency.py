@@ -162,7 +162,7 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
 
         for item in parsed_dataset:
             # annotations are not parsed if we do not access them
-            assert not item.annotations_are_initialized or item.annotations == []
+            assert not item.annotations_are_initialized
 
             # annotations are parsed if we access them
             assert isinstance(item.annotations, Annotations)
@@ -187,7 +187,7 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
             assert subset.is_stream
             for item in subset:
                 # annotations are not parsed if we do not access them
-                assert not item.annotations_are_initialized or item.annotations == []
+                assert not item.annotations_are_initialized
                 # annotations are parsed if we access them
                 assert isinstance(item.annotations, Annotations)
                 assert item.annotations_are_initialized

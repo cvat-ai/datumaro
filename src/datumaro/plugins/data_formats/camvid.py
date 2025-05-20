@@ -221,7 +221,9 @@ class CamvidBase(SubsetBase):
                 item_id = osp.splitext(osp.join(*image.split("/")[2:]))[0]
                 image_path = osp.join(self._dataset_dir, image.lstrip("/"))
 
-                def parse_annotations(mask_path: str) -> list[Annotation]:
+                def parse_annotations(mask_path: Optional[str]) -> list[Annotation]:
+                    if mask_path is None:
+                        return []
                     item_annotations = []
                     gt_path = osp.join(self._dataset_dir, mask_path)
                     mask = lazy_mask(
@@ -247,7 +249,7 @@ class CamvidBase(SubsetBase):
                     id=item_id,
                     subset=self._subset,
                     media=Image.from_file(path=image_path),
-                    annotations=[] if gt is None else partial(parse_annotations, gt),
+                    annotations=partial(parse_annotations, gt),
                 )
 
     def __len__(self):

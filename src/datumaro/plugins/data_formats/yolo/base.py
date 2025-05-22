@@ -119,7 +119,8 @@ class _YoloBase(SubsetBase):
 
         if isinstance(item, str):
             try:
-                image_size = self._image_info.get(item_id)
+                image_info_key = os.path.join(subset_name, f"{item_id}{os.path.splitext(item)[1]}")
+                image_size = self._image_info.get(image_info_key)
                 image_path = osp.join(self._path, item)
 
                 image = Image.from_file(path=image_path, size=image_size)
@@ -467,14 +468,29 @@ class YoloUltralyticsDetectionBase(YoloBase):
                 yield from super()._get_subset_image_paths(subset_name)
             else:
                 path = osp.join(self._path, self.localize_path(subset_images_source))
-                if not osp.isdir(path):
-                    raise InvalidAnnotationError(f"Can't find '{subset_name}' subset image folder")
-                yield from (
-                    osp.relpath(osp.join(root, file), self._path)
-                    for root, dirs, files in os.walk(path)
-                    for file in files
-                    if osp.isfile(osp.join(root, file))
-                )
+
+                image_paths = []
+                if osp.isdir(path):
+                    image_paths = [
+                        osp.relpath(osp.join(root, file), self._path)
+                        for root, dirs, files in os.walk(path)
+                        for file in files
+                        if osp.isfile(osp.join(root, file))
+                    ]
+                if not image_paths and self._image_info:
+                    image_paths = [
+                        osp.relpath(osp.join(path, image_path), self._path)
+                        for image in self._image_info
+                        for image_subset_name, image_path in [image.split(osp.sep, 1)]
+                        if image_subset_name == subset_name
+                    ]
+
+                if not image_paths:
+                    raise InvalidAnnotationError(
+                        f"Can't find images for subset '{subset_name}' in {subset_images_source}"
+                    )
+
+                yield from image_paths
         else:
             yield from subset_images_source
 

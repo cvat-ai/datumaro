@@ -119,7 +119,7 @@ class _YoloBase(SubsetBase):
 
         if isinstance(item, str):
             try:
-                image_info_key = os.path.join(subset_name, f"{item_id}{os.path.splitext(item)[1]}")
+                image_info_key = f"{item_id}{os.path.splitext(item)[1]}"
                 image_size = self._image_info.get(image_info_key)
                 image_path = osp.join(self._path, item)
 
@@ -479,10 +479,10 @@ class YoloUltralyticsDetectionBase(YoloBase):
                     ]
                 if not image_paths and self._image_info:
                     image_paths = [
-                        osp.relpath(osp.join(path, image_path), self._path)
-                        for image in self._image_info
-                        for image_subset_name, image_path in [image.split(osp.sep, 1)]
-                        if image_subset_name == subset_name
+                        osp.relpath(full_image_path, self._path)
+                        for image_path in self._image_info
+                        for full_image_path in [osp.join(path, image_path)]
+                        if osp.exists(self._get_labels_path_from_image_path(full_image_path))
                     ]
 
                 if not image_paths:

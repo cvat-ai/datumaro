@@ -233,7 +233,7 @@ class YoloExporterTest(CompareDatasetMixin):
             shutil.rmtree(osp.join(test_dir, "images"))
 
         parsed_dataset = Dataset.import_from(
-            test_dir, self.IMPORTER.NAME, image_info={"1.jpg": (10, 15)}
+            test_dir, self.IMPORTER.NAME, image_info={list(source_dataset)[0].id: (10, 15)}
         )
         self.compare_datasets(source_dataset, parsed_dataset)
 
@@ -667,7 +667,7 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
             yaml.dump(data, f)
 
         parsed_dataset = Dataset.import_from(
-            test_dir, self.IMPORTER.NAME, image_info={"1.jpg": (10, 15)}
+            test_dir, self.IMPORTER.NAME, image_info={list(source_dataset)[0].id: (10, 15)}
         )
         self.compare_datasets(source_dataset, parsed_dataset)
 

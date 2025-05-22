@@ -119,8 +119,7 @@ class _YoloBase(SubsetBase):
 
         if isinstance(item, str):
             try:
-                image_info_key = f"{item_id}{os.path.splitext(item)[1]}"
-                image_size = self._image_info.get(image_info_key)
+                image_size = self._image_info.get(item_id)
                 image_path = osp.join(self._path, item)
 
                 image = Image.from_file(path=image_path, size=image_size)
@@ -481,7 +480,7 @@ class YoloUltralyticsDetectionBase(YoloBase):
                     image_paths = [
                         osp.relpath(full_image_path, self._path)
                         for image_path in self._image_info
-                        for full_image_path in [osp.join(path, image_path)]
+                        for full_image_path in [osp.join(path, f"{image_path}.bmp")]
                         if osp.exists(self._get_labels_path_from_image_path(full_image_path))
                     ]
 

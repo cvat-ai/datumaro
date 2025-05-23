@@ -514,7 +514,7 @@ class StreamJsonReader(JsonReader):
             item = self._parse_item(item_desc)
             yield item
 
-            if item is not None:
+            if item is not None and item.annotations_are_initialized:
                 for ann in item.annotations:
                     ann_types.add(ann.type)
         self.ann_types = ann_types

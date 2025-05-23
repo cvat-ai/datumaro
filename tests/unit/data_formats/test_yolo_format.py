@@ -656,8 +656,8 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
         self.CONVERTER.convert(source_dataset, test_dir)
 
         image_folder = osp.join(test_dir, "images")
-        if osp.exists(image_folder):
-            shutil.rmtree(osp.join(test_dir, "images"))
+        shutil.rmtree(image_folder)
+        os.makedirs(osp.join(image_folder, "train"))
 
         data_path = osp.join(test_dir, "data.yaml")
         with open(data_path, "r", encoding="utf-8") as f:
@@ -1739,7 +1739,7 @@ class YoloUltralyticsDetectionExtractorTest(YoloExtractorTest):
         with pytest.raises(DatasetImportError) as capture:
             Dataset.import_from(dataset_path, self.IMPORTER.NAME).init_cache()
         assert isinstance(capture.value.__cause__, InvalidAnnotationError)
-        assert "Can't find images for subset 'train'" in str(capture.value.__cause__)
+        assert "subset image folder" in str(capture.value.__cause__)
 
     def test_can_report_missing_ann_file(self, test_dir):
         # YoloUltralytics does not require annotation files

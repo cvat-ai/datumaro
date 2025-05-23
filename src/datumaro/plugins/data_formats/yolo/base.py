@@ -467,7 +467,6 @@ class YoloUltralyticsDetectionBase(YoloBase):
                 yield from super()._get_subset_image_paths(subset_name)
             else:
                 path = osp.join(self._path, self.localize_path(subset_images_source))
-
                 if not osp.isdir(path):
                     raise InvalidAnnotationError(f"Can't find '{subset_name}' subset image folder")
 

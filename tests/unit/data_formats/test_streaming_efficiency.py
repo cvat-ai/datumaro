@@ -160,25 +160,27 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
         else:
             assert init_counter.count == 0
 
-        for item in parsed_dataset:
-            # annotations are not parsed if we do not access them
-            assert not item.annotations_are_initialized
+        # annotations are not parsed if we do not access them
+        items = list(iter(parsed_dataset))
+        assert all(not item.annotations_are_initialized for item in items)
+        del items
 
+        for item in parsed_dataset:
             # annotations are parsed if we access them
             assert isinstance(item.annotations, Annotations)
             assert item.annotations_are_initialized
 
-        assert init_counter.count == len(fxt_dataset)
+        assert init_counter.count == len(fxt_dataset) * 2
 
         # inits again on iteration, i.e. does not cache items
         for _ in parsed_dataset:
             pass
-        assert init_counter.count == len(fxt_dataset) * 2
+        assert init_counter.count == len(fxt_dataset) * 3
 
         # subset list can be accessed without making extra item iterations
         for _ in parsed_dataset.subsets().values():
             pass
-        assert init_counter.count == len(fxt_dataset) * 2
+        assert init_counter.count == len(fxt_dataset) * 3
 
         # subset access DOES ITERATE over ALL items in the dataset,
         # though item annotations and media data are not parsed before access
@@ -192,4 +194,4 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
                 assert isinstance(item.annotations, Annotations)
                 assert item.annotations_are_initialized
 
-        assert init_counter.count == len(fxt_dataset) * (2 + len(parsed_dataset.subsets()))
+        assert init_counter.count == len(fxt_dataset) * (3 + len(parsed_dataset.subsets()))

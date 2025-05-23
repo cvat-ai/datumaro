@@ -308,8 +308,9 @@ class _CocoBase(SubsetBase):
 
             yield item
             length += 1
-            for ann in item.annotations:
-                self._ann_types.add(ann.type)
+            if item.annotations_are_initialized:
+                for ann in item.annotations:
+                    self._ann_types.add(ann.type)
 
         self._length = length
 

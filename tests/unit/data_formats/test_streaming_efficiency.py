@@ -37,11 +37,7 @@ class DummyStreamingExtractor(DatasetBase):
             # before yielded, references are only here
             assert sys.getrefcount(item) == 2
 
-            # after yielded, there are more references (e.g. where it's yielded from)
-            # number of references doesn't have to increase in general,
-            # but it should due to how our code works
             yield item
-            assert sys.getrefcount(item) > 2
 
             # after next item yielded, ref count is 2 again - i.e. item was not saved anywhere
             yield DatasetItem(
@@ -182,7 +178,7 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
             pass
         assert init_counter.count == len(fxt_dataset) * 3
 
-        # subset access DOES ITERATE over ALL items in the dataset,
+        # subset access only iterates relevant items
         # though item annotations and media data are not parsed before access
         # (depending on the extractor support)
         for subset in parsed_dataset.subsets().values():
@@ -194,4 +190,4 @@ def test_streaming_importers(test_dir, export_format, fxt_dataset):
                 assert isinstance(item.annotations, Annotations)
                 assert item.annotations_are_initialized
 
-        assert init_counter.count == len(fxt_dataset) * (3 + len(parsed_dataset.subsets()))
+        assert init_counter.count == len(fxt_dataset) * 4

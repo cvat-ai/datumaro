@@ -227,6 +227,11 @@ class YoloExporterTest(CompareDatasetMixin):
         )
 
         self.CONVERTER.convert(source_dataset, test_dir)
+
+        image_folder = osp.join(test_dir, "images")
+        if osp.exists(image_folder):
+            shutil.rmtree(osp.join(test_dir, "images"))
+
         parsed_dataset = Dataset.import_from(
             test_dir, self.IMPORTER.NAME, image_info={list(source_dataset)[0].id: (10, 15)}
         )
@@ -636,6 +641,35 @@ class YoloUltralyticsDetectionExporterTest(YoloExporterTest):
 
         parsed_dataset = Dataset.import_from(test_dir, self.IMPORTER.NAME)
         self.compare_datasets(expected_dataset, parsed_dataset)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_load_dataset_with_exact_image_info_folder_in_datayaml(self, test_dir):
+        source_dataset = self._generate_random_dataset(
+            [
+                {
+                    "annotations": 2,
+                    "media": Image.from_file(path="1.jpg", size=(10, 15)),
+                },
+            ]
+        )
+
+        self.CONVERTER.convert(source_dataset, test_dir)
+
+        image_folder = osp.join(test_dir, "images")
+        shutil.rmtree(image_folder)
+        os.makedirs(osp.join(image_folder, "train"))
+
+        data_path = osp.join(test_dir, "data.yaml")
+        with open(data_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        data["train"] = osp.join("images", "train")
+        with open(data_path, "w", encoding="utf-8") as f:
+            yaml.dump(data, f)
+
+        parsed_dataset = Dataset.import_from(
+            test_dir, self.IMPORTER.NAME, image_info={list(source_dataset)[0].id: (10, 15)}
+        )
+        self.compare_datasets(source_dataset, parsed_dataset)
 
 
 class YoloUltralyticsSegmentationExporterTest(YoloUltralyticsDetectionExporterTest):

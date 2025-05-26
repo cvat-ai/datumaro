@@ -749,6 +749,8 @@ class StreamDatasetStorage(DatasetStorage):
                     nonlocal keeps_subsets_intact
                     for item in self._source:
                         transformed_item = stacked_transform.transform_item(item)
+                        if transformed_item is None:
+                            continue
                         if item.subset != transformed_item.subset:
                             keeps_subsets_intact = False
                         yield transformed_item

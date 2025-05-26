@@ -628,7 +628,7 @@ class DatasetStorage(IDataset):
 
 
 class StreamSubset(IDataset):
-    def __init__(self, source: IDataset, subset: str) -> None:
+    def __init__(self, source: "StreamDatasetStorage", subset: str) -> None:
         if not source.is_stream:
             raise ValueError("source should be a stream.")
         self._source = source
@@ -636,7 +636,13 @@ class StreamSubset(IDataset):
         self._length = None
 
     def __iter__(self) -> Iterator[DatasetItem]:
-        for item in self._source:
+        if self._source._keeps_subsets_intact:
+            source = self._source._apply_stacked_transform(
+                self._source._source.get_subset(self._subset)
+            )
+        else:
+            source = self._source
+        for item in source:
             if item.subset == self._subset:
                 yield item
 
@@ -697,6 +703,7 @@ class StreamDatasetStorage(DatasetStorage):
             ann_types=ann_types,
             raise_on_malformed_transform=raise_on_malformed_transform,
         )
+        self._keeps_subsets_intact = True
 
     def is_cache_initialized(self) -> bool:
         log.debug("This function has no effect on streaming.")
@@ -706,23 +713,49 @@ class StreamDatasetStorage(DatasetStorage):
         log.debug("This function has no effect on streaming.")
         pass
 
-    @property
-    def stacked_transform(self) -> IDataset:
+    def _apply_stacked_transform(self, source: IDataset):
         if self._transforms:
             transform = _StackedTransform(
-                self._source,
+                source,
                 self._transforms,
                 raise_on_malformed_transform=self._raise_on_malformed_transform,
             )
             self._drop_malformed_transforms(transform.malformed_transform_indices)
         else:
-            transform = self._source
+            transform = source
+
+        return transform
+
+    @property
+    def stacked_transform(self) -> IDataset:
+        transform = self._apply_stacked_transform(self._source)
 
         self._flush_changes = True
         return transform
 
     def __iter__(self) -> Iterator[DatasetItem]:
-        for item in self.stacked_transform:
+        item_generator = stacked_transform = self.stacked_transform
+        keeps_subsets_intact = self._keeps_subsets_intact
+
+        if keeps_subsets_intact is None:
+            if not isinstance(stacked_transform, _StackedTransform):
+                keeps_subsets_intact = True
+            elif not stacked_transform.is_local:
+                keeps_subsets_intact = False
+            else:
+                keeps_subsets_intact = True
+
+                def _item_generator():
+                    nonlocal keeps_subsets_intact
+                    for item in self._source:
+                        transformed_item = stacked_transform.transform_item(item)
+                        if item.subset != transformed_item.subset:
+                            keeps_subsets_intact = False
+                        yield transformed_item
+
+                item_generator = _item_generator()
+
+        for item in item_generator:
             yield item
 
             if item.annotations_are_initialized:
@@ -730,6 +763,8 @@ class StreamDatasetStorage(DatasetStorage):
                     if ann.type == AnnotationType.hash_key:
                         continue
                     self._ann_types.add(ann.type)
+
+        self._keeps_subsets_intact = keeps_subsets_intact
 
     def __len__(self) -> int:
         if self._length is None:
@@ -764,6 +799,7 @@ class StreamDatasetStorage(DatasetStorage):
 
     def transform(self, method: Type[Transform], *args, **kwargs) -> None:
         super().transform(method, *args, **kwargs)
+        self._keeps_subsets_intact = None if issubclass(method, ItemTransform) else False
 
     def get_annotated_items(self) -> int:
         return super().get_annotated_items()

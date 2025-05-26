@@ -694,7 +694,6 @@ class StreamDatasetStorage(DatasetStorage):
         if not source.is_stream:
             raise ValueError("source should be a stream.")
         self._subset_names = list(source.subsets().keys())
-        self._transform_ids_for_latest_subset_names = []
         super().__init__(
             source=source,
             infos=infos,
@@ -734,30 +733,7 @@ class StreamDatasetStorage(DatasetStorage):
         return transform
 
     def __iter__(self) -> Iterator[DatasetItem]:
-        item_generator = stacked_transform = self.stacked_transform
-        keeps_subsets_intact = self._keeps_subsets_intact
-
-        if keeps_subsets_intact is None:
-            if not isinstance(stacked_transform, _StackedTransform):
-                keeps_subsets_intact = True
-            elif not stacked_transform.is_local:
-                keeps_subsets_intact = False
-            else:
-                keeps_subsets_intact = True
-
-                def _item_generator():
-                    nonlocal keeps_subsets_intact
-                    for item in self._source:
-                        transformed_item = stacked_transform.transform_item(item)
-                        if transformed_item is None:
-                            continue
-                        if item.subset != transformed_item.subset:
-                            keeps_subsets_intact = False
-                        yield transformed_item
-
-                item_generator = _item_generator()
-
-        for item in item_generator:
+        for item in self.stacked_transform:
             yield item
 
             if item.annotations_are_initialized:
@@ -765,8 +741,6 @@ class StreamDatasetStorage(DatasetStorage):
                     if ann.type == AnnotationType.hash_key:
                         continue
                     self._ann_types.add(ann.type)
-
-        self._keeps_subsets_intact = keeps_subsets_intact
 
     def __len__(self) -> int:
         if self._length is None:
@@ -788,11 +762,34 @@ class StreamDatasetStorage(DatasetStorage):
     def get_subset(self, name: str) -> IDataset:
         return self.subsets()[name]
 
+    def _collect_subset_names(self):
+        assert not self._keeps_subsets_intact
+
+        item_generator = stacked_transform = self.stacked_transform
+        assert isinstance(stacked_transform, _StackedTransform)
+
+        if not stacked_transform.is_local:
+            self._keeps_subsets_intact = False
+        else:
+            self._keeps_subsets_intact = True
+
+            def _item_generator():
+                for item in self._source:
+                    transformed_item = stacked_transform.transform_item(item)
+                    if transformed_item is None:
+                        continue
+                    if item.subset != transformed_item.subset:
+                        self._keeps_subsets_intact = False
+                    yield transformed_item
+
+            item_generator = _item_generator()
+
+        return {item.subset for item in item_generator}
+
     @property
     def subset_names(self):
-        if self._transform_ids_for_latest_subset_names != [id(t) for t in self._transforms]:
-            self._subset_names = {item.subset for item in self}
-            self._transform_ids_for_latest_subset_names = [id(t) for t in self._transforms]
+        if self._subset_names is None:
+            self._subset_names = self._collect_subset_names()
 
         return self._subset_names
 
@@ -802,6 +799,7 @@ class StreamDatasetStorage(DatasetStorage):
     def transform(self, method: Type[Transform], *args, **kwargs) -> None:
         super().transform(method, *args, **kwargs)
         self._keeps_subsets_intact = None if issubclass(method, ItemTransform) else False
+        self._subset_names = None
 
     def get_annotated_items(self) -> int:
         return super().get_annotated_items()

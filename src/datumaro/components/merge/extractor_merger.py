@@ -55,10 +55,7 @@ class ExtractorMerger(DatasetBase):
             subsets[source.subset] += [source]
             assert len(subsets[source.subset]) == 1
 
-        self._subsets = {
-            subset_name: sources[0]
-            for subset_name, sources in subsets.items()
-        }
+        self._subsets = {subset_name: sources[0] for subset_name, sources in subsets.items()}
 
     def infos(self) -> DatasetInfo:
         return self._infos

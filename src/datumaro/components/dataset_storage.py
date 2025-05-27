@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
+from __future__ import annotations
+
 import logging as log
 from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type, Union
 
@@ -628,7 +630,7 @@ class DatasetStorage(IDataset):
 
 
 class StreamSubset(IDataset):
-    def __init__(self, source: "StreamDatasetStorage", subset: str) -> None:
+    def __init__(self, source: StreamDatasetStorage, subset: str) -> None:
         if not source.is_stream:
             raise ValueError("source should be a stream.")
         self._source = source

@@ -8,7 +8,7 @@ import numpy as np
 
 import datumaro.plugins.data_formats.camvid as Camvid
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, MaskCategories
-from datumaro.components.dataset import Dataset
+from datumaro.components.dataset import Dataset, StreamDataset
 from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.media import Image
@@ -59,6 +59,8 @@ class TestExtractorBase(DatasetBase):
 
 
 class CamvidImportTest(TestCase):
+    DATASET_CLS = Dataset
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import(self):
         source_dataset = Dataset.from_iterable(
@@ -105,7 +107,7 @@ class CamvidImportTest(TestCase):
             categories=Camvid.make_camvid_categories(),
         )
 
-        parsed_dataset = Dataset.import_from(DUMMY_DATASET_DIR, "camvid")
+        parsed_dataset = self.DATASET_CLS.import_from(DUMMY_DATASET_DIR, "camvid")
 
         compare_datasets(self, source_dataset, parsed_dataset)
 
@@ -115,7 +117,13 @@ class CamvidImportTest(TestCase):
         self.assertEqual([CamvidImporter.NAME], detected_formats)
 
 
+class CamvidStreamingImportTest(CamvidImportTest):
+    DATASET_CLS = StreamDataset
+
+
 class CamvidExporterTest(TestCase):
+    STREAM = False
+
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def _test_save_and_load(
         self, source_dataset, converter, test_dir, target_dataset=None, importer_args=None, **kwargs
@@ -128,6 +136,7 @@ class CamvidExporterTest(TestCase):
             importer="camvid",
             target_dataset=target_dataset,
             importer_args=importer_args,
+            stream=self.STREAM,
             **kwargs,
         )
 
@@ -533,3 +542,7 @@ class CamvidExporterTest(TestCase):
                 target_dataset=DstExtractor(),
             )
             self.assertTrue(osp.isfile(osp.join(test_dir, "dataset_meta.json")))
+
+
+class CamvidStreamExporterTest(CamvidExporterTest):
+    STREAM = True

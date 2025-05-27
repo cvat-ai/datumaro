@@ -78,12 +78,8 @@ class ExtractorMerger(DatasetBase):
         return sum(len(subset) for subset in self._subsets.values())
 
     def get(self, id: str, subset: Optional[str] = None) -> Optional[DatasetItem]:
-        if subset is not None and (source := self._subsets.get(subset)):
+        if source := self._subsets.get(subset):
             if item := source.get(id, subset):
-                return item
-
-        for source in self._subsets.values():
-            if item := source.get(id=id, subset=source.subset):
                 return item
 
         return None

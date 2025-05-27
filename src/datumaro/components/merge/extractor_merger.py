@@ -29,10 +29,8 @@ def check_identicalness(seq: Sequence[T], raise_error_on_empty: bool = True) -> 
     return seq[0]
 
 
-class ExtractorConcatenator(SubsetBase):
-    """
-    A simple class to merge single-subset extractors with the same subset and no intersecting items
-    """
+class _ExtractorConcatenator(SubsetBase):
+    """A simple class to merge not-intersecting single-subset extractors with the same subset"""
 
     def __init__(
         self,
@@ -81,7 +79,7 @@ class ExtractorConcatenator(SubsetBase):
 
 
 class ExtractorMerger(DatasetBase):
-    """A simple class to merge single-subset extractors which do not have intersecting items."""
+    """A simple class to merge not-intersecting single-subset extractors."""
 
     def __init__(
         self,
@@ -106,7 +104,7 @@ class ExtractorMerger(DatasetBase):
             subsets[source.subset] += [source]
 
         self._subsets = {
-            subset_name: ExtractorConcatenator(sources) for subset_name, sources in subsets.items()
+            subset_name: _ExtractorConcatenator(sources) for subset_name, sources in subsets.items()
         }
 
     def infos(self) -> DatasetInfo:

@@ -25,7 +25,7 @@ from datumaro.components.contexts.importer import (
     ProgressReporter,
 )
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, StreamDataset, eager_mode
-from datumaro.components.dataset_base import DatasetBase, DatasetItem, SubsetBase
+from datumaro.components.dataset_base import DatasetBase, DatasetItem, IDataset, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
 from datumaro.components.environment import Environment
 from datumaro.components.errors import (
@@ -2463,14 +2463,14 @@ class StreamDatasetTest:
                         items_for_subsets[name][0], items_for_subsets[name][1], name
                     )
 
-        return SrcExtractor()
+        return SrcExtractor
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     @pytest.mark.parametrize(
         "items_for_subsets", [{"train": (1, 3)}, {"train": (1, 3), "val": (3, 6), "test": (9, 13)}]
     )
     def test_annotation_initializations(self, items_for_subsets):
-        extractor = self._make_extractor(items_for_subsets)
+        extractor = self._make_extractor(items_for_subsets)()
         dataset_length = len(extractor)
 
         dataset = StreamDataset.from_extractors(extractor)
@@ -2521,3 +2521,116 @@ class StreamDatasetTest:
             subset_dataset = dataset.get_subset(subset).as_dataset()
             len([item.annotations for item in subset_dataset])
         assert extractor.ann_init_counter == dataset_length * 3
+
+    @staticmethod
+    def _make_extractor_with_subset_access(items_for_subsets: Dict[str, Tuple[int, int]]):
+        class SrcExtractor(StreamDatasetTest._make_extractor(items_for_subsets)):
+            def __init__(self):
+                super().__init__()
+                self.item_iterated_count = 0
+
+            def __iter__(self):
+                for subset_name in items_for_subsets:
+                    yield from self.get_subset(subset_name)
+
+            def get_subset(self, name: str) -> IDataset:
+                assert name in items_for_subsets
+                parent = self
+
+                class _SubsetExtractor(SubsetBase):
+                    def __iter__(self):
+                        for item in super(SrcExtractor, parent).__iter__():
+                            if item.subset == name:
+                                yield item
+                                parent.item_iterated_count += 1
+
+                    @property
+                    def is_stream(self):
+                        return True
+
+                return _SubsetExtractor()
+
+        return SrcExtractor
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    @pytest.mark.parametrize(
+        "items_for_subsets", [{"train": (1, 3)}, {"train": (1, 3), "val": (3, 6), "test": (9, 13)}]
+    )
+    def test_item_iteration_count_no_transform(self, items_for_subsets):
+        extractor = self._make_extractor_with_subset_access(items_for_subsets)()
+        dataset_length = len(extractor)
+        extractor.item_iterated_count = 0
+        dataset = StreamDataset.from_extractors(extractor)
+
+        # no need to iterate items to get subsets
+        dataset.subsets()
+        assert extractor.item_iterated_count == 0
+
+        # accessing items through subsets only iterates relevant items
+        for subset in dataset.subsets():
+            subset_dataset = dataset.get_subset(subset).as_dataset()
+            for _ in subset_dataset:
+                pass
+        assert extractor.item_iterated_count == dataset_length
+
+        assert extractor.ann_init_counter == 0
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    @pytest.mark.parametrize(
+        "items_for_subsets", [{"train": (1, 3)}, {"train": (1, 3), "val": (3, 6), "test": (9, 13)}]
+    )
+    def test_item_iteration_count_item_transform(self, items_for_subsets):
+        extractor = self._make_extractor_with_subset_access(items_for_subsets)()
+        dataset_length = len(extractor)
+        extractor.item_iterated_count = 0
+        dataset = StreamDataset.from_extractors(extractor)
+
+        class TestTransform(ItemTransform):
+            def transform_item(self, item):
+                return item
+
+        dataset.transform(TestTransform)
+
+        # iterates items to collect subset names
+        dataset.subsets()
+        assert extractor.item_iterated_count == dataset_length
+        extractor.item_iterated_count = 0
+
+        # accessing items through subsets only iterates relevant items
+        for subset in dataset.subsets():
+            subset_dataset = dataset.get_subset(subset).as_dataset()
+            for _ in subset_dataset:
+                pass
+        assert extractor.item_iterated_count == dataset_length
+
+        assert extractor.ann_init_counter == 0
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    @pytest.mark.parametrize(
+        "items_for_subsets", [{"train": (1, 3)}, {"train": (1, 3), "val": (3, 6), "test": (9, 13)}]
+    )
+    def test_item_iteration_count_general_transform(self, items_for_subsets):
+        extractor = self._make_extractor_with_subset_access(items_for_subsets)()
+        dataset_length = len(extractor)
+        extractor.item_iterated_count = 0
+        dataset = StreamDataset.from_extractors(extractor)
+
+        class TestTransform(Transform):
+            def __iter__(self):
+                yield from self._extractor
+
+        dataset.transform(TestTransform)
+
+        # iterates items to collect subset names
+        dataset.subsets()
+        assert extractor.item_iterated_count == dataset_length
+        extractor.item_iterated_count = 0
+
+        # iterates ALL items to access subset items
+        for subset in dataset.subsets():
+            subset_dataset = dataset.get_subset(subset).as_dataset()
+            for _ in subset_dataset:
+                pass
+        assert extractor.item_iterated_count == dataset_length * len(items_for_subsets)
+
+        assert extractor.ann_init_counter == 0

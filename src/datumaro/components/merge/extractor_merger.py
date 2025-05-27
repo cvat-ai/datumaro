@@ -30,7 +30,7 @@ def check_identicalness(seq: Sequence[T], raise_error_on_empty: bool = True) -> 
 
 
 class ExtractorMerger(DatasetBase):
-    """A simple class to merge single-subset extractors."""
+    """A simple class to merge not-intersecting single-subset extractors."""
 
     def __init__(
         self,
@@ -50,9 +50,12 @@ class ExtractorMerger(DatasetBase):
 
         self._is_stream = check_identicalness([s.is_stream for s in sources])
 
-        self._subsets: Dict[str, List[SubsetBase]] = defaultdict(list)
+        subsets: Dict[str, List[SubsetBase]] = defaultdict(list)
         for source in sources:
-            self._subsets[source.subset] += [source]
+            subsets[source.subset] += [source]
+            assert len(subsets[source.subset]) == 1
+
+        self._subsets = {subset_name: sources[0] for subset_name, sources in subsets.items()}
 
     def infos(self) -> DatasetInfo:
         return self._infos
@@ -61,23 +64,23 @@ class ExtractorMerger(DatasetBase):
         return self._categories
 
     def __iter__(self) -> Iterator[DatasetItem]:
-        for sources in self._subsets.values():
-            for source in sources:
-                yield from source
+        for subset in self._subsets.values():
+            yield from subset
+
+    def get_subset(self, name: str):
+        if name not in self._subsets:
+            raise KeyError(
+                "Unknown subset '%s', available subsets: %s" % (name, set(self._subsets))
+            )
+        return self._subsets[name]
 
     def __len__(self) -> int:
-        return sum(len(source) for sources in self._subsets.values() for source in sources)
+        return sum(len(subset) for subset in self._subsets.values())
 
     def get(self, id: str, subset: Optional[str] = None) -> Optional[DatasetItem]:
-        if subset is not None and (sources := self._subsets.get(subset, [])):
-            for source in sources:
-                if item := source.get(id, subset):
-                    return item
-
-        for sources in self._subsets.values():
-            for source in sources:
-                if item := source.get(id=id, subset=source.subset):
-                    return item
+        if source := self._subsets.get(subset):
+            if item := source.get(id, subset):
+                return item
 
         return None
 

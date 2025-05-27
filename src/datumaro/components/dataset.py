@@ -254,7 +254,8 @@ class Dataset(IDataset):
         else:
             from datumaro.components.hl_ops import HLOps
 
-            return HLOps.merge(*sources, merge_policy=merge_policy)
+            merged = HLOps.merge(*sources, merge_policy=merge_policy)
+            return Dataset(source=merged, env=env)
 
         return dataset
 

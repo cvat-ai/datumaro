@@ -571,7 +571,7 @@ class _KeypointsExporter(_InstancesExporter):
         if any(element.label is not None for element in ann.elements):
             # ... arrange them in order corresponding to
             # the order of those labels in the skeleton.
-            elements = [None] * len(ann.elements)
+            elements = [None] * len(self._point_label_to_position)
             for element in ann.elements:
                 elements[self._point_label_to_position[element.label]] = element
         else:
@@ -579,8 +579,12 @@ class _KeypointsExporter(_InstancesExporter):
             elements = ann.elements
 
         for element in elements:
-            points.extend(element.points)
-            visibility.extend(element.visibility)
+            if element is not None:
+                points.extend(element.points)
+                visibility.extend(element.visibility)
+            else:
+                points.extend([0, 0])
+                visibility.append(Points.Visibility.absent)
 
         for index in range(0, len(points), 2):
             kp = points[index : index + 2]

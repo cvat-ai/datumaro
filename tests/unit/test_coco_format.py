@@ -1866,6 +1866,35 @@ class CocoExporterTest(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_keypoints_in_skeleton_order_when_some_points_absent(self):
+        categories = {
+            AnnotationType.label: LabelCategories.from_iterable(
+                [
+                    "skeleton1",
+                    "skeleton2",
+                    ("alpha", "skeleton1"),
+                    ("beta", "skeleton1"),
+                    ("gamma", "skeleton1"),
+                    ("delta", "skeleton1"),
+                    ("sub1", "skeleton2"),
+                    ("sub2", "skeleton2"),
+                    ("sub3", "skeleton2"),
+                    ("sub4", "skeleton2"),
+                    ("sub5", "skeleton2"),
+                    ("sub6", "skeleton2"),
+                ]
+            ),
+            AnnotationType.points: PointsCategories.from_iterable(
+                [
+                    (0, ["alpha", "beta", "gamma", "delta"], [[0, 1], [1, 2], [2, 3]]),
+                    (
+                        1,
+                        ["sub1", "sub2", "sub3", "sub4", "sub5", "sub6"],
+                        [[0, 1], [1, 2], [2, 3], [3, 4], [5, 6]],
+                    ),
+                ]
+            ),
+        }
+
         source_dataset = Dataset.from_iterable(
             [
                 DatasetItem(
@@ -1875,34 +1904,28 @@ class CocoExporterTest(TestCase):
                     annotations=[
                         Skeleton(
                             [
-                                Points([0, 2], [1], label=2),
-                                Points([4, 1], [2], label=4),
-                                Points([2, 3], [2], label=1),
+                                Points([0, 2], [Points.Visibility.hidden.value], label=3),
+                                Points([4, 1], [Points.Visibility.visible.value], label=5),
+                                Points([2, 3], [Points.Visibility.visible.value], label=2),
                             ],
                             label=0,
                             group=1,
                             id=1,
                         ),
                         Bbox(0, 1, 4, 2, label=0, group=1, id=1),
+                        Skeleton(
+                            [
+                                Points([3, 4], [Points.Visibility.visible.value], label=8),
+                            ],
+                            label=1,
+                            group=2,
+                            id=2,
+                        ),
+                        Bbox(0, 1, 5, 3, label=1, group=2, id=2),
                     ],
                 ),
             ],
-            categories={
-                AnnotationType.label: LabelCategories.from_iterable(
-                    [
-                        "obj",
-                        ("alpha", "obj"),
-                        ("beta", "obj"),
-                        ("gamma", "obj"),
-                        ("delta", "obj"),
-                    ]
-                ),
-                AnnotationType.points: PointsCategories.from_iterable(
-                    [
-                        (0, ["alpha", "beta", "gamma", "delta"], [[0, 1], [1, 2], [2, 3]]),
-                    ]
-                ),
-            },
+            categories=categories,
         )
 
         target_dataset = Dataset.from_iterable(
@@ -1916,10 +1939,10 @@ class CocoExporterTest(TestCase):
                             [
                                 # The points will be reordered to skeleton order,
                                 # since the format doesn't preserve the original order.
-                                Points([2, 3], [2], label=1),
-                                Points([0, 2], [1], label=2),
-                                Points([0, 0], [0], label=3),
-                                Points([4, 1], [2], label=4),
+                                Points([2, 3], [Points.Visibility.visible.value], label=2),
+                                Points([0, 2], [Points.Visibility.hidden.value], label=3),
+                                Points([0, 0], [Points.Visibility.absent.value], label=4),
+                                Points([4, 1], [Points.Visibility.visible.value], label=5),
                             ],
                             label=0,
                             group=1,
@@ -1927,26 +1950,28 @@ class CocoExporterTest(TestCase):
                             attributes={"is_crowd": False},
                         ),
                         Bbox(0, 1, 4, 2, label=0, group=1, id=1, attributes={"is_crowd": False}),
+                        Skeleton(
+                            [
+                                # The points will be reordered to skeleton order,
+                                # since the format doesn't preserve the original order.
+                                Points([0, 0], [Points.Visibility.absent.value], label=6),
+                                Points([0, 0], [Points.Visibility.absent.value], label=7),
+                                Points([3, 4], [Points.Visibility.visible.value], label=8),
+                                Points([0, 0], [Points.Visibility.absent.value], label=9),
+                                Points([0, 0], [Points.Visibility.absent.value], label=10),
+                                Points([0, 0], [Points.Visibility.absent.value], label=11),
+                            ],
+                            label=1,
+                            group=2,
+                            id=2,
+                            attributes={"is_crowd": False},
+                        ),
+                        Bbox(0, 1, 5, 3, label=1, group=2, id=2, attributes={"is_crowd": False}),
                     ],
                     attributes={"id": 1},
                 ),
             ],
-            categories={
-                AnnotationType.label: LabelCategories.from_iterable(
-                    [
-                        "obj",
-                        ("alpha", "obj"),
-                        ("beta", "obj"),
-                        ("gamma", "obj"),
-                        ("delta", "obj"),
-                    ]
-                ),
-                AnnotationType.points: PointsCategories.from_iterable(
-                    [
-                        (0, ["alpha", "beta", "gamma", "delta"], [[0, 1], [1, 2], [2, 3]]),
-                    ]
-                ),
-            },
+            categories=categories,
         )
 
         with TestDir() as test_dir:

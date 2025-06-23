@@ -5,6 +5,7 @@
 import logging as log
 import os
 import os.path as osp
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
 from io import BufferedWriter
@@ -499,8 +500,8 @@ class _KeypointsExporter(_InstancesExporter):
             return
         point_categories = dataset.categories().get(AnnotationType.points)
 
-        # point label -> position of the point in the skeleton
-        self._point_label_to_position: Dict[int, int] = {}
+        # skeleton label -> {point label -> position of the point in the skeleton}
+        self._point_label_to_position: Dict[int, Dict[int, int]] = defaultdict(dict)
 
         for idx, label_cat in enumerate(label_categories.items):
             if not label_cat.parent:
@@ -527,7 +528,7 @@ class _KeypointsExporter(_InstancesExporter):
                                 point_name, parent=label_cat.name
                             )
                             if label_index is not None:
-                                self._point_label_to_position[label_index] = point_pos
+                                self._point_label_to_position[idx][label_index] = point_pos
 
                 self.categories.append(cat)
 
@@ -571,9 +572,9 @@ class _KeypointsExporter(_InstancesExporter):
         if any(element.label is not None for element in ann.elements):
             # ... arrange them in order corresponding to
             # the order of those labels in the skeleton.
-            elements = [None] * len(self._point_label_to_position)
+            elements = [None] * len(self._point_label_to_position[ann.label])
             for element in ann.elements:
-                elements[self._point_label_to_position[element.label]] = element
+                elements[self._point_label_to_position[ann.label][element.label]] = element
         else:
             # otherwise, keep the order as-is.
             elements = ann.elements

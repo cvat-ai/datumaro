@@ -316,3 +316,7 @@ class MotSeqGtExporter(Exporter):
             labels_file = osp.join(anno_dir, MotPath.LABELS_FILE)
             with open(labels_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(l.name for l in extractor.categories()[AnnotationType.label]))
+
+    @property
+    def can_stream(self) -> bool:
+        return True

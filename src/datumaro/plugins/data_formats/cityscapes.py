@@ -1,15 +1,16 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
+import errno
 import glob
 import logging as log
 import os
 import os.path as osp
 from collections import OrderedDict
 from enum import Enum, auto
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 
@@ -23,10 +24,10 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
-from datumaro.components.errors import MediaTypeError
+from datumaro.components.errors import AnnotationExportError, InvalidAnnotationError, MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
-from datumaro.components.importer import Importer
+from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util import find
 from datumaro.util.annotation_util import make_label_id_mapping
@@ -210,7 +211,7 @@ def parse_label_map(path):
                 color = None
 
             if name in label_map:
-                raise ValueError("Label '%s' is already defined" % name)
+                raise InvalidAnnotationError("Label '%s' is already defined" % name)
 
             label_map[name] = color
     return label_map
@@ -227,7 +228,13 @@ def write_label_map(path, label_map):
 
 
 class CityscapesBase(SubsetBase):
-    def __init__(self, path, subset=None):
+    def __init__(
+        self,
+        path: str,
+        *,
+        subset: Optional[str] = None,
+        ctx: Optional[ImportContext] = None,
+    ):
         assert osp.isdir(path), path
 
         if not subset:
@@ -244,11 +251,14 @@ class CityscapesBase(SubsetBase):
             images_dir = path
             annotations_dir = osp.join(self._path, CityscapesPath.GT_FINE_DIR, subset)
 
-        self._subset = subset
         self._images_dir = images_dir
         self._gt_anns_dir = annotations_dir
 
-        super().__init__(subset=subset)
+        for path in [self._images_dir, self._gt_anns_dir]:
+            if not osp.isdir(path):
+                raise NotADirectoryError(errno.ENOTDIR, "Can't find dataset directory", path)
+
+        super().__init__(subset=subset, ctx=ctx)
 
         self._items = list(self._load_items().values())
 
@@ -299,6 +309,11 @@ class CityscapesBase(SubsetBase):
                 recursive=True,
             )
             mask_suffix = CityscapesPath.GT_INSTANCE_MASK_SUFFIX
+
+        self._categories = self._load_categories(
+            self._path, use_train_label_map=mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
+        )
+
         for mask_path in masks:
             item_id = self._get_id_from_mask_path(mask_path, mask_suffix)
 
@@ -324,6 +339,7 @@ class CityscapesBase(SubsetBase):
                         attributes={"is_crowd": is_crowd},
                     )
                 )
+                self._ann_types.add(AnnotationType.mask)
 
             image = image_path_by_id.pop(item_id, None)
             if image:
@@ -338,9 +354,6 @@ class CityscapesBase(SubsetBase):
                 id=item_id, subset=self._subset, media=Image.from_file(path=path)
             )
 
-        self._categories = self._load_categories(
-            self._path, use_train_label_map=mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
-        )
         return items
 
 
@@ -374,6 +387,18 @@ class CityscapesImporter(Importer):
             )
 
         return sources
+
+    @classmethod
+    def get_file_extensions(cls) -> List[str]:
+        return list(
+            {
+                osp.splitext(p)[1]
+                for p in (
+                    CityscapesPath.GT_INSTANCE_MASK_SUFFIX,
+                    CityscapesPath.LABEL_TRAIN_IDS_SUFFIX,
+                )
+            }
+        )
 
 
 class LabelmapType(Enum):
@@ -416,18 +441,27 @@ class CityscapesExporter(Exporter):
             label_map = LabelmapType.source.name
         self._load_categories(label_map)
 
-    def apply(self):
+    def _apply_impl(self):
         if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
             raise MediaTypeError("Media type is not an image")
 
         os.makedirs(self._save_dir, exist_ok=True)
 
         for subset_name, subset in self._extractor.subsets().items():
+            media_dir = osp.join(
+                self._save_dir,
+                CityscapesPath.IMGS_FINE_DIR,
+                CityscapesPath.ORIGINAL_IMAGE_DIR,
+                subset_name,
+            )
+            os.makedirs(media_dir, exist_ok=True)
+
+            mask_dir = osp.join(self._save_dir, CityscapesPath.GT_FINE_DIR, subset_name)
+            os.makedirs(mask_dir, exist_ok=True)
+
             for item in subset:
                 image_path = osp.join(
-                    CityscapesPath.IMGS_FINE_DIR,
-                    CityscapesPath.ORIGINAL_IMAGE_DIR,
-                    subset_name,
+                    media_dir,
                     item.id + CityscapesPath.ORIGINAL_IMAGE + self._find_image_ext(item),
                 )
                 if self._save_media:
@@ -453,7 +487,6 @@ class CityscapesExporter(Exporter):
                     background_label_id=0,
                 )
 
-                mask_dir = osp.join(self._save_dir, CityscapesPath.GT_FINE_DIR, subset_name)
                 mask_name = item.id + "_" + CityscapesPath.GT_FINE_DIR
 
                 color_mask_path = osp.join(mask_dir, mask_name + CityscapesPath.COLOR_IMAGE)
@@ -519,7 +552,7 @@ class CityscapesExporter(Exporter):
                 label_map = parse_label_map(label_map_source)
 
         else:
-            raise Exception(
+            raise AnnotationExportError(
                 "Wrong labelmap specified, "
                 "expected one of %s or a file path" % ", ".join(t.name for t in LabelmapType)
             )

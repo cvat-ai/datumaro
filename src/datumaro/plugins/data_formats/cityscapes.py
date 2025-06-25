@@ -10,7 +10,6 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from enum import Enum, auto
-from functools import partial
 from typing import List, Optional
 
 import numpy as np
@@ -21,7 +20,7 @@ from datumaro.components.annotation import (
     ExtractedMask,
     LabelCategories,
     MaskCategories,
-    RgbColor, Annotation,
+    RgbColor,
 )
 from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus

@@ -10,6 +10,7 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from enum import Enum, auto
+from functools import partial
 from typing import List, Optional
 
 import numpy as np
@@ -20,7 +21,7 @@ from datumaro.components.annotation import (
     ExtractedMask,
     LabelCategories,
     MaskCategories,
-    RgbColor,
+    RgbColor, Annotation,
 )
 from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
@@ -657,3 +658,7 @@ class CityscapesExporter(Exporter):
             )
             if osp.isdir(img_dir) and not os.listdir(img_dir):
                 os.rmdir(img_dir)
+
+    @property
+    def can_stream(self) -> bool:
+        return True

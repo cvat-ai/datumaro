@@ -3,18 +3,19 @@
 #
 # SPDX-License-Identifier: MIT
 
-import errno
 import glob
 import logging as log
 import os
 import os.path as osp
 from collections import OrderedDict
 from enum import Enum, auto
+from functools import partial
 from typing import List, Optional
 
 import numpy as np
 
 from datumaro.components.annotation import (
+    Annotation,
     AnnotationType,
     CompiledMask,
     ExtractedMask,
@@ -29,6 +30,7 @@ from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
+from datumaro.components.merge.extractor_merger import ExtractorMerger
 from datumaro.util import find
 from datumaro.util.annotation_util import make_label_id_mapping
 from datumaro.util.image import find_images, lazy_image, save_image
@@ -234,6 +236,7 @@ class CityscapesBase(SubsetBase):
         *,
         subset: Optional[str] = None,
         ctx: Optional[ImportContext] = None,
+        stream: bool = True,
     ):
         assert osp.isdir(path), path
 
@@ -254,13 +257,13 @@ class CityscapesBase(SubsetBase):
         self._images_dir = images_dir
         self._gt_anns_dir = annotations_dir
 
-        for path in [self._images_dir, self._gt_anns_dir]:
-            if not osp.isdir(path):
-                raise NotADirectoryError(errno.ENOTDIR, "Can't find dataset directory", path)
-
         super().__init__(subset=subset, ctx=ctx)
 
-        self._items = list(self._load_items().values())
+        self._find_masks()
+        self._categories = self._load_categories(
+            self._path,
+            use_train_label_map=self._mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX,
+        )
 
     def _load_categories(self, path, use_train_label_map=False):
         label_map = None
@@ -288,8 +291,20 @@ class CityscapesBase(SubsetBase):
     def _get_id_from_mask_path(self, path, suffix):
         return osp.relpath(path, self._gt_anns_dir).replace(suffix, "")
 
-    def _load_items(self):
-        items = {}
+    def _find_masks(self):
+        self._masks = glob.glob(
+            osp.join(self._gt_anns_dir, "**", f"*{CityscapesPath.LABEL_TRAIN_IDS_SUFFIX}"),
+            recursive=True,
+        )
+        self._mask_suffix = CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
+        if not self._masks:
+            self._masks = glob.glob(
+                osp.join(self._gt_anns_dir, "**", f"*{CityscapesPath.GT_INSTANCE_MASK_SUFFIX}"),
+                recursive=True,
+            )
+            self._mask_suffix = CityscapesPath.GT_INSTANCE_MASK_SUFFIX
+
+    def __iter__(self):
         image_path_by_id = {}
 
         if self._images_dir:
@@ -298,63 +313,52 @@ class CityscapesBase(SubsetBase):
                 for p in find_images(self._images_dir, recursive=True)
             }
 
-        masks = glob.glob(
-            osp.join(self._gt_anns_dir, "**", f"*{CityscapesPath.LABEL_TRAIN_IDS_SUFFIX}"),
-            recursive=True,
-        )
-        mask_suffix = CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
-        if not masks:
-            masks = glob.glob(
-                osp.join(self._gt_anns_dir, "**", f"*{CityscapesPath.GT_INSTANCE_MASK_SUFFIX}"),
-                recursive=True,
-            )
-            mask_suffix = CityscapesPath.GT_INSTANCE_MASK_SUFFIX
-
-        self._categories = self._load_categories(
-            self._path, use_train_label_map=mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
-        )
-
-        for mask_path in masks:
-            item_id = self._get_id_from_mask_path(mask_path, mask_suffix)
-
-            anns = []
-            instances_mask = lazy_image(mask_path, dtype=np.int32)
-            segm_ids = np.unique(instances_mask())
-            for segm_id in segm_ids:
-                # either is_crowd or ann_id should be set
-                if segm_id < 1000:
-                    label_id = segm_id
-                    is_crowd = True
-                    ann_id = None
-                else:
-                    label_id = segm_id // 1000
-                    is_crowd = False
-                    ann_id = segm_id % 1000
-                anns.append(
-                    ExtractedMask(
-                        index_mask=instances_mask,
-                        index=segm_id,
-                        label=label_id,
-                        id=ann_id,
-                        attributes={"is_crowd": is_crowd},
-                    )
-                )
-                self._ann_types.add(AnnotationType.mask)
+        for mask_path in self._masks:
+            item_id = self._get_id_from_mask_path(mask_path, self._mask_suffix)
 
             image = image_path_by_id.pop(item_id, None)
             if image:
                 image = Image.from_file(path=image)
 
-            items[item_id] = DatasetItem(
-                id=item_id, subset=self._subset, media=image, annotations=anns
+            yield DatasetItem(
+                id=item_id,
+                subset=self._subset,
+                media=image,
+                annotations=partial(self._mask_path_to_annotations, mask_path),
             )
 
         for item_id, path in image_path_by_id.items():
-            items[item_id] = DatasetItem(
-                id=item_id, subset=self._subset, media=Image.from_file(path=path)
-            )
+            yield DatasetItem(id=item_id, subset=self._subset, media=Image.from_file(path=path))
 
-        return items
+    def _mask_path_to_annotations(self, mask_path: str) -> list[Annotation]:
+        anns = []
+        instances_mask = lazy_image(mask_path, dtype=np.int32)
+        segm_ids = np.unique(instances_mask())
+        for segm_id in segm_ids:
+            # either is_crowd or ann_id should be set
+            if segm_id < 1000:
+                label_id = segm_id
+                is_crowd = True
+                ann_id = None
+            else:
+                label_id = segm_id // 1000
+                is_crowd = False
+                ann_id = segm_id % 1000
+            anns.append(
+                ExtractedMask(
+                    index_mask=instances_mask,
+                    index=segm_id,
+                    label=label_id,
+                    id=ann_id,
+                    attributes={"is_crowd": is_crowd},
+                )
+            )
+            self._ann_types.add(AnnotationType.mask)
+        return anns
+
+    @property
+    def is_stream(self) -> bool:
+        return True
 
 
 class CityscapesImporter(Importer):
@@ -399,6 +403,13 @@ class CityscapesImporter(Importer):
                 )
             }
         )
+
+    @property
+    def can_stream(self) -> bool:
+        return True
+
+    def get_extractor_merger(self):
+        return ExtractorMerger
 
 
 class LabelmapType(Enum):

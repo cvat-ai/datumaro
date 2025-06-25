@@ -7,6 +7,7 @@ import os
 import os.path as osp
 from collections import defaultdict
 from glob import glob, iglob
+from typing import List, Optional
 
 import numpy as np
 from defusedxml import ElementTree
@@ -16,7 +17,7 @@ from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
-from datumaro.components.importer import Importer
+from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util import cast, escape, unescape
 from datumaro.util.image import save_image
@@ -44,9 +45,9 @@ class LabelMePath:
 
 
 class LabelMeBase(DatasetBase):
-    def __init__(self, path):
+    def __init__(self, path: str, *, ctx: Optional[ImportContext] = None):
         assert osp.isdir(path), path
-        super().__init__()
+        super().__init__(ctx=ctx)
 
         self._items, self._categories, self._subsets = self._parse(path)
         self._length = len(self._items)
@@ -299,9 +300,11 @@ class LabelMeBase(DatasetBase):
 
 
 class LabelMeImporter(Importer):
+    _ANNO_EXT = ".xml"
+
     @classmethod
     def detect(cls, context: FormatDetectionContext) -> None:
-        annot_paths = context.require_files("**/*.xml")
+        annot_paths = context.require_files(f"**/*{cls._ANNO_EXT}")
 
         for annot_path in annot_paths:
             with context.probe_text_file(
@@ -356,11 +359,15 @@ class LabelMeImporter(Importer):
             pass
         return subsets
 
+    @classmethod
+    def get_file_extensions(cls) -> List[str]:
+        return [cls._ANNO_EXT]
+
 
 class LabelMeExporter(Exporter):
     DEFAULT_IMAGE_EXT = LabelMePath.IMAGE_EXT
 
-    def apply(self):
+    def _apply_impl(self):
         if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
             raise MediaTypeError("Media type is not an image")
 
@@ -519,3 +526,7 @@ class LabelMeExporter(Exporter):
     def _paint_mask(mask):
         # TODO: check if mask colors are random
         return np.array([[0, 0, 0, 0], [255, 203, 0, 153]], dtype=np.uint8)[mask.astype(np.uint8)]
+
+    @property
+    def can_stream(self) -> bool:
+        return True

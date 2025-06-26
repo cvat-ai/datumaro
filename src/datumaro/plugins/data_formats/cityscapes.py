@@ -320,8 +320,7 @@ class CityscapesBase(SubsetBase):
             self._image_mask_path_by_id[item_id] = (path, None)
 
         self._categories = self._load_categories(
-            self._path,
-            use_train_label_map=mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX,
+            self._path, use_train_label_map=mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
         )
 
     def _mask_path_to_annotations(self, mask_path: str) -> list[Annotation]:

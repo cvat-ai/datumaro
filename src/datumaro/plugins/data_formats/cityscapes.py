@@ -254,16 +254,13 @@ class CityscapesBase(SubsetBase):
             images_dir = path
             annotations_dir = osp.join(self._path, CityscapesPath.GT_FINE_DIR, subset)
 
+        self._subset = subset
         self._images_dir = images_dir
         self._gt_anns_dir = annotations_dir
 
         super().__init__(subset=subset, ctx=ctx)
 
-        self._find_masks()
-        self._categories = self._load_categories(
-            self._path,
-            use_train_label_map=self._mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX,
-        )
+        self._find_item_paths()
 
     def _load_categories(self, path, use_train_label_map=False):
         label_map = None
@@ -291,20 +288,7 @@ class CityscapesBase(SubsetBase):
     def _get_id_from_mask_path(self, path, suffix):
         return osp.relpath(path, self._gt_anns_dir).replace(suffix, "")
 
-    def _find_masks(self):
-        self._masks = glob.glob(
-            osp.join(self._gt_anns_dir, "**", f"*{CityscapesPath.LABEL_TRAIN_IDS_SUFFIX}"),
-            recursive=True,
-        )
-        self._mask_suffix = CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
-        if not self._masks:
-            self._masks = glob.glob(
-                osp.join(self._gt_anns_dir, "**", f"*{CityscapesPath.GT_INSTANCE_MASK_SUFFIX}"),
-                recursive=True,
-            )
-            self._mask_suffix = CityscapesPath.GT_INSTANCE_MASK_SUFFIX
-
-    def __iter__(self):
+    def _find_item_paths(self):
         image_path_by_id = {}
 
         if self._images_dir:
@@ -313,22 +297,32 @@ class CityscapesBase(SubsetBase):
                 for p in find_images(self._images_dir, recursive=True)
             }
 
-        for mask_path in self._masks:
-            item_id = self._get_id_from_mask_path(mask_path, self._mask_suffix)
+        masks = glob.glob(
+            osp.join(self._gt_anns_dir, "**", f"*{CityscapesPath.LABEL_TRAIN_IDS_SUFFIX}"),
+            recursive=True,
+        )
+        mask_suffix = CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
+        if not masks:
+            masks = glob.glob(
+                osp.join(self._gt_anns_dir, "**", f"*{CityscapesPath.GT_INSTANCE_MASK_SUFFIX}"),
+                recursive=True,
+            )
+            mask_suffix = CityscapesPath.GT_INSTANCE_MASK_SUFFIX
+
+        self._image_mask_path_by_id = {}
+        for mask_path in masks:
+            item_id = self._get_id_from_mask_path(mask_path, mask_suffix)
 
             image = image_path_by_id.pop(item_id, None)
-            if image:
-                image = Image.from_file(path=image)
-
-            yield DatasetItem(
-                id=item_id,
-                subset=self._subset,
-                media=image,
-                annotations=partial(self._mask_path_to_annotations, mask_path),
-            )
+            self._image_mask_path_by_id[item_id] = (image, mask_path)
 
         for item_id, path in image_path_by_id.items():
-            yield DatasetItem(id=item_id, subset=self._subset, media=Image.from_file(path=path))
+            self._image_mask_path_by_id[item_id] = (path, None)
+
+        self._categories = self._load_categories(
+            self._path,
+            use_train_label_map=mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX,
+        )
 
     def _mask_path_to_annotations(self, mask_path: str) -> list[Annotation]:
         anns = []
@@ -355,6 +349,21 @@ class CityscapesBase(SubsetBase):
             )
             self._ann_types.add(AnnotationType.mask)
         return anns
+
+    def __iter__(self):
+        for item_id, (image_path, mask_path) in self._image_mask_path_by_id.items():
+            image = Image.from_file(path=image_path) if image_path else None
+            annotations = partial(self._mask_path_to_annotations, mask_path) if mask_path else []
+
+            yield DatasetItem(
+                id=item_id,
+                subset=self._subset,
+                media=image,
+                annotations=annotations,
+            )
+
+    def __len__(self):
+        return len(self._image_mask_path_by_id)
 
     @property
     def is_stream(self) -> bool:

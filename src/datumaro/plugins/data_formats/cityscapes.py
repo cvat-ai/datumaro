@@ -323,8 +323,10 @@ class CityscapesBase(SubsetBase):
             self._path, use_train_label_map=mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
         )
 
-    def _mask_path_to_annotations(self, mask_path: str) -> list[Annotation]:
+    def _mask_path_to_annotations(self, mask_path: Optional[str]) -> list[Annotation]:
         anns = []
+        if not mask_path:
+            return anns
         instances_mask = lazy_image(mask_path, dtype=np.int32)
         segm_ids = np.unique(instances_mask())
         for segm_id in segm_ids:
@@ -351,14 +353,11 @@ class CityscapesBase(SubsetBase):
 
     def __iter__(self):
         for item_id, (image_path, mask_path) in self._image_mask_path_by_id.items():
-            image = Image.from_file(path=image_path) if image_path else None
-            annotations = partial(self._mask_path_to_annotations, mask_path) if mask_path else []
-
             yield DatasetItem(
                 id=item_id,
                 subset=self._subset,
-                media=image,
-                annotations=annotations,
+                media=Image.from_file(path=image_path) if image_path else None,
+                annotations=partial(self._mask_path_to_annotations, mask_path),
             )
 
     def __len__(self):

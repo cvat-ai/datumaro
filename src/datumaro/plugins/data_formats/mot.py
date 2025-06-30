@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
@@ -13,13 +13,14 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from enum import Enum
+from typing import List, Optional, Union
 
 from datumaro.components.annotation import AnnotationType, Bbox, LabelCategories
 from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
-from datumaro.components.importer import Importer
+from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util import cast
 from datumaro.util.image import find_images
@@ -67,8 +68,17 @@ class MotPath:
 
 
 class MotSeqBase(SubsetBase):
-    def __init__(self, path, labels=None, occlusion_threshold=0, is_gt=None, subset=None):
-        super().__init__(subset=subset)
+    def __init__(
+        self,
+        path: str,
+        *,
+        labels: Optional[Union[str, List[str]]] = None,
+        occlusion_threshold: float = 0.0,
+        is_gt: Optional[bool] = None,
+        subset: Optional[str] = None,
+        ctx: Optional[ImportContext] = None,
+    ):
+        super().__init__(subset=subset, ctx=ctx)
 
         assert osp.isfile(path)
         seq_root = osp.dirname(osp.dirname(path))
@@ -191,6 +201,7 @@ class MotSeqBase(SubsetBase):
                     attributes["score"] = float(confidence)
 
                 annotations.append(Bbox(x, y, w, h, label=label_id, attributes=attributes))
+                self._ann_types.add(AnnotationType.bbox)
 
                 items[frame_id] = item
         return items
@@ -222,21 +233,31 @@ class MotSeqBase(SubsetBase):
 
 
 class MotSeqImporter(Importer):
+    _ANNO_EXT = ".txt"
+
     @classmethod
     def detect(cls, context: FormatDetectionContext) -> None:
-        context.require_file("gt/gt.txt")
+        context.require_file(f"gt/gt{cls._ANNO_EXT}")
 
     @classmethod
     def find_sources(cls, path):
         return cls._find_sources_recursive(
-            path, ".txt", "mot_seq", dirname="gt", filename=osp.splitext(MotPath.GT_FILENAME)[0]
+            path,
+            cls._ANNO_EXT,
+            "mot_seq",
+            dirname="gt",
+            filename=osp.splitext(MotPath.GT_FILENAME)[0],
         )
+
+    @classmethod
+    def get_file_extensions(cls) -> List[str]:
+        return [cls._ANNO_EXT]
 
 
 class MotSeqGtExporter(Exporter):
     DEFAULT_IMAGE_EXT = MotPath.IMAGE_EXT
 
-    def apply(self):
+    def _apply_impl(self):
         extractor = self._extractor
 
         if extractor.media_type() and not issubclass(extractor.media_type(), Image):
@@ -296,3 +317,7 @@ class MotSeqGtExporter(Exporter):
             labels_file = osp.join(anno_dir, MotPath.LABELS_FILE)
             with open(labels_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(l.name for l in extractor.categories()[AnnotationType.label]))
+
+    @property
+    def can_stream(self) -> bool:
+        return True

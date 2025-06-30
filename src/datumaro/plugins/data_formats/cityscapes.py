@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2021 Intel Corporation
+# Copyright (C) 2020-2023 Intel Corporation
 # Copyright (C) 2022 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
@@ -9,11 +9,13 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from enum import Enum, auto
-from typing import Optional
+from functools import partial
+from typing import List, Optional
 
 import numpy as np
 
 from datumaro.components.annotation import (
+    Annotation,
     AnnotationType,
     CompiledMask,
     ExtractedMask,
@@ -23,11 +25,12 @@ from datumaro.components.annotation import (
 )
 from datumaro.components.dataset_base import CategoriesInfo, DatasetItem, SubsetBase
 from datumaro.components.dataset_item_storage import ItemStatus
-from datumaro.components.errors import MediaTypeError
+from datumaro.components.errors import AnnotationExportError, InvalidAnnotationError, MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.format_detection import FormatDetectionContext
-from datumaro.components.importer import Importer
+from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
+from datumaro.components.merge.extractor_merger import ExtractorMerger
 from datumaro.util import find
 from datumaro.util.annotation_util import make_label_id_mapping
 from datumaro.util.image import find_images, lazy_image, save_image
@@ -210,7 +213,7 @@ def parse_label_map(path):
                 color = None
 
             if name in label_map:
-                raise ValueError("Label '%s' is already defined" % name)
+                raise InvalidAnnotationError("Label '%s' is already defined" % name)
 
             label_map[name] = color
     return label_map
@@ -227,7 +230,14 @@ def write_label_map(path, label_map):
 
 
 class CityscapesBase(SubsetBase):
-    def __init__(self, path, subset=None):
+    def __init__(
+        self,
+        path: str,
+        *,
+        subset: Optional[str] = None,
+        ctx: Optional[ImportContext] = None,
+        stream: bool = True,
+    ):
         assert osp.isdir(path), path
 
         if not subset:
@@ -248,9 +258,9 @@ class CityscapesBase(SubsetBase):
         self._images_dir = images_dir
         self._gt_anns_dir = annotations_dir
 
-        super().__init__(subset=subset)
+        super().__init__(subset=subset, ctx=ctx)
 
-        self._items = list(self._load_items().values())
+        self._find_item_paths()
 
     def _load_categories(self, path, use_train_label_map=False):
         label_map = None
@@ -278,8 +288,7 @@ class CityscapesBase(SubsetBase):
     def _get_id_from_mask_path(self, path, suffix):
         return osp.relpath(path, self._gt_anns_dir).replace(suffix, "")
 
-    def _load_items(self):
-        items = {}
+    def _find_item_paths(self):
         image_path_by_id = {}
 
         if self._images_dir:
@@ -299,49 +308,66 @@ class CityscapesBase(SubsetBase):
                 recursive=True,
             )
             mask_suffix = CityscapesPath.GT_INSTANCE_MASK_SUFFIX
+
+        if masks:
+            self._ann_types.add(AnnotationType.mask)
+
+        self._image_mask_path_by_id = {}
         for mask_path in masks:
             item_id = self._get_id_from_mask_path(mask_path, mask_suffix)
 
-            anns = []
-            instances_mask = lazy_image(mask_path, dtype=np.int32)
-            segm_ids = np.unique(instances_mask())
-            for segm_id in segm_ids:
-                # either is_crowd or ann_id should be set
-                if segm_id < 1000:
-                    label_id = segm_id
-                    is_crowd = True
-                    ann_id = None
-                else:
-                    label_id = segm_id // 1000
-                    is_crowd = False
-                    ann_id = segm_id % 1000
-                anns.append(
-                    ExtractedMask(
-                        index_mask=instances_mask,
-                        index=segm_id,
-                        label=label_id,
-                        id=ann_id,
-                        attributes={"is_crowd": is_crowd},
-                    )
-                )
-
             image = image_path_by_id.pop(item_id, None)
-            if image:
-                image = Image.from_file(path=image)
-
-            items[item_id] = DatasetItem(
-                id=item_id, subset=self._subset, media=image, annotations=anns
-            )
+            self._image_mask_path_by_id[item_id] = (image, mask_path)
 
         for item_id, path in image_path_by_id.items():
-            items[item_id] = DatasetItem(
-                id=item_id, subset=self._subset, media=Image.from_file(path=path)
-            )
+            self._image_mask_path_by_id[item_id] = (path, None)
 
         self._categories = self._load_categories(
             self._path, use_train_label_map=mask_suffix is CityscapesPath.LABEL_TRAIN_IDS_SUFFIX
         )
-        return items
+
+    def _mask_path_to_annotations(self, mask_path: Optional[str]) -> list[Annotation]:
+        anns = []
+        if not mask_path:
+            return anns
+        instances_mask = lazy_image(mask_path, dtype=np.int32)
+        segm_ids = np.unique(instances_mask())
+        for segm_id in segm_ids:
+            # either is_crowd or ann_id should be set
+            if segm_id < 1000:
+                label_id = segm_id
+                is_crowd = True
+                ann_id = None
+            else:
+                label_id = segm_id // 1000
+                is_crowd = False
+                ann_id = segm_id % 1000
+            anns.append(
+                ExtractedMask(
+                    index_mask=instances_mask,
+                    index=segm_id,
+                    label=label_id,
+                    id=ann_id,
+                    attributes={"is_crowd": is_crowd},
+                )
+            )
+        return anns
+
+    def __iter__(self):
+        for item_id, (image_path, mask_path) in self._image_mask_path_by_id.items():
+            yield DatasetItem(
+                id=item_id,
+                subset=self._subset,
+                media=Image.from_file(path=image_path) if image_path else None,
+                annotations=partial(self._mask_path_to_annotations, mask_path),
+            )
+
+    def __len__(self):
+        return len(self._image_mask_path_by_id)
+
+    @property
+    def is_stream(self) -> bool:
+        return True
 
 
 class CityscapesImporter(Importer):
@@ -374,6 +400,25 @@ class CityscapesImporter(Importer):
             )
 
         return sources
+
+    @classmethod
+    def get_file_extensions(cls) -> List[str]:
+        return list(
+            {
+                osp.splitext(p)[1]
+                for p in (
+                    CityscapesPath.GT_INSTANCE_MASK_SUFFIX,
+                    CityscapesPath.LABEL_TRAIN_IDS_SUFFIX,
+                )
+            }
+        )
+
+    @property
+    def can_stream(self) -> bool:
+        return True
+
+    def get_extractor_merger(self):
+        return ExtractorMerger
 
 
 class LabelmapType(Enum):
@@ -416,18 +461,27 @@ class CityscapesExporter(Exporter):
             label_map = LabelmapType.source.name
         self._load_categories(label_map)
 
-    def apply(self):
+    def _apply_impl(self):
         if self._extractor.media_type() and not issubclass(self._extractor.media_type(), Image):
             raise MediaTypeError("Media type is not an image")
 
         os.makedirs(self._save_dir, exist_ok=True)
 
         for subset_name, subset in self._extractor.subsets().items():
+            media_dir = osp.join(
+                self._save_dir,
+                CityscapesPath.IMGS_FINE_DIR,
+                CityscapesPath.ORIGINAL_IMAGE_DIR,
+                subset_name,
+            )
+            os.makedirs(media_dir, exist_ok=True)
+
+            mask_dir = osp.join(self._save_dir, CityscapesPath.GT_FINE_DIR, subset_name)
+            os.makedirs(mask_dir, exist_ok=True)
+
             for item in subset:
                 image_path = osp.join(
-                    CityscapesPath.IMGS_FINE_DIR,
-                    CityscapesPath.ORIGINAL_IMAGE_DIR,
-                    subset_name,
+                    media_dir,
                     item.id + CityscapesPath.ORIGINAL_IMAGE + self._find_image_ext(item),
                 )
                 if self._save_media:
@@ -453,7 +507,6 @@ class CityscapesExporter(Exporter):
                     background_label_id=0,
                 )
 
-                mask_dir = osp.join(self._save_dir, CityscapesPath.GT_FINE_DIR, subset_name)
                 mask_name = item.id + "_" + CityscapesPath.GT_FINE_DIR
 
                 color_mask_path = osp.join(mask_dir, mask_name + CityscapesPath.COLOR_IMAGE)
@@ -519,7 +572,7 @@ class CityscapesExporter(Exporter):
                 label_map = parse_label_map(label_map_source)
 
         else:
-            raise Exception(
+            raise AnnotationExportError(
                 "Wrong labelmap specified, "
                 "expected one of %s or a file path" % ", ".join(t.name for t in LabelmapType)
             )
@@ -624,3 +677,7 @@ class CityscapesExporter(Exporter):
             )
             if osp.isdir(img_dir) and not os.listdir(img_dir):
                 os.rmdir(img_dir)
+
+    @property
+    def can_stream(self) -> bool:
+        return True

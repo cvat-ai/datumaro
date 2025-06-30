@@ -8,7 +8,7 @@ import numpy as np
 
 import datumaro.plugins.data_formats.cityscapes as Cityscapes
 from datumaro.components.annotation import AnnotationType, LabelCategories, Mask, MaskCategories
-from datumaro.components.dataset import Dataset
+from datumaro.components.dataset import Dataset, StreamDataset
 from datumaro.components.dataset_base import DatasetBase, DatasetItem
 from datumaro.components.environment import Environment
 from datumaro.components.media import Image
@@ -56,6 +56,8 @@ class CityscapesFormatTest(TestCase):
 
 
 class CityscapesImportTest(TestCase):
+    DATASET_CLS = Dataset
+
     @mark_requirement(Requirements.DATUM_267)
     def test_can_import(self):
         # is_crowd marks labels allowing to specify instance id
@@ -128,7 +130,7 @@ class CityscapesImportTest(TestCase):
             categories=Cityscapes.make_cityscapes_categories(),
         )
 
-        parsed_dataset = Dataset.import_from(DUMMY_DATASET_DIR, "cityscapes")
+        parsed_dataset = self.DATASET_CLS.import_from(DUMMY_DATASET_DIR, "cityscapes")
 
         compare_datasets(self, source_dataset, parsed_dataset)
 
@@ -176,7 +178,7 @@ class CityscapesImportTest(TestCase):
             categories=Cityscapes.make_cityscapes_categories(label_map=TRAIN_CITYSCAPES_LABEL_MAP),
         )
 
-        parsed_dataset = Dataset.import_from(DUMMY_TRAIN_DATASET_DIR, "cityscapes")
+        parsed_dataset = self.DATASET_CLS.import_from(DUMMY_TRAIN_DATASET_DIR, "cityscapes")
 
         compare_datasets(self, source_dataset, parsed_dataset)
 
@@ -184,6 +186,10 @@ class CityscapesImportTest(TestCase):
     def test_can_detect_cityscapes(self):
         detected_formats = Environment().detect_dataset(DUMMY_DATASET_DIR)
         self.assertEqual([CityscapesImporter.NAME], detected_formats)
+
+
+class CityscapesStreamImportTest(CityscapesImportTest):
+    DATASET_CLS = StreamDataset
 
 
 class TestExtractorBase(DatasetBase):
@@ -195,6 +201,8 @@ class TestExtractorBase(DatasetBase):
 
 
 class CityscapesExporterTest(TestCase):
+    STREAM = False
+
     def _test_save_and_load(
         self, source_dataset, converter, test_dir, target_dataset=None, importer_args=None, **kwargs
     ):
@@ -206,6 +214,7 @@ class CityscapesExporterTest(TestCase):
             importer="cityscapes",
             target_dataset=target_dataset,
             importer_args=importer_args,
+            stream=self.STREAM,
             **kwargs,
         )
 
@@ -957,3 +966,7 @@ class CityscapesExporterTest(TestCase):
                 partial(CityscapesExporter.convert, label_map="cityscapes"),
                 test_dir,
             )
+
+
+class CityscapesStreamExporterTest(CityscapesExporterTest):
+    STREAM = True

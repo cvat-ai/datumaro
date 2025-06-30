@@ -6,6 +6,7 @@ import logging as log
 import os
 import os.path as osp
 from collections import defaultdict
+from functools import partial
 from glob import glob, iglob
 from typing import List, Optional
 
@@ -233,8 +234,11 @@ class LabelMeBase(DatasetBase):
                 )
                 if not osp.isfile(mask_path):
                     raise Exception("Can't find mask at '%s'" % mask_path)
-                mask = load_mask(mask_path)
-                mask = np.any(mask, axis=2)
+
+                def _lazy_mask(path: str):
+                    return np.any(load_mask(path), axis=2)
+
+                mask = partial(_lazy_mask, mask_path)
                 ann_items.append(Mask(image=mask, label=label, id=obj_id, attributes=attributes))
 
             if not deleted:

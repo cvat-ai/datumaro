@@ -309,6 +309,9 @@ class CityscapesBase(SubsetBase):
             )
             mask_suffix = CityscapesPath.GT_INSTANCE_MASK_SUFFIX
 
+        if masks:
+            self._ann_types.add(AnnotationType.mask)
+
         self._image_mask_path_by_id = {}
         for mask_path in masks:
             item_id = self._get_id_from_mask_path(mask_path, mask_suffix)
@@ -348,7 +351,6 @@ class CityscapesBase(SubsetBase):
                     attributes={"is_crowd": is_crowd},
                 )
             )
-            self._ann_types.add(AnnotationType.mask)
         return anns
 
     def __iter__(self):

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 from datumaro.components.annotation import AnnotationType
 from datumaro.components.dataset_base import CategoriesInfo, DatasetInfo
-from datumaro.components.dataset_storage import StreamDatasetStorage
+from datumaro.components.dataset_storage import StreamDatasetStorage, StreamSubset
 from datumaro.plugins.transforms import MapSubsets, RandomSplit, RemapLabels, Rename, UpdateInfos
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
 
@@ -169,3 +169,18 @@ class StreamDatasetStorageTest:
         # Check Rename
         self._test_loop(fxt_stream_extractor, storage, n_calls, id_pattern="rename_{idx}")
         assert fxt_stream_extractor.__iter__.call_count == n_calls
+
+
+class StreamSubsetTest:
+    def test_single_subset_len_uses_dataset_len(self):
+        dataset_storage_mock = MagicMock(spec=StreamDatasetStorage)
+        dataset_storage_mock.subset_names = {"FOO"}
+
+        class StreamSubsetWrap(StreamSubset):
+            def __iter__(self):
+                # should not iterate items to get length
+                assert False
+
+        subset = StreamSubsetWrap(dataset_storage_mock, "FOO")
+        len(subset)
+        assert dataset_storage_mock.__len__.called

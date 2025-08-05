@@ -2562,8 +2562,9 @@ class StreamDatasetTest:
         extractor.item_iterated_count = 0
         dataset = StreamDataset.from_extractors(extractor)
 
-        # no need to iterate items to get subsets
+        # no need to iterate items to get subsets or length
         dataset.subsets()
+        len(dataset)
         assert extractor.item_iterated_count == 0
 
         # accessing items through subsets only iterates relevant items

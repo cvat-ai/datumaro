@@ -650,7 +650,10 @@ class StreamSubset(IDataset):
 
     def __len__(self) -> int:
         if self._length is None:
-            self._length = sum(1 for _ in self)
+            if self._source.subset_names == {self._subset}:
+                self._length = len(self._source)
+            else:
+                self._length = sum(1 for _ in self)
         return self._length
 
     def subsets(self) -> Dict[str, IDataset]:
@@ -695,7 +698,7 @@ class StreamDatasetStorage(DatasetStorage):
     ):
         if not source.is_stream:
             raise ValueError("source should be a stream.")
-        self._subset_names = list(source.subsets().keys())
+        self._subset_names = set(source.subsets().keys())
         super().__init__(
             source=source,
             infos=infos,
@@ -746,7 +749,10 @@ class StreamDatasetStorage(DatasetStorage):
 
     def __len__(self) -> int:
         if self._length is None:
-            self._length = sum(1 for _ in self)
+            if not self._transforms:
+                self._length = len(self._source)
+            else:
+                self._length = sum(1 for _ in self)
         return self._length
 
     def put(self, item: DatasetItem) -> None:
@@ -764,7 +770,7 @@ class StreamDatasetStorage(DatasetStorage):
     def get_subset(self, name: str) -> IDataset:
         return self.subsets()[name]
 
-    def _collect_subset_names(self):
+    def _collect_subset_names(self) -> set[str]:
         assert not self._keeps_subsets_intact
 
         item_generator = stacked_transform = self.stacked_transform
@@ -789,7 +795,7 @@ class StreamDatasetStorage(DatasetStorage):
         return {item.subset for item in item_generator}
 
     @property
-    def subset_names(self):
+    def subset_names(self) -> set[str]:
         if self._subset_names is None:
             self._subset_names = self._collect_subset_names()
 

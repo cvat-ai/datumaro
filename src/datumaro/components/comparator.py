@@ -11,7 +11,6 @@ from typing import Dict, List, Set, Tuple
 from unittest import TestCase
 
 from attr import attrib, attrs
-from tabulate import tabulate
 
 from datumaro.cli.util.project import generate_next_file_name
 from datumaro.components.annotation import Annotation, AnnotationType, LabelCategories, Points
@@ -23,7 +22,6 @@ from datumaro.components.operations import (
     match_items_by_id,
     match_items_by_image_hash,
 )
-from datumaro.components.shift_analyzer import ShiftAnalyzer
 from datumaro.util import dump_json_file, filter_dict, find
 from datumaro.util.annotation_util import find_instances, max_bbox
 from datumaro.util.attrs_util import default_if_none
@@ -428,6 +426,8 @@ class TableComparator:
             new_row = [wrapfunc(item) for item in row]
             wrapped_rows.append(new_row)
 
+        from tabulate import tabulate
+
         return tabulate(wrapped_rows, headers, tablefmt="grid")
 
     @staticmethod
@@ -532,24 +532,39 @@ class TableComparator:
         for subset_name in subset_names:
             first_subset_data = first_image_stats["subsets"].get(subset_name, {})
             second_subset_data = second_image_stats["subsets"].get(subset_name, {})
+
+            image_mean_array_first = first_subset_data.get("image mean (RGB)", [])
             mean_str_first = (
-                ", ".join(f"{val:6.2f}" for val in first_subset_data.get("image mean (RGB)", []))
-                if "image mean (RGB)" in first_subset_data
+                ", ".join(f"{val:<6.2f}" for val in image_mean_array_first)
+                if image_mean_array_first != "n/a"
+                and isinstance(image_mean_array_first, list)
+                and len(image_mean_array_first) > 0
                 else ""
             )
+
+            image_std_array_first = first_subset_data.get("image std (RGB)", [])
             std_str_first = (
-                ", ".join(f"{val:6.2f}" for val in first_subset_data.get("image std (RGB)", []))
-                if "image std" in first_subset_data
+                ", ".join(f"{val:6.2f}" for val in image_std_array_first)
+                if image_std_array_first != "n/a"
+                and isinstance(image_std_array_first, list)
+                and len(image_std_array_first) > 0
                 else ""
             )
+            image_mean_array_second = second_subset_data.get("image mean (RGB)", [])
             mean_str_second = (
-                ", ".join(f"{val:6.2f}" for val in second_subset_data.get("image mean (RGB)", []))
-                if "image mean (RGB)" in second_subset_data
+                ", ".join(f"{val:6.2f}" for val in image_mean_array_second)
+                if image_mean_array_second != "n/a"
+                and isinstance(image_mean_array_second, list)
+                and len(image_mean_array_second) > 0
                 else ""
             )
+
+            image_std_array_second = second_subset_data.get("image std (RGB)", [])
             std_str_second = (
-                ", ".join(f"{val:6.2f}" for val in second_subset_data.get("image std", []))
-                if "image std (RGB)" in second_subset_data
+                ", ".join(f"{val:6.2f}" for val in image_std_array_second)
+                if image_std_array_second != "n/a"
+                and isinstance(image_std_array_second, list)
+                and len(image_std_array_second) > 0
                 else ""
             )
             rows.append([f"{subset_name} - Image Mean (RGB)", mean_str_first, mean_str_second])
@@ -587,38 +602,9 @@ class TableComparator:
 
         return table, data_dict
 
-    def _create_low_level_comparison_table(
-        self, first_dataset: Dataset, second_dataset: Dataset
-    ) -> Tuple[str, Dict]:
-        """Generates a low-level comparison table.
-
-        Args:
-            first_dataset: The first dataset to compare.
-            second_dataset: The second dataset to compare.
-
-        Returns:
-            A tuple containing the table as a string and a dictionary representing the data
-            of the table.
-        """
-        shift_analyzer = ShiftAnalyzer()
-        cov_shift = shift_analyzer.compute_covariate_shift([first_dataset, second_dataset])
-        label_shift = shift_analyzer.compute_label_shift([first_dataset, second_dataset])
-
-        headers = ["Field", "Value"]
-
-        rows = [
-            ["Covariate shift", str(cov_shift)],
-            ["Label shift", str(label_shift)],
-        ]
-
-        table = self._create_table(headers, rows)
-        data_dict = self._create_dict(rows)
-
-        return table, data_dict
-
     def compare_datasets(
         self, first: Dataset, second: Dataset, mode: str = "all"
-    ) -> Tuple[str, str, str, Dict]:
+    ) -> Tuple[str, str, Dict]:
         """Compares two datasets and generates comparison reports.
 
         Args:
@@ -626,7 +612,7 @@ class TableComparator:
             second: The second dataset to compare.
 
         Returns:
-            A tuple containing high-level table, mid-level table, low-level table, and a
+            A tuple containing high-level table, mid-level table, and a
             dictionary representation of the comparison.
         """
         first_info = self._analyze_dataset(first)
@@ -634,7 +620,6 @@ class TableComparator:
 
         high_level_table, high_level_dict = None, {}
         mid_level_table, mid_level_dict = None, {}
-        low_level_table, low_level_dict = None, {}
 
         if mode in ["high", "all"]:
             high_level_table, high_level_dict = self._create_high_level_comparison_table(
@@ -644,24 +629,18 @@ class TableComparator:
             mid_level_table, mid_level_dict = self._create_mid_level_comparison_table(
                 first_info, second_info
             )
-        if mode in ["low", "all"]:
-            low_level_table, low_level_dict = self._create_low_level_comparison_table(first, second)
 
-        comparison_dict = dict(
-            high_level=high_level_dict, mid_level=mid_level_dict, low_level=low_level_dict
-        )
+        comparison_dict = dict(high_level=high_level_dict, mid_level=mid_level_dict)
 
         print(f"High-level comparison:\n{high_level_table}\n")
         print(f"Mid-level comparison:\n{mid_level_table}\n")
-        print(f"Low-level comparison:\n{low_level_table}\n")
 
-        return high_level_table, mid_level_table, low_level_table, comparison_dict
+        return high_level_table, mid_level_table, comparison_dict
 
     @staticmethod
     def save_compare_report(
         high_level_table: str,
         mid_level_table: str,
-        low_level_table: str,
         comparison_dict: Dict,
         report_dir: str,
     ) -> None:
@@ -670,7 +649,6 @@ class TableComparator:
         Args:
             high_level_table: High-level comparison table as a string.
             mid_level_table: Mid-level comparison table as a string.
-            low_level_table: Low-level comparison table as a string.
             comparison_dict: A dictionary containing the comparison data.
             report_dir: A string representing the directory to save the report files.
         """
@@ -689,4 +667,3 @@ class TableComparator:
         with open(txt_output_file, "w") as f:
             f.write(f"High-level Comparison:\n{high_level_table}\n\n")
             f.write(f"Mid-level Comparison:\n{mid_level_table}\n\n")
-            f.write(f"Low-level Comparison:\n{low_level_table}\n\n")

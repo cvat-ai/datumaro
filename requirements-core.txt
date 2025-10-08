@@ -36,9 +36,6 @@ pandas>=1.4.0
 # Encryption
 cryptography>= 38.03
 
-# Shift analyzer
-pyemd
-
 # apache arrow
 pyarrow
 

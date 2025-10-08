@@ -586,6 +586,32 @@ class TableComparator:
 
         return table, data_dict
 
+    def _create_low_level_comparison_table(
+        self, first_dataset: Dataset, second_dataset: Dataset
+    ) -> Tuple[str, Dict]:
+        """Generates a low-level comparison table.
+
+        Note: Shift analysis functionality has been removed.
+
+        Args:
+            first_dataset: The first dataset to compare.
+            second_dataset: The second dataset to compare.
+
+        Returns:
+            A tuple containing the table as a string and a dictionary representing the data
+            of the table.
+        """
+        headers = ["Field", "Value"]
+
+        rows = [
+            ["Note", "Shift analysis functionality has been removed"],
+        ]
+
+        table = self._create_table(headers, rows)
+        data_dict = self._create_dict(rows)
+
+        return table, data_dict
+
     def compare_datasets(
         self, first: Dataset, second: Dataset, mode: str = "all"
     ) -> Tuple[str, str, str, Dict]:
@@ -614,6 +640,8 @@ class TableComparator:
             mid_level_table, mid_level_dict = self._create_mid_level_comparison_table(
                 first_info, second_info
             )
+        if mode in ["low", "all"]:
+            low_level_table, low_level_dict = self._create_low_level_comparison_table(first, second)
 
         comparison_dict = dict(
             high_level=high_level_dict, mid_level=mid_level_dict, low_level=low_level_dict

@@ -613,7 +613,7 @@ class TableComparator:
             second: The second dataset to compare.
 
         Returns:
-            A tuple containing high-level table, mid-level table, low-level table, and a
+            A tuple containing high-level table, mid-level table, and a
             dictionary representation of the comparison.
         """
         first_info = self._analyze_dataset(first)

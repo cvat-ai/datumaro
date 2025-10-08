@@ -72,11 +72,11 @@ class HLOps:
         """
         if method == "table":
             comparator = TableComparator()
-            h_table, m_table, l_table, result_dict = comparator.compare_datasets(
+            h_table, m_table, result_dict = comparator.compare_datasets(
                 first_dataset, second_dataset
             )
             if report_dir:
-                comparator.save_compare_report(h_table, m_table, l_table, result_dict, report_dir)
+                comparator.save_compare_report(h_table, m_table, result_dict, report_dir)
 
         elif method == "equality":
             comparator = EqualityComparator(**kwargs)

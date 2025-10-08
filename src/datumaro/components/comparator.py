@@ -11,7 +11,6 @@ from typing import Dict, List, Set, Tuple
 from unittest import TestCase
 
 from attr import attrib, attrs
-from tabulate import tabulate
 
 from datumaro.cli.util.project import generate_next_file_name
 from datumaro.components.annotation import Annotation, AnnotationType, LabelCategories, Points

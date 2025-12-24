@@ -790,6 +790,14 @@ class YoloUltralyticsPoseBase(YoloUltralyticsDetectionBase):
 
 
 class YoloUltralyticsClassificationBase(_YoloBase):
+    def __init__(self, rootpath, image_info=None, stream=False, **kwargs):
+        self._labels_file_cache: dict[str, dict] = {}
+        super().__init__(rootpath, image_info, stream, **kwargs)
+
+    def __iter__(self):
+        yield from super().__iter__()
+        self._labels_file_cache.clear()
+
     def _get_subset_names(self):
         return [
             subset_name
@@ -812,8 +820,17 @@ class YoloUltralyticsClassificationBase(_YoloBase):
     def _get_item_info_from_labels_file(self, subset_name: str) -> Optional[Dict]:
         subset_path = osp.join(self._path, subset_name)
         labels_file_path = osp.join(subset_path, YoloUltralyticsClassificationFormat.LABELS_FILE)
-        if osp.isfile(labels_file_path):
-            return parse_json_file(labels_file_path)
+
+        if labels_file_path in self._labels_file_cache:
+            parsed_data = self._labels_file_cache[labels_file_path]
+        else:
+            if osp.isfile(labels_file_path):
+                parsed_data = parse_json_file(labels_file_path)
+                self._labels_file_cache[labels_file_path] = parsed_data
+            else:
+                parsed_data = None
+
+        return parsed_data
 
     def _get_lazy_subset_items(self, subset_name: str):
         subset_path = osp.join(self._path, subset_name)

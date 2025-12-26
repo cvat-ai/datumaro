@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import cv2
 import json_stream
+import json_stream.base
 import numpy as np
 import yaml
 
@@ -791,39 +792,47 @@ class YoloUltralyticsPoseBase(YoloUltralyticsDetectionBase):
         return skeleton
 
 
-class YoloUltralyticsClassificationBase(_YoloBase):
-    class LabelsFileReader:
-        def __init__(self, path: str):
-            self.path = path
-            self.file = None
-            self.json_stream = None
+class LabelsFileReader:
+    def __init__(self, path: str):
+        self.path = path
+        self._file = None
+        self._json_stream = None
 
-        def __enter__(self):
-            assert self.file is None
-            assert self.json_stream is None
+    def __enter__(self):
+        assert self._file is None
+        assert self._json_stream is None
 
-            try:
-                self.file = open(self.path, "rb")
-                self.json_stream = json_stream.load(self.file, persistent=False)
-                return self.json_stream
-            except Exception:
-                self.close()
-                raise
-
-        def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            self._file = open(self.path, "rb")
+            self._json_stream = json_stream.load(self._file)
+            return self._json_stream
+        except Exception:
             self.close()
+            raise
 
-        def close(self):
-            if self.json_stream:
-                self.json_stream = None
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
-            if self.file:
-                self.file.close()
-                self.file = None
+    def close(self):
+        if self._json_stream:
+            self._json_stream = None
 
+        if self._file:
+            self._file.close()
+            self._file = None
+
+
+class YoloUltralyticsClassificationBase(_YoloBase):
     def __init__(self, rootpath, image_info=None, stream=False, **kwargs):
-        self._labels_file_reader = None
+        self._labels_file_reader: LabelsFileReader | None = None
         super().__init__(rootpath, image_info, stream, **kwargs)
+
+    def __iter__(self):
+        yield from super().__iter__()
+
+        if self._labels_file_reader:
+            self._labels_file_reader.close()
+            self._labels_file_reader = None
 
     def _get_subset_names(self):
         return [
@@ -853,7 +862,7 @@ class YoloUltralyticsClassificationBase(_YoloBase):
     def _get_lazy_subset_items(self, subset_name: str):
         labels_file_path = self._get_labels_file_path(subset_name)
         if os.path.isfile(labels_file_path):
-            with self.LabelsFileReader(labels_file_path) as reader:
+            with LabelsFileReader(labels_file_path) as reader:
                 return {
                     item_id: osp.join(subset_name, item_info["path"])
                     for item_id, item_info in reader.items()
@@ -867,20 +876,30 @@ class YoloUltralyticsClassificationBase(_YoloBase):
             for image_path in self._get_image_paths_for_subset_and_label(subset_name, category_name)
         }
 
-    def _get_item_info_from_labels_file(self, subset_name: str, item_id: str) -> Optional[Dict]:
+    def _get_item_info_from_labels_file(self, subset_name: str, item_id: str) -> dict | None:
         labels_file_path = self._get_labels_file_path(subset_name)
         if not osp.isfile(labels_file_path):
             return None
 
-        if self._labels_file_reader and self._labels_file_reader.path != labels_file_path:
+        def _parse_item():
+            if self._labels_file_reader and self._labels_file_reader.path != labels_file_path:
+                self._labels_file_reader.close()
+                self._labels_file_reader = None
+
+            if not self._labels_file_reader:
+                self._labels_file_reader = LabelsFileReader(labels_file_path)
+                self._labels_file_reader.__enter__()
+
+            return self._labels_file_reader._json_stream[item_id]
+
+        try:
+            return _parse_item()
+        except json_stream.base.TransientAccessException:
+            # The items are accessed lazily in the reverse order
+            # or the stream is reiterated mid iteration
             self._labels_file_reader.close()
             self._labels_file_reader = None
-
-        if not self._labels_file_reader:
-            self._labels_file_reader = self.LabelsFileReader(labels_file_path)
-            self._labels_file_reader.__enter__()
-
-        return self._labels_file_reader.json_stream[item_id]
+            return _parse_item()
 
     def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:
         item_id, subset_name = item_id
@@ -904,7 +923,7 @@ class YoloUltralyticsClassificationBase(_YoloBase):
         if not osp.isfile(labels_file_path):
             return labels
 
-        with self.LabelsFileReader(self._get_labels_file_path(subset_name)) as reader:
+        with LabelsFileReader(self._get_labels_file_path(subset_name)) as reader:
             for item_info in reader.values():
                 labels.update(item_info["labels"])
 

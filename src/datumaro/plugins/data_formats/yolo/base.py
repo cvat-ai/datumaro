@@ -851,11 +851,13 @@ class YoloUltralyticsClassificationBase(_YoloBase):
         return osp.join(subset_path, YoloUltralyticsClassificationFormat.LABELS_FILE)
 
     def _get_lazy_subset_items(self, subset_name: str):
-        with self.LabelsFileReader(self._get_labels_file_path(subset_name)) as reader:
-            return {
-                item_id: osp.join(subset_name, item_info["path"])
-                for item_id, item_info in reader.items()
-            }
+        labels_file_path = self._get_labels_file_path(subset_name)
+        if os.path.isfile(labels_file_path):
+            with self.LabelsFileReader(labels_file_path) as reader:
+                return {
+                    item_id: osp.join(subset_name, item_info["path"])
+                    for item_id, item_info in reader.items()
+                }
 
         subset_path = osp.join(self._path, subset_name)
         return {

@@ -8,11 +8,14 @@ from __future__ import annotations
 import os
 import os.path as osp
 import re
+from collections.abc import Generator
 from functools import cached_property, partial
 from itertools import cycle
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import cv2
+import json_stream
+import json_stream.base
 import numpy as np
 import yaml
 
@@ -789,7 +792,48 @@ class YoloUltralyticsPoseBase(YoloUltralyticsDetectionBase):
         return skeleton
 
 
+class LabelsFileReader:
+    def __init__(self, path: str):
+        self.path = path
+        self._file = None
+        self._json_stream = None
+
+    def __enter__(self):
+        assert self._file is None
+        assert self._json_stream is None
+
+        try:
+            self._file = open(self.path, "rb")
+            self._json_stream = json_stream.load(self._file)
+            return self._json_stream
+        except Exception:
+            self.close()
+            raise
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def close(self):
+        if self._json_stream:
+            self._json_stream = None
+
+        if self._file:
+            self._file.close()
+            self._file = None
+
+
 class YoloUltralyticsClassificationBase(_YoloBase):
+    def __init__(self, rootpath, image_info=None, stream=False, **kwargs):
+        self._labels_file_reader: LabelsFileReader | None = None
+        super().__init__(rootpath, image_info, stream, **kwargs)
+
+    def __iter__(self):
+        yield from super().__iter__()
+
+        if self._labels_file_reader:
+            self._labels_file_reader.close()
+            self._labels_file_reader = None
+
     def _get_subset_names(self):
         return [
             subset_name
@@ -797,7 +841,9 @@ class YoloUltralyticsClassificationBase(_YoloBase):
             if osp.isdir(osp.join(self._path, subset_name))
         ]
 
-    def _get_image_paths_for_subset_and_label(self, subset_name: str, label_name: str) -> list[str]:
+    def _get_image_paths_for_subset_and_label(
+        self, subset_name: str, label_name: str
+    ) -> Generator[list[str], None, None]:
         category_folder = osp.join(self._path, subset_name, label_name)
         image_list_path = osp.join(category_folder, YoloUltralyticsClassificationFormat.LABELS_FILE)
         if osp.isfile(image_list_path):
@@ -809,18 +855,20 @@ class YoloUltralyticsClassificationBase(_YoloBase):
             for image_path in find_images(category_folder, recursive=True)
         )
 
-    def _get_item_info_from_labels_file(self, subset_name: str) -> Optional[Dict]:
+    def _get_labels_file_path(self, subset_name: str) -> str:
         subset_path = osp.join(self._path, subset_name)
-        labels_file_path = osp.join(subset_path, YoloUltralyticsClassificationFormat.LABELS_FILE)
-        if osp.isfile(labels_file_path):
-            return parse_json_file(labels_file_path)
+        return osp.join(subset_path, YoloUltralyticsClassificationFormat.LABELS_FILE)
 
     def _get_lazy_subset_items(self, subset_name: str):
+        labels_file_path = self._get_labels_file_path(subset_name)
+        if os.path.isfile(labels_file_path):
+            with LabelsFileReader(labels_file_path) as reader:
+                return {
+                    item_id: osp.join(subset_name, item_info["path"])
+                    for item_id, item_info in reader.items()
+                }
+
         subset_path = osp.join(self._path, subset_name)
-
-        if item_info := self._get_item_info_from_labels_file(subset_name):
-            return {id: osp.join(subset_name, item_info[id]["path"]) for id in item_info}
-
         return {
             self.name_from_path(image_path): image_path
             for category_name in os.listdir(subset_path)
@@ -828,10 +876,35 @@ class YoloUltralyticsClassificationBase(_YoloBase):
             for image_path in self._get_image_paths_for_subset_and_label(subset_name, category_name)
         }
 
+    def _get_item_info_from_labels_file(self, subset_name: str, item_id: str) -> dict | None:
+        labels_file_path = self._get_labels_file_path(subset_name)
+        if not osp.isfile(labels_file_path):
+            return None
+
+        def _parse_item():
+            if self._labels_file_reader and self._labels_file_reader.path != labels_file_path:
+                self._labels_file_reader.close()
+                self._labels_file_reader = None
+
+            if not self._labels_file_reader:
+                self._labels_file_reader = LabelsFileReader(labels_file_path)
+                self._labels_file_reader.__enter__()
+
+            return self._labels_file_reader._json_stream[item_id]
+
+        try:
+            return _parse_item()
+        except json_stream.base.TransientAccessException:
+            # The items are accessed lazily in the reverse order
+            # or the stream is reiterated mid iteration
+            self._labels_file_reader.close()
+            self._labels_file_reader = None
+            return _parse_item()
+
     def _parse_annotations(self, image: Image, *, item_id: Tuple[str, str]) -> List[Annotation]:
         item_id, subset_name = item_id
-        if item_info := self._get_item_info_from_labels_file(subset_name):
-            label_names = item_info[item_id]["labels"]
+        if item_info := self._get_item_info_from_labels_file(subset_name, item_id):
+            label_names = item_info["labels"]
         else:
             subset_path = osp.join(self._path, subset_name)
             relative_image_path = osp.relpath(image.path, subset_path)
@@ -843,6 +916,19 @@ class YoloUltralyticsClassificationBase(_YoloBase):
             if label != YoloUltralyticsClassificationFormat.IMAGE_DIR_NO_LABEL
         ]
 
+    def _get_labels_from_labels_file(self, subset_name: str) -> set[str]:
+        labels_file_path = self._get_labels_file_path(subset_name)
+        labels = set()
+
+        if not osp.isfile(labels_file_path):
+            return labels
+
+        with LabelsFileReader(self._get_labels_file_path(subset_name)) as reader:
+            for item_info in reader.values():
+                labels.update(item_info["labels"])
+
+        return labels
+
     def _load_categories(self) -> CategoriesInfo:
         categories = set()
         for subset in os.listdir(self._path):
@@ -850,8 +936,7 @@ class YoloUltralyticsClassificationBase(_YoloBase):
             if not osp.isdir(subset_path):
                 continue
 
-            if item_info := self._get_item_info_from_labels_file(subset):
-                categories.update(*[item_info[item_id]["labels"] for item_id in item_info])
+            categories.update(self._get_labels_from_labels_file(subset))
 
             for label_dir_name in os.listdir(subset_path):
                 if not osp.isdir(osp.join(subset_path, label_dir_name)):

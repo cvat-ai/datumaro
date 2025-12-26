@@ -48,6 +48,9 @@ tabulate
 # prune
 scikit-learn
 
+# Stream JSON parser
+json-stream
+
 # Stream JSON dumper
 python-rapidjson==1.20
 

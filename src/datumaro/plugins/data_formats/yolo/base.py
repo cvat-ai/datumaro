@@ -850,12 +850,6 @@ class YoloUltralyticsClassificationBase(_YoloBase):
         subset_path = osp.join(self._path, subset_name)
         return osp.join(subset_path, YoloUltralyticsClassificationFormat.LABELS_FILE)
 
-    def _get_items_from_labels_file(self, subset_name: str) -> Optional[Dict]:
-        labels_file_path = self._get_labels_file_path(subset_name)
-
-        if osp.isfile(labels_file_path):
-            return parse_json_file(labels_file_path)
-
     def _get_lazy_subset_items(self, subset_name: str):
         with self.LabelsFileReader(self._get_labels_file_path(subset_name)) as reader:
             return {

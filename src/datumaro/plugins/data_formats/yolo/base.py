@@ -5,10 +5,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
 import os
 import os.path as osp
 import re
+from collections.abc import Generator
 from functools import cached_property, partial
 from itertools import cycle
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
@@ -821,7 +821,7 @@ class YoloUltralyticsClassificationBase(_YoloBase):
                 self.file.close()
                 self.file = None
 
-    def __init__(self, rootpath, image_info = None, stream = False, **kwargs):
+    def __init__(self, rootpath, image_info=None, stream=False, **kwargs):
         self._labels_file_reader = None
         super().__init__(rootpath, image_info, stream, **kwargs)
 
@@ -832,7 +832,9 @@ class YoloUltralyticsClassificationBase(_YoloBase):
             if osp.isdir(osp.join(self._path, subset_name))
         ]
 
-    def _get_image_paths_for_subset_and_label(self, subset_name: str, label_name: str) -> Generator[list[str], None, None]:
+    def _get_image_paths_for_subset_and_label(
+        self, subset_name: str, label_name: str
+    ) -> Generator[list[str], None, None]:
         category_folder = osp.join(self._path, subset_name, label_name)
         image_list_path = osp.join(category_folder, YoloUltralyticsClassificationFormat.LABELS_FILE)
         if osp.isfile(image_list_path):

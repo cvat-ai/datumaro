@@ -529,16 +529,17 @@ class YoloUltralyticsClassificationExporter(Exporter):
 
     def _export_media_for_label(self, item: DatasetItem, subset_name: str, label_name: str) -> str:
         try:
-            if not item.media or not (item.media.has_data or item.media.has_size):
-                raise DatasetExportError(
-                    "Failed to export item '%s': " "item has no image info" % item.id
-                )
             subset_path = osp.join(self._save_dir, subset_name)
             label_folder_path = osp.join(subset_path, label_name)
 
             image_fpath = self._generate_path_for_item(item, label_folder_path)
 
             if self._save_media:
+                if not item.media or not (item.media.has_data or item.media.has_size):
+                    raise DatasetExportError(
+                        "Failed to export item '%s': " "item has no image info" % item.id
+                    )
+
                 if item.media:
                     os.makedirs(label_folder_path, exist_ok=True)
                     self._save_image(item, image_fpath)

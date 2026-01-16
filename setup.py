@@ -84,8 +84,9 @@ setuptools.setup(
     install_requires=CORE_REQUIREMENTS,
     extras_require={
         "tf": [
-            "tensorflow",
-            "pyarrow!=21.0",
+            # 2.20.0 fails on MacOS, https://github.com/tensorflow/tensorflow/issues/98563
+            # (with python 3.10 it can be replaced with pyarrow!=21.0)
+            "tensorflow!=2.20.0",
         ],
         "tfds": [
             # 4.5.0 fails on Windows, https://github.com/tensorflow/datasets/issues/3709
@@ -94,8 +95,7 @@ setuptools.setup(
             "dill~=0.3",
         ],
         "tf-gpu": [
-            "tensorflow-gpu",
-            "pyarrow!=21.0",
+            "tensorflow-gpu!=2.20.0",
         ],
         "default": DEFAULT_REQUIREMENTS,
     },

@@ -82,4 +82,5 @@ src/**/*.so
 docs/**/_autosummary/
 
 # Rust API
+rust/Cargo.lock
 rust/target/

@@ -68,10 +68,3 @@ jobs:
           path: .tox/bandit-report.txt
         # Use always() to always run this step to publish scan results when there are test failures
         if: ${{ always() }}
-  call-notify-to-teams:
-    needs: [Trivy, Bandit]
-    if: |
-      always() &&
-      contains(needs.*.result, 'failure')
-    uses: ./.github/workflows/notify_teams.yml
-    secrets: inherit

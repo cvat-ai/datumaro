@@ -39,10 +39,3 @@ jobs:
       - name: Code instrumentation
         run: |
           tox -e tests-py${{ matrix.tox-env-py }}-lin
-  call-notify-to-teams:
-    needs: [check_integrity]
-    if: |
-      always() &&
-      contains(needs.*.result, 'failure')
-    uses: ./.github/workflows/notify_teams.yml
-    secrets: inherit

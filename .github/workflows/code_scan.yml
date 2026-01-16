@@ -26,8 +26,6 @@ jobs:
           pip-compile -o .ci/base/requirements.txt requirements.txt
           mkdir -p .ci/dev/tests
           pip-compile -o .ci/dev/tests/requirements.txt tests/requirements.txt
-          mkdir -p .ci/base/docs
-          pip-compile -o .ci/base/docs/requirements.txt docs/requirements.txt
       - name: Run Trivy Scan (full, csv)
         uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # 0.29.0
         with:

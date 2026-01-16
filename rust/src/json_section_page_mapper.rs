@@ -6,7 +6,7 @@ use crate::{
     page_mapper::{JsonPageMapper, ParsedJsonSection},
     utils::read_skipping_ws,
 };
-use pyo3::{prelude::*, types::PyDict};
+use pyo3::{prelude::*};
 use std::{
     collections::HashMap,
     fs::File,

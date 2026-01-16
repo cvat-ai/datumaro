@@ -63,6 +63,10 @@ jobs:
       - name: Integration testing
         run: |
           tox -vvv -e tests-py${{ matrix.tox-env-py }}-${{ matrix.tox-env-os }} -- tests/integration
+      - name: Rust unit tests
+        run: |
+          cd rust/
+          cargo test
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:

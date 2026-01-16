@@ -77,7 +77,7 @@ def generate_docs(repo, output_dir, tags):
         shutil.copytree(repo_root / "site", content_loc, symlinks=True)
 
         def run_hugo(destination_dir):
-            subprocess.run(  # nosec B603, B607
+            subprocess.run(  # nosec B404, B603, B607
                 [
                     "hugo",
                     "--destination",

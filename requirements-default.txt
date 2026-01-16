@@ -4,5 +4,5 @@ GitPython>=3.1.18,!=3.1.25 # https://github.com/openvinotoolkit/datumaro/issues/
 openvino-telemetry>=2022.1.0
 openvino-dev>=2023.2.0
 
-# restrict versions of the DVC dependency, https://github.com/treeverse/dvc/issues/6555
+# Restrict versions of the DVC dependency, https://github.com/treeverse/dvc/pull/10948
 pathspec<1

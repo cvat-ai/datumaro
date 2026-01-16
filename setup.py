@@ -88,10 +88,7 @@ setuptools.setup(
             "tensorflow!=2.20.0",
         ],
         "tfds": [
-            # 4.5.0 fails on Windows, https://github.com/tensorflow/datasets/issues/3709
-            "tensorflow-datasets!=4.5.0,!=4.5.1",
-            # TFDS misses a dependency in recent python releases
-            "dill~=0.3",
+            "tensorflow-datasets>=4.8.3,<5",
         ],
         "tf-gpu": [
             "tensorflow-gpu!=2.20.0",

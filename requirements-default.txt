@@ -6,3 +6,6 @@ openvino-dev>=2023.2.0
 
 # Restrict versions of the DVC dependency, https://github.com/treeverse/dvc/pull/10948
 pathspec<1
+
+# Restrict versions of the GitPython dependency
+dulwich<1

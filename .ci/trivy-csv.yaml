@@ -12,5 +12,4 @@ vulnerability:
 format: template
 template: "@.ci/trivy-csv.tmpl"
 output: trivy-results-full.csv
-list-all-pkgs: true
 debug: true

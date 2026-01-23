@@ -1,7 +1,6 @@
 name: Code Scanning
 
 on:
-  workflow_dispatch: # run on request (no need for PR)
   push:
     branches: [ "develop", "releases/*" ]
   schedule:

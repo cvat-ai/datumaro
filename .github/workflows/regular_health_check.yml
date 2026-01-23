@@ -1,17 +1,9 @@
-name: Build
+name: Regular healthcheck
+
 on:
-  pull_request:
-    branches:
-      - 'master'
-      - 'releases/*'
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - ready_for_review
-  push:
-    branches:
-      - 'develop'
+  schedule:
+    # every UTC 6PM at Mon, Wed, Fri
+    - cron: "0 18 * * 1,3,5"
 
 # This is what will cancel the workflow concurrency
 concurrency:

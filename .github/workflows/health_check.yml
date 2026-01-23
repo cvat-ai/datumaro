@@ -61,4 +61,4 @@ jobs:
           cargo test
       - name: Code instrumentation
         run: |
-          tox -e tests-py${{ matrix.tox-env-py }}-lin
+          tox -e tests-py${{ matrix.tox-env-py }}-${{ matrix.tox-env-os }}

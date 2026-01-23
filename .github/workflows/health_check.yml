@@ -1,6 +1,5 @@
 name: Build
 on:
-  workflow_dispatch: # for testing
   pull_request:
     branches:
       - 'master'

@@ -1,6 +1,15 @@
 name: Build
 on:
   workflow_dispatch: # for testing
+  pull_request:
+    branches:
+      - 'master'
+      - 'releases/*'
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   push:
     branches:
       - 'develop'
@@ -46,6 +55,10 @@ jobs:
       - name: Installing dependencies
         run: |
           python -m pip install tox
+      - name: Rust unit tests
+        run: |
+          cd rust/
+          cargo test
       - name: Code instrumentation
         run: |
           tox -e tests-py${{ matrix.tox-env-py }}-lin

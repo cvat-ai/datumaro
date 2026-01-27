@@ -1,43 +1,30 @@
-name: PR Test
+name: Push sync
 on:
-  pull_request:
+  push:
     branches:
       - 'develop'
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - ready_for_review
 
 # This is what will cancel the workflow concurrency
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-push_sync
   cancel-in-progress: true
 
 defaults:
   run:
     shell: bash
 jobs:
-  pr_test:
-    if: |
-      github.event.pull_request.draft == false &&
-      !(startsWith(github.event.pull_request.title, '[WIP]')) &&
-      !(startsWith(github.event.pull_request.title, '[Dependent]'))
+  test:
     strategy:
       fail-fast: false
       matrix:
-        os: ['macos-14', 'ubuntu-24.04', 'windows-2022']
+        os: ['ubuntu-24.04']
         python-version: ['3.10']
         include:
           - python-version: "3.10"
             tox-env-py: "310"
           - os: "ubuntu-24.04"
             tox-env-os: "lin"
-          - os: "windows-2022"
-            tox-env-os: "win"
-          - os: "macos-14"
-            tox-env-os: "mac"
-    name: pr test (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    name: test (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -61,9 +48,6 @@ jobs:
       - name: Unit testing
         run: |
           tox -vvv -e tests-py${{ matrix.tox-env-py }}-${{ matrix.tox-env-os }} --develop -- tests/unit --cov --cov-report=xml
-      - name: Integration testing
-        run: |
-          tox -vvv -e tests-py${{ matrix.tox-env-py }}-${{ matrix.tox-env-os }} -- tests/integration
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:

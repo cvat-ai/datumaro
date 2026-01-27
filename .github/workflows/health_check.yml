@@ -14,7 +14,7 @@ on:
     branches:
       - 'develop'
   schedule:
-    # every UTC 10:13PM at working days
+    # every UTC 10:13PM at Mon to Fri
     - cron: "0 18 * * 1-5"
 
 # This is what will cancel the workflow concurrency

@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   check_integrity:
+    runs-on: ubuntu-latest
     steps:
       - name: Test
         run: |

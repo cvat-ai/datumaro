@@ -4,7 +4,8 @@ from unittest import TestCase
 
 import numpy as np
 
-from datumaro.components.annotation import Mask
+import datumaro.util.mask_tools as mask_tools
+from datumaro.components.annotation import Mask, RleMask
 from datumaro.components.dataset import Dataset
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
@@ -225,6 +226,35 @@ class MotsPngExporterTest(TestCase):
                 require_media=True,
             )
             self.assertTrue(osp.isfile(osp.join(test_dir, "dataset_meta.json")))
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_rle_mask(self):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="1",
+                    subset="a",
+                    media=Image.from_numpy(data=np.ones((5, 1))),
+                    annotations=[
+                        RleMask(
+                            rle=mask_tools.to_uncompressed_rle(
+                                mask_tools.mask_to_rle(np.array([[1, 1, 0, 0, 0]])),
+                                width=5,
+                                height=1,
+                            ),
+                            label=0,
+                            attributes={"track_id": 1},
+                        ),
+                    ],
+                ),
+            ],
+            categories=["label_0"],
+        )
+
+        with TestDir() as test_dir:
+            self._test_save_and_load(
+                source_dataset, partial(MotsPngExporter.convert, save_media=False), test_dir
+            )
 
 
 class MotsImporterTest(TestCase):

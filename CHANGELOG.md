@@ -126,7 +126,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Invalid handling of Mac OS special dirs in format detection
   (<https://github.com/cvat-ai/datumaro/pull/88>)
 - ICDAR exporter does not require index attributes anymore
-- (<https://github.com/cvat-ai/datumaro/pull/105>)
+  (<https://github.com/cvat-ai/datumaro/pull/105>)
+- MOTS exporter now works with RLE masks when NumPy 2.x is used
+  (<https://github.com/cvat-ai/datumaro/pull/132>)
 
 ### Security
 - TBD

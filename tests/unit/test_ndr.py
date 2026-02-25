@@ -99,7 +99,7 @@ class NDRTest(TestCase):
             len(result)
 
         with self.assertRaisesRegex(
-            MediaShapeError, "An image should have 2 \(gray\) or 3 \(bgra\) dims"
+            MediaShapeError, r"An image should have 2 \(gray\) or 3 \(bgra\) dims"
         ):
             source = self._generate_dataset(config, 10, "invalid_dimension")
             result = ndr.NDR(source, working_subset="train")

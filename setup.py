@@ -85,7 +85,8 @@ setuptools.setup(
     extras_require={
         "tf": [
             # 2.20.0 fails on MacOS, https://github.com/tensorflow/tensorflow/issues/98563
-            "tensorflow!=2.20.0",
+            # 2.21.0 fails on MacOS 14 and python 3.10
+            "tensorflow!=2.20,!=2.21",
         ],
         "tfds": [
             "tensorflow-datasets>=4.8.3,<5",

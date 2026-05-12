@@ -129,6 +129,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/105>)
 - MOTS exporter now works with RLE masks when NumPy 2.x is used
   (<https://github.com/cvat-ai/datumaro/pull/132>)
+- Cityscapes and KITTY exporters are now compatible with Pillow 13
+  (<https://github.com/cvat-ai/datumaro/pull/136>)
 
 ### Security
 - TBD

@@ -1,5 +1,5 @@
 # Copyright (C) 2021 Intel Corporation
-# Copyright (C) 2022 CVAT.ai Corporation
+# Copyright (C) 2022-2026 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -149,7 +149,7 @@ class KittiExporter(Exporter):
                         osp.join(self._save_dir, labelids_mask_path),
                         compiled_class_mask.class_mask,
                         apply_colormap=False,
-                        dtype=np.int32,
+                        dtype=np.uint16,
                     )
 
                     # TODO: optimize second merging
@@ -167,7 +167,7 @@ class KittiExporter(Exporter):
                         osp.join(self._save_dir, inst_path),
                         compiled_instance_mask.class_mask,
                         apply_colormap=False,
-                        dtype=np.int32,
+                        dtype=np.uint16,
                     )
 
                 bboxes = [a for a in item.annotations if a.type == AnnotationType.bbox]

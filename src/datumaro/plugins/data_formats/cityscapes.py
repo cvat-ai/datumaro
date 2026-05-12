@@ -1,5 +1,5 @@
 # Copyright (C) 2020-2023 Intel Corporation
-# Copyright (C) 2022 CVAT.ai Corporation
+# Copyright (C) 2022-2026 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -522,7 +522,7 @@ class CityscapesExporter(Exporter):
                     inst_mask_path,
                     compiled_mask.instance_mask,
                     apply_colormap=False,
-                    dtype=np.int32,
+                    dtype=np.uint16,
                 )
         self.save_label_map()
 

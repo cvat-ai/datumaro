@@ -449,12 +449,10 @@ class _CocoBase(SubsetBase):
         return label_id
 
     @overload
-    def _parse_field(self, ann: Dict[str, Any], key: str, cls: Type[T]) -> T:
-        ...
+    def _parse_field(self, ann: Dict[str, Any], key: str, cls: Type[T]) -> T: ...
 
     @overload
-    def _parse_field(self, ann: Dict[str, Any], key: str, cls: Tuple[Type, ...]) -> Any:
-        ...
+    def _parse_field(self, ann: Dict[str, Any], key: str, cls: Tuple[Type, ...]) -> Any: ...
 
     def _parse_field(
         self, ann: Dict[str, Any], key: str, cls: Union[Type[T], Tuple[Type, ...]]
@@ -481,9 +479,7 @@ class _CocoBase(SubsetBase):
         elif value is NOTSET:
             raise MissingFieldError("iscrowd")
         elif not isinstance(value, int):
-            raise InvalidFieldTypeError(
-                "iscrowd", actual=str(type(value)), expected=(str(int),)
-            )
+            raise InvalidFieldTypeError("iscrowd", actual=str(type(value)), expected=(str(int),))
         return value
 
     def _load_annotations(self, ann, image_info=None, parsed_annotations=None):

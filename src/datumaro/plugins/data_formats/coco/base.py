@@ -465,6 +465,7 @@ class _CocoBase(SubsetBase):
         ann: Dict[str, Any],
         key: str,
         cls: Union[Type[T], Tuple[Type, ...]],
+        *,
         default: Any,
     ) -> Any:
         ...

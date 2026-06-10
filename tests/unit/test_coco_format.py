@@ -962,7 +962,7 @@ class CocoExtractorTests(TestCase):
                     self.assertEqual(capture.exception.__cause__.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_instances_without_required_iscrowd_via_directory(self):
+    def test_can_import_instances_without_iscrowd(self):
         with TestDir() as test_dir:
             ann_dir = osp.join(test_dir, "annotations")
             os.makedirs(ann_dir)

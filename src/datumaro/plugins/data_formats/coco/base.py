@@ -473,7 +473,8 @@ class _CocoBase(SubsetBase):
         self,
         ann: Dict[str, Any],
         key: str,
-        cls: Union[Type[T], Tuple[Type, ...]],
+        cls: Union[Type[T], Tuple[Type, ...]], 
+        *,
         default: Any = NOTSET,
     ) -> Any:
         value = ann.get(key, NOTSET)

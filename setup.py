@@ -90,6 +90,11 @@ setuptools.setup(
         ],
         "tfds": [
             "tensorflow-datasets>=4.8.3,<5",
+            # tensorflow-datasets depends on tensorflow-metadata.
+            # tensorflow-metadata 1.17+ requires protobuf>=6.
+            # tensorflow (<2.20) requires protobuf<6,
+            # so there is a conflict. Cap to the last protobuf-5-compatible release.
+            "tensorflow-metadata<1.17",
         ],
         "tf-gpu": [
             "tensorflow-gpu!=2.20.0",

@@ -962,20 +962,6 @@ class CocoExtractorTests(TestCase):
                     self.assertEqual(capture.exception.__cause__.__cause__.name, field)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
-    def test_can_import_instances_without_required_iscrowd(self):
-        with TestDir() as test_dir:
-            ann_path = osp.join(test_dir, "ann.json")
-            anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
-            anns["annotations"][0].pop("iscrowd")
-            dump_json_file(ann_path, anns)
-
-            dataset = Dataset.import_from(ann_path, "coco_instances", require_iscrowd=False)
-            item = dataset.get("a")
-
-            self.assertEqual(len(item.annotations), 1)
-            self.assertNotIn("is_crowd", item.annotations[0].attributes)
-
-    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_instances_without_required_iscrowd_via_directory(self):
         # Directory-based import invokes CocoImporter.find_sources and routes
         # require_iscrowd through extra_params -> options -> _CocoBase.__init__,

@@ -459,11 +459,27 @@ class _CocoBase(SubsetBase):
     def _parse_field(self, ann: Dict[str, Any], key: str, cls: Tuple[Type, ...]) -> Any:
         ...
 
+    @overload
     def _parse_field(
-        self, ann: Dict[str, Any], key: str, cls: Union[Type[T], Tuple[Type, ...]]
+        self,
+        ann: Dict[str, Any],
+        key: str,
+        cls: Union[Type[T], Tuple[Type, ...]],
+        default: Any,
+    ) -> Any:
+        ...
+
+    def _parse_field(
+        self,
+        ann: Dict[str, Any],
+        key: str,
+        cls: Union[Type[T], Tuple[Type, ...]],
+        default: Any = NOTSET,
     ) -> Any:
         value = ann.get(key, NOTSET)
         if value is NOTSET:
+            if default is not NOTSET:
+                return default
             raise MissingFieldError(key)
         elif not isinstance(value, cls):
             cls = (cls,) if isclass(cls) else cls
@@ -479,13 +495,13 @@ class _CocoBase(SubsetBase):
         ``require_iscrowd`` is disabled, missing values are accepted and no
         ``is_crowd`` attribute is added to the imported annotation.
         """
-        value = ann.get("iscrowd", NOTSET)
-        if value is NOTSET and self._require_iscrowd:
-            raise MissingFieldError("iscrowd")
-        elif value is NOTSET:
+        if self._require_iscrowd:
+            value = self._parse_field(ann, "iscrowd", int)
+        else:
+            value = self._parse_field(ann, "iscrowd", int, default=None)
+
+        if value is None:
             return None
-        elif not isinstance(value, int):
-            raise InvalidFieldTypeError("iscrowd", actual=str(type(value)), expected=(str(int),))
         return bool(value)
 
     def _load_annotations(self, ann, image_info=None, parsed_annotations=None):

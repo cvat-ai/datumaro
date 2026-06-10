@@ -963,9 +963,6 @@ class CocoExtractorTests(TestCase):
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_import_instances_without_required_iscrowd_via_directory(self):
-        # Directory-based import invokes CocoImporter.find_sources and routes
-        # require_iscrowd through extra_params -> options -> _CocoBase.__init__,
-        # which is a different code path from the single-file import above.
         with TestDir() as test_dir:
             ann_dir = osp.join(test_dir, "annotations")
             os.makedirs(ann_dir)

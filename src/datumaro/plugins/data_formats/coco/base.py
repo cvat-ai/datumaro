@@ -115,6 +115,7 @@ class _CocoBase(SubsetBase):
         merge_instance_polygons: bool = False,
         keep_original_category_ids: bool = False,
         coco_importer_type: CocoImporterType = CocoImporterType.default,
+        require_iscrowd: bool = True,
         subset: Optional[str] = None,
         stream: bool = False,
         ctx: Optional[ImportContext] = None,
@@ -141,6 +142,7 @@ class _CocoBase(SubsetBase):
             raise DatasetImportError(f"Not supported type: {coco_importer_type}")
 
         self._task = task
+        self._require_iscrowd = require_iscrowd
 
         self._merge_instance_polygons = merge_instance_polygons
 
@@ -407,7 +409,10 @@ class _CocoBase(SubsetBase):
         for segm_info in self._parse_field(ann, "segments_info", list):
             cat_id = self._get_label_id(segm_info)
             segm_id = self._parse_field(segm_info, "id", int)
-            attributes = {"is_crowd": bool(self._parse_field(segm_info, "iscrowd", int))}
+            attributes = {}
+            is_crowd = self._parse_iscrowd(segm_info)
+            if is_crowd is not None:
+                attributes["is_crowd"] = is_crowd
             parsed_annotations.append(
                 Mask(
                     image=mask.lazy_extract(segm_id),
@@ -454,11 +459,29 @@ class _CocoBase(SubsetBase):
     def _parse_field(self, ann: Dict[str, Any], key: str, cls: Tuple[Type, ...]) -> Any:
         ...
 
+    @overload
     def _parse_field(
-        self, ann: Dict[str, Any], key: str, cls: Union[Type[T], Tuple[Type, ...]]
+        self,
+        ann: Dict[str, Any],
+        key: str,
+        cls: Union[Type[T], Tuple[Type, ...]],
+        *,
+        default: Any,
+    ) -> Any:
+        ...
+
+    def _parse_field(
+        self,
+        ann: Dict[str, Any],
+        key: str,
+        cls: Union[Type[T], Tuple[Type, ...]],
+        *,
+        default: Any = NOTSET,
     ) -> Any:
         value = ann.get(key, NOTSET)
         if value is NOTSET:
+            if default is not NOTSET:
+                return default
             raise MissingFieldError(key)
         elif not isinstance(value, cls):
             cls = (cls,) if isclass(cls) else cls
@@ -466,6 +489,22 @@ class _CocoBase(SubsetBase):
                 key, actual=str(type(value)), expected=tuple(str(t) for t in cls)
             )
         return value
+
+    def _parse_iscrowd(self, ann: Dict[str, Any]) -> Optional[bool]:
+        """Parse COCO ``iscrowd`` according to importer strictness.
+
+        By default, COCO annotations must include this field. When
+        ``require_iscrowd`` is disabled, missing values are accepted and no
+        ``is_crowd`` attribute is added to the imported annotation.
+        """
+        if self._require_iscrowd:
+            value = self._parse_field(ann, "iscrowd", int)
+        else:
+            value = self._parse_field(ann, "iscrowd", int, default=None)
+
+        if value is None:
+            return None
+        return bool(value)
 
     def _load_annotations(self, ann, image_info=None, parsed_annotations=None):
         if parsed_annotations is None:
@@ -486,7 +525,9 @@ class _CocoBase(SubsetBase):
         ):
             label_id = self._get_label_id(ann)
 
-            attributes["is_crowd"] = bool(self._parse_field(ann, "iscrowd", int))
+            is_crowd = self._parse_iscrowd(ann)
+            if is_crowd is not None:
+                attributes["is_crowd"] = is_crowd
 
             if self._task is CocoTask.person_keypoints:
                 keypoints = self._parse_field(ann, "keypoints", list)

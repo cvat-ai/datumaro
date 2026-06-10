@@ -61,6 +61,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with streaming support. Added support for using `get_subset()` from the source dataset
   in `StreamDataset` during iteration, when possible.
   (<https://github.com/cvat-ai/datumaro/pull/97>)
+- \[API\] Added a `require_iscrowd` option to COCO importers to allow importing annotations
+  without the `iscrowd` field while keeping strict validation by default.
+  (<https://github.com/cvat-ai/datumaro/pull/138>)
 
 ### Changed
 - `env.detect_dataset()` now returns a list of detected formats at all recursion levels

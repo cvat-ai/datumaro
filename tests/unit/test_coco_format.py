@@ -961,6 +961,22 @@ class CocoExtractorTests(TestCase):
                     self.assertIsInstance(capture.exception.__cause__.__cause__, MissingFieldError)
                     self.assertEqual(capture.exception.__cause__.__cause__.name, field)
 
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_import_instances_without_iscrowd(self):
+        with TestDir() as test_dir:
+            ann_dir = osp.join(test_dir, "annotations")
+            os.makedirs(ann_dir)
+            ann_path = osp.join(ann_dir, "instances_default.json")
+            anns = deepcopy(self.ANNOTATION_JSON_TEMPLATE)
+            anns["annotations"][0].pop("iscrowd")
+            dump_json_file(ann_path, anns)
+
+            dataset = Dataset.import_from(test_dir, "coco_instances", require_iscrowd=False)
+            item = dataset.get("a")
+
+            self.assertEqual(len(item.annotations), 1)
+            self.assertNotIn("is_crowd", item.annotations[0].attributes)
+
     @mark_requirement(Requirements.DATUM_ERROR_REPORTING)
     def test_can_report_missing_global_field(self):
         for field in ["images", "annotations", "categories"]:

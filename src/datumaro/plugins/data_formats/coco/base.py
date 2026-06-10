@@ -467,7 +467,9 @@ class _CocoBase(SubsetBase):
             raise MissingFieldError(key)
         elif not isinstance(value, cls):
             cls = (cls,) if isclass(cls) else cls
-            raise InvalidFieldTypeError(key, actual=str(type(value)), expected=tuple(str(t) for t in cls))
+            raise InvalidFieldTypeError(
+                key, actual=str(type(value)), expected=tuple(str(t) for t in cls)
+            )
         return value
 
     def _parse_iscrowd(self, ann: Dict[str, Any]) -> Optional[bool]:
@@ -483,9 +485,7 @@ class _CocoBase(SubsetBase):
         elif value is NOTSET:
             return None
         elif not isinstance(value, int):
-            raise InvalidFieldTypeError(
-                "iscrowd", actual=str(type(value)), expected=(str(int),)
-            )
+            raise InvalidFieldTypeError("iscrowd", actual=str(type(value)), expected=(str(int),))
         return bool(value)
 
     def _load_annotations(self, ann, image_info=None, parsed_annotations=None):

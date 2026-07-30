@@ -3,6 +3,7 @@ import os.path as osp
 import shutil
 from unittest.case import TestCase
 
+from datumaro.cli.util.errors import RevpathParseProblem
 from datumaro.cli.util.project import WrongRevpathError, parse_full_revpath, split_local_revpath
 from datumaro.components.dataset import DEFAULT_FORMAT, Dataset, IDataset
 from datumaro.components.dataset_base import DatasetItem
@@ -147,7 +148,12 @@ class TestRevpath(TestCase):
                 parse_full_revpath(dataset_url)
             self.assertEqual(
                 {ProjectNotFoundError, MultipleFormatsMatchError},
-                set(type(e) for e in cm.exception.problems),
+                {type(problem.error) for problem in cm.exception.problems},
+            )
+            self.assertEqual(dataset_url, cm.exception.revpath)
+            self.assertEqual(
+                ["As a project revision", "As a dataset path"],
+                [problem.description for problem in cm.exception.problems],
             )
 
         proj_dir = osp.join(test_dir, "proj")
@@ -158,8 +164,35 @@ class TestRevpath(TestCase):
                 parse_full_revpath(dataset_url, proj)
             self.assertEqual(
                 {UnknownTargetError, MultipleFormatsMatchError},
-                set(type(e) for e in cm.exception.problems),
+                {type(problem.error) for problem in cm.exception.problems},
             )
+
+    def test_wrong_revpath_error_reports_cause_chain(self):
+        root_error = ValueError("invalid annotation")
+        import_error = RuntimeError("failed to import dataset")
+        import_error.__cause__ = root_error
+
+        error = WrongRevpathError(
+            revpath="broken/path",
+            problems=[RevpathParseProblem("As a dataset path", import_error)],
+        )
+
+        self.assertEqual(
+            "Failed to parse revpath 'broken/path':\n"
+            "\n"
+            "  As a dataset path:\n"
+            "    RuntimeError: failed to import dataset\n"
+            "    Caused by: ValueError: invalid annotation",
+            str(error),
+        )
+
+    def test_wrong_revpath_error_handles_empty_messages(self):
+        error = WrongRevpathError(
+            revpath="broken/path",
+            problems=[RevpathParseProblem("As a dataset path", RuntimeError())],
+        )
+
+        self.assertIn("    RuntimeError", str(error))
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_split_local_revpath(self):

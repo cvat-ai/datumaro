@@ -6,7 +6,7 @@ import os
 import re
 from typing import Optional, Tuple
 
-from datumaro.cli.util.errors import WrongRevpathError
+from datumaro.cli.util.errors import RevpathParseProblem, WrongRevpathError
 from datumaro.components.dataset import Dataset
 from datumaro.components.environment import DEFAULT_ENVIRONMENT, Environment
 from datumaro.components.errors import DatumaroError, ProjectNotFoundError
@@ -132,18 +132,18 @@ def parse_full_revpath(
     else:
         env = DEFAULT_ENVIRONMENT
 
-    errors = []
+    problems = []
     try:
         return parse_revspec(s, ctx_project=ctx_project)
     except (DatumaroError, OSError) as e:
-        errors.append(e)
+        problems.append(RevpathParseProblem("As a project revision", e))
 
     try:
         return parse_dataset_pathspec(s, env=env), None
     except (DatumaroError, OSError) as e:
-        errors.append(e)
+        problems.append(RevpathParseProblem("As a dataset path", e))
 
-    raise WrongRevpathError(problems=errors)
+    raise WrongRevpathError(revpath=s, problems=problems)
 
 
 def split_local_revpath(revpath: str) -> Tuple[Revision, str]:

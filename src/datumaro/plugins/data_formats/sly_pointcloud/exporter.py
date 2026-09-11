@@ -1,4 +1,5 @@
 # Copyright (C) 2021-2022 Intel Corporation
+# Copyright (C) 2026 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -55,7 +56,7 @@ class _SuperviselyPointCloudDumper:
         for img in item.media.extra_images:
             name = osp.splitext(osp.basename(img.path))[0]
             img_path = osp.join(img_dir, item.id + "_pcd", name + self._find_image_ext(img))
-            if img.has_data:
+            if self._context._save_media and img.has_data:
                 img.save(img_path)
 
             img_data = {
@@ -68,7 +69,9 @@ class _SuperviselyPointCloudDumper:
                 },
             }
 
-            dump_json_file(osp.join(img_dir, img_path + ".json"), img_data, indent=True)
+            meta_path = img_path + ".json"
+            os.makedirs(osp.dirname(meta_path), exist_ok=True)
+            dump_json_file(meta_path, img_data, indent=True)
 
     def _write_pcd(self, item):
         self._context._save_point_cloud(item, basedir=self._point_cloud_dir)
@@ -357,10 +360,10 @@ class _SuperviselyPointCloudDumper:
                 else:
                     log.debug("Item '%s' has no point cloud info", item.id)
 
-                if item.media and item.media.extra_images:
-                    self._write_related_images(item)
-                else:
-                    log.debug("Item '%s' has no related images info", item.id)
+            if item.media and item.media.extra_images:
+                self._write_related_images(item)
+            else:
+                log.debug("Item '%s' has no related images info", item.id)
 
             self._write_item_annotations(item)
 

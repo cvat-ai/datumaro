@@ -10,6 +10,7 @@ from datumaro.components.media import Image, PointCloud
 from datumaro.components.project import Dataset
 from datumaro.plugins.data_formats.sly_pointcloud.base import SuperviselyPointCloudImporter
 from datumaro.plugins.data_formats.sly_pointcloud.exporter import SuperviselyPointCloudExporter
+from datumaro.util import parse_json_file
 
 from tests.requirements import Requirements, mark_requirement
 from tests.utils.assets import get_test_asset_path
@@ -398,6 +399,34 @@ class PointCloudExporterTest(TestCase):
                 {"img2.png", "img2.png.json"},
                 set(os.listdir(osp.join(test_dir, "ds0", "related_images", "a", "b", "c235_pcd"))),
             )
+
+    @mark_requirement(Requirements.DATUM_CVAT_AI_BUG_63)
+    def test_can_export_related_image_meta_with_no_save_media(self):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="frm2",
+                    media=PointCloud.from_file(self.pcd2, extra_images=[self.image2]),
+                    attributes={"frame": 1},
+                ),
+            ],
+            media_type=PointCloud,
+        )
+
+        with TestDir() as test_dir:
+            SuperviselyPointCloudExporter.convert(source_dataset, test_dir, save_media=False)
+
+            related_dir = osp.join(test_dir, "ds0", "related_images", "frm2_pcd")
+            meta_path = osp.join(related_dir, "img1.png.json")
+            self.assertTrue(osp.isfile(meta_path))
+            self.assertFalse(osp.isfile(osp.join(related_dir, "img1.png")))
+            self.assertFalse(osp.isfile(osp.join(test_dir, "ds0", "pointcloud", "frm2.pcd")))
+
+            meta = parse_json_file(meta_path)
+            self.assertEqual("img1.png", meta["name"])
+            self.assertIn("sensorsData", meta["meta"])
+            self.assertIn("extrinsicMatrix", meta["meta"]["sensorsData"])
+            self.assertIn("intrinsicMatrix", meta["meta"]["sensorsData"])
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_inplace_save_writes_only_updated_data(self):

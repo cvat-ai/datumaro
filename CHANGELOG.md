@@ -136,6 +136,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/132>)
 - Cityscapes and KITTY exporters are now compatible with Pillow 13
   (<https://github.com/cvat-ai/datumaro/pull/136>)
+- Annotation equality now compares base class fields for subclasses that
+  override `__eq__`, including `Mask` vs `RleMask` and two `RleMask`s
+  (<https://github.com/cvat-ai/datumaro/issues/133>)
 
 ### Security
 - TBD

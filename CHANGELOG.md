@@ -136,6 +136,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/132>)
 - Cityscapes and KITTY exporters are now compatible with Pillow 13
   (<https://github.com/cvat-ai/datumaro/pull/136>)
+- Supervisely 3D export now writes related-image metadata when `save_media` is false
+  (<https://github.com/cvat-ai/datumaro/issues/63>)
 
 ### Security
 - TBD

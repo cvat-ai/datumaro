@@ -1,4 +1,5 @@
 # Copyright (C) 2021-2022 Intel Corporation
+# Copyright (C) 2026 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -63,6 +64,9 @@ class Requirements:
     # GitHub issues (bugs)
     # https://github.com/cvat-ai/datumaro/issues
     DATUM_CVAT_AI_BUG_20 = "Incorrect export without images from CVAT"
+    DATUM_CVAT_AI_BUG_63 = (
+        "Supervisely 3D doesn't export meta for related images if save_media is false"
+    )
 
 
 class SkipMessages:

@@ -127,6 +127,103 @@ class Market1501FormatTest(TestCase):
             compare_datasets(self, expected_dataset, parsed_dataset, require_media=True)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_dataset_with_numeric_person_id(self):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="frame_1",
+                    subset="test",
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
+                    attributes={
+                        "camera_id": 0,
+                        "person_id": 1,
+                        "track_id": 1,
+                        "frame_id": 3,
+                        "bbox_id": 0,
+                        "query": False,
+                    },
+                ),
+                DatasetItem(
+                    id="frame_2",
+                    subset="test",
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
+                    attributes={
+                        # number-typed attributes can be floats on export
+                        "camera_id": 0,
+                        "person_id": 2.0,
+                        "track_id": 1,
+                        "frame_id": 4,
+                        "bbox_id": 0,
+                        "query": False,
+                    },
+                ),
+                DatasetItem(
+                    id="frame_3",
+                    subset="test",
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
+                    attributes={
+                        "camera_id": 0,
+                        "person_id": -1,
+                        "track_id": 1,
+                        "frame_id": 5,
+                        "bbox_id": 0,
+                        "query": False,
+                    },
+                ),
+            ]
+        )
+
+        expected_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id="0001_c1s1_000003_00",
+                    subset="test",
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
+                    attributes={
+                        "camera_id": 0,
+                        "person_id": "0001",
+                        "track_id": 1,
+                        "frame_id": 3,
+                        "bbox_id": 0,
+                        "query": False,
+                    },
+                ),
+                DatasetItem(
+                    id="0002_c1s1_000004_00",
+                    subset="test",
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
+                    attributes={
+                        "camera_id": 0,
+                        "person_id": "0002",
+                        "track_id": 1,
+                        "frame_id": 4,
+                        "bbox_id": 0,
+                        "query": False,
+                    },
+                ),
+                DatasetItem(
+                    id="-1_c1s1_000005_00",
+                    subset="test",
+                    media=Image.from_numpy(data=np.ones((2, 5, 3))),
+                    attributes={
+                        "camera_id": 0,
+                        "person_id": "-1",
+                        "track_id": 1,
+                        "frame_id": 5,
+                        "bbox_id": 0,
+                        "query": False,
+                    },
+                ),
+            ]
+        )
+
+        with TestDir() as test_dir:
+            Market1501Exporter.convert(source_dataset, test_dir, save_media=True)
+            parsed_dataset = Dataset.import_from(test_dir, "market1501")
+
+            compare_datasets(self, expected_dataset, parsed_dataset, require_media=True)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_save_dataset_with_no_save_media(self):
         source_dataset = Dataset.from_iterable(
             [

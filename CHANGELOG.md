@@ -139,6 +139,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Annotation equality now compares base class fields for subclasses that
   override `__eq__`, including `Mask` vs `RleMask` and two `RleMask`s
   (<https://github.com/cvat-ai/datumaro/issues/133>)
+- Missing `person_id` padding in Market-1501 filenames on export
+  (<https://github.com/cvat-ai/datumaro/issues/99>)
 
 ### Security
 - TBD

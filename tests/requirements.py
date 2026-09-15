@@ -1,4 +1,5 @@
 # Copyright (C) 2021-2022 Intel Corporation
+# Copyright (C) 2022-2026 CVAT.ai Corporation
 #
 # SPDX-License-Identifier: MIT
 
@@ -63,6 +64,7 @@ class Requirements:
     # GitHub issues (bugs)
     # https://github.com/cvat-ai/datumaro/issues
     DATUM_CVAT_AI_BUG_20 = "Incorrect export without images from CVAT"
+    DATUM_CVAT_AI_BUG_133 = "Annotation equality checks can miss some parent class checks"
 
 
 class SkipMessages:

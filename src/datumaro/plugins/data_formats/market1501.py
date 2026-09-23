@@ -141,6 +141,8 @@ class Market1501Exporter(Exporter):
                 pid = item.attributes.get("person_id")
                 match = Market1501Path.PATTERN.fullmatch(item.id)
                 if not match and pid:
+                    # attributes may come as strings or floats
+                    pid = int(float(pid))
                     cid = int(item.attributes.get("camera_id", 0)) + 1
                     tid = int(item.attributes.get("track_id", 1))
                     bbid = int(item.attributes.get("bbox_id", 0))
@@ -149,8 +151,10 @@ class Market1501Exporter(Exporter):
                             "frame_id", max(used_frames.get((pid, cid, tid), [-1])) + 1
                         )
                     )
+                    # the original dataset uses -1 unpadded for junk images
+                    pid_str = str(pid) if pid < 0 else f"{pid:04d}"
                     image_name = osp.join(
-                        osp.dirname(image_name), f"{pid}_c{cid}s{tid}_{fid:06d}_{bbid:02d}"
+                        osp.dirname(image_name), f"{pid_str}_c{cid}s{tid}_{fid:06d}_{bbid:02d}"
                     )
 
                 image_path = self._make_image_filename(item, name=image_name, subdir=dirname)

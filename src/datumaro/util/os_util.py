@@ -32,6 +32,7 @@ from .definitions import DEFAULT_SUBSET_NAME
 SPECIAL_MACOS_FOLDERS = {"__MSOSX", "__MACOSX"}
 
 OS_PATH_SEPARATORS = {"/", "\\"}
+OS_PATH_SEPARATORS_RE = re.compile('|'.join(map(re.escape, OS_PATH_SEPARATORS)))
 
 DEFAULT_MAX_DEPTH = 10
 DEFAULT_MIN_DEPTH = 0
@@ -212,6 +213,26 @@ def split_path(path):
     parts.reverse()
 
     return parts
+
+
+def safe_join(base: str, *paths: str) -> str:
+    """
+    Verifies that each of paths can be joined to base without going up the directory tree.
+    Raises ValueError if that is not the case. Otherwise, returns the joined path.
+
+    The checks are solely based on certain syntax elements being present in the paths.
+    For example, "a/../b" will be rejected, even though it will not actually traverse
+    out of the base directory.
+    """
+
+    for path in paths:
+        if not path: continue
+        drive, rest = osp.splitdrive(path)
+        parts = OS_PATH_SEPARATORS_RE.split(rest)
+        if drive or not parts[0] or ".." in parts:
+            raise ValueError(f"Unsafe path component: {path!r}")
+
+    return osp.join(base, *paths)
 
 
 def is_subpath(path: str, base: str) -> bool:

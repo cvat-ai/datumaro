@@ -17,6 +17,7 @@ from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class ImagenetTxtPath:
@@ -132,7 +133,7 @@ class ImagenetTxtBase(SubsetBase):
                 items[item_id] = DatasetItem(
                     id=item_id,
                     subset=self._subset,
-                    media=Image.from_file(path=osp.join(self.image_dir, image)),
+                    media=Image.from_file(path=safe_join(self.image_dir, image)),
                     annotations=anno,
                 )
         return items
@@ -210,7 +211,7 @@ class ImagenetTxtExporter(Exporter):
 
         extractor = self._extractor
         for subset_name, subset in self._extractor.subsets().items():
-            annotation_file = osp.join(subset_dir, "%s.txt" % subset_name)
+            annotation_file = safe_join(subset_dir, f"{subset_name}.txt")
 
             labels = {}
             for item in subset:

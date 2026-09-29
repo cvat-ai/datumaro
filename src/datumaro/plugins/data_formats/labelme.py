@@ -24,7 +24,7 @@ from datumaro.util import cast, escape, unescape
 from datumaro.util.image import save_image
 from datumaro.util.mask_tools import find_mask_bbox, load_mask
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
-from datumaro.util.os_util import split_path
+from datumaro.util.os_util import safe_join, split_path
 
 
 class LabelMePath:
@@ -93,7 +93,9 @@ class LabelMeBase(DatasetBase):
 
             image = Image.from_file(path=image_path, size=image_size)
 
-            annotations = self._parse_annotations(root, osp.join(dataset_root, subset), categories)
+            annotations = self._parse_annotations(
+                root, safe_join(dataset_root, subset), categories
+            )
 
             items.append(
                 DatasetItem(id=item_id, subset=subset, media=image, annotations=annotations)
@@ -229,7 +231,7 @@ class LabelMeBase(DatasetBase):
                     user = user_elem.text
                 attributes.append(("username", user))
 
-                mask_path = osp.join(
+                mask_path = safe_join(
                     subset_root, LabelMePath.MASKS_DIR, segm_elem.find("mask").text
                 )
                 if not osp.isfile(mask_path):
@@ -381,7 +383,7 @@ class LabelMeExporter(Exporter):
             self._save_meta_file(self._save_dir)
 
         for subset_name, subset in self._extractor.subsets().items():
-            subset_dir = osp.join(self._save_dir, subset_name)
+            subset_dir = safe_join(self._save_dir, subset_name)
             os.makedirs(subset_dir, exist_ok=True)
 
             for item in subset:
@@ -405,7 +407,7 @@ class LabelMeExporter(Exporter):
         image_filename = self._make_image_filename(item)
         if self._save_media:
             if item.media and item.media.has_data:
-                self._save_image(item, osp.join(subset_dir, image_filename))
+                self._save_image(item, safe_join(subset_dir, image_filename))
             else:
                 log.debug("Item '%s' has no image", item.id)
 
@@ -470,7 +472,7 @@ class LabelMeExporter(Exporter):
             elif ann.type == AnnotationType.mask:
                 mask_filename = "%s_mask_%s.png" % (item.id, obj_id)
                 save_image(
-                    osp.join(subset_dir, LabelMePath.MASKS_DIR, mask_filename),
+                    safe_join(subset_dir, LabelMePath.MASKS_DIR, mask_filename),
                     self._paint_mask(ann.image),
                     create_dir=True,
                 )
@@ -518,10 +520,10 @@ class LabelMeExporter(Exporter):
                 ET.SubElement(parts_elem, "hasparts").text = ""
                 ET.SubElement(parts_elem, "ispartof").text = str(leader_id)
 
-        os.makedirs(osp.join(subset_dir, osp.dirname(image_filename)), exist_ok=True)
-        xml_path = osp.join(subset_dir, osp.splitext(image_filename)[0] + ".xml")
+        os.makedirs(safe_join(subset_dir, osp.dirname(image_filename)), exist_ok=True)
+        xml_path = safe_join(subset_dir, osp.splitext(image_filename)[0] + ".xml")
         if osp.exists(xml_path):
-            xml_path = osp.join(subset_dir, image_filename + ".xml")
+            xml_path = safe_join(subset_dir, image_filename + ".xml")
         with open(xml_path, "w", encoding="utf-8") as f:
             xml_data = ET.tostring(root_elem, encoding="unicode", pretty_print=True)
             f.write(xml_data)

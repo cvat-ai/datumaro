@@ -16,6 +16,7 @@ from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.image import IMAGE_EXTENSIONS, find_images
 from datumaro.util.mask_tools import lazy_mask
+from datumaro.util.os_util import safe_join
 
 from .format import IcdarPath, IcdarTask
 
@@ -71,7 +72,7 @@ class _IcdarBase(SubsetBase):
                     captions = []
 
                 item_id = osp.splitext(image)[0]
-                image_path = osp.join(osp.dirname(self._path), IcdarPath.IMAGES_DIR, image)
+                image_path = safe_join(osp.dirname(self._path), IcdarPath.IMAGES_DIR, image)
                 if item_id not in items:
                     items[item_id] = DatasetItem(
                         item_id, subset=self._subset, media=Image.from_file(path=image_path)
@@ -223,7 +224,7 @@ class _IcdarBase(SubsetBase):
             mask_categories = MaskCategories({i: colors[i] for i in range(len(colors))})
             inverse_cls_colormap = mask_categories.inverse_colormap
 
-            gt_path = osp.join(self._path, item_id + "_GT" + IcdarPath.GT_EXT)
+            gt_path = safe_join(self._path, item_id + "_GT" + IcdarPath.GT_EXT)
             if osp.isfile(gt_path):
                 # load mask through cache
                 mask = lazy_mask(gt_path, inverse_cls_colormap)

@@ -19,6 +19,7 @@ from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image
 from datumaro.util import cast, pairs
+from datumaro.util.os_util import safe_join
 
 from .format import CvatPath
 
@@ -195,7 +196,7 @@ class _SubsetWriter:
                 image_info["height"] = str(h)
 
             if self._context._save_media:
-                self._context._save_image(item, osp.join(self._context._images_dir, filename))
+                self._context._save_image(item, safe_join(self._context._images_dir, filename))
         else:
             log.debug("Item '%s' has no image info", item.id)
         self._writer.open_image(image_info)
@@ -489,7 +490,7 @@ class CvatExporter(Exporter):
         os.makedirs(self._images_dir, exist_ok=True)
 
         for subset_name, subset in self._extractor.subsets().items():
-            ann_path = osp.join(self._save_dir, "%s.xml" % subset_name)
+            ann_path = safe_join(self._save_dir, f"{subset_name}.xml")
             with open(ann_path, "w", encoding="utf-8") as f:
                 writer = _SubsetWriter(f, subset_name, subset, self)
                 writer.write()
@@ -527,6 +528,6 @@ class CvatExporter(Exporter):
             if not to_remove:
                 continue
 
-            image_path = osp.join(save_dir, CvatPath.IMAGES_DIR, conv._make_image_filename(item))
+            image_path = safe_join(save_dir, CvatPath.IMAGES_DIR, conv._make_image_filename(item))
             if osp.isfile(image_path):
                 os.unlink(image_path)

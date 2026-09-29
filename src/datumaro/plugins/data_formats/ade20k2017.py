@@ -17,6 +17,7 @@ from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.image import IMAGE_EXTENSIONS, find_images, lazy_image, load_image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class Ade20k2017Path:
@@ -62,7 +63,7 @@ class Ade20K2017Base(DatasetBase):
 
     def _load_items(self, subset):
         labels = self._categories.setdefault(AnnotationType.label, LabelCategories())
-        path = osp.join(self._path, subset)
+        path = safe_join(self._path, subset)
 
         images = [i for i in find_images(path, recursive=True)]
 

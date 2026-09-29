@@ -24,6 +24,7 @@ from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.importer import Importer
 from datumaro.components.media import Image
+from datumaro.util.os_util import safe_join
 
 from .format import CvatPath
 
@@ -493,7 +494,7 @@ class CvatBase(SubsetBase):
     def _load_items(self, parsed):
         for frame_id, item_desc in parsed.items():
             name = item_desc.get("name", "frame_%06d.png" % int(frame_id))
-            image = osp.join(self._images_dir, name)
+            image = safe_join(self._images_dir, name)
             image_size = (item_desc.get("height"), item_desc.get("width"))
             if all(image_size):
                 image = Image.from_file(path=image, size=tuple(map(int, image_size)))

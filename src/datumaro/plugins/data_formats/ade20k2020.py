@@ -24,6 +24,7 @@ from datumaro.components.media import Image
 from datumaro.util import parse_json
 from datumaro.util.image import IMAGE_EXTENSIONS, find_images, lazy_image, load_image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class Ade20k2020Path:
@@ -70,7 +71,7 @@ class Ade20K2020Base(DatasetBase):
 
     def _load_items(self, subset):
         labels = self._categories.setdefault(AnnotationType.label, LabelCategories())
-        path = osp.join(self._path, subset)
+        path = safe_join(self._path, subset)
 
         images = [i for i in find_images(path, recursive=True)]
 
@@ -118,7 +119,7 @@ class Ade20K2020Base(DatasetBase):
                 mask_path = osp.splitext(image_path)[0] + "_parts_%s.png" % (part_level + 1)
 
             for item in item_info:
-                instance_path = osp.join(osp.dirname(image_path), item["instance_mask"])
+                instance_path = safe_join(osp.dirname(image_path), item["instance_mask"])
                 if not osp.isfile(instance_path):
                     log.warning("Can`t find instance mask: %s" % instance_path)
                     continue

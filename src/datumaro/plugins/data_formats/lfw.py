@@ -15,6 +15,7 @@ from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.image import find_images
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class LfwPath:
@@ -38,7 +39,7 @@ class LfwBase(SubsetBase):
 
         self._dataset_dir = osp.dirname(osp.dirname(osp.dirname(path)))
         self._annotations_dir = osp.dirname(path)
-        self._images_dir = osp.join(self._dataset_dir, self._subset, LfwPath.IMAGES_DIR)
+        self._images_dir = safe_join(self._dataset_dir, self._subset, LfwPath.IMAGES_DIR)
 
         people_file = osp.join(osp.dirname(path), LfwPath.PEOPLE_FILE)
         self._categories = self._load_categories(people_file)
@@ -193,7 +194,7 @@ class LfwBase(SubsetBase):
                         items[item_id] = DatasetItem(
                             id=item_id,
                             subset=self._subset,
-                            image=osp.join(self._images_dir, line[0]),
+                            image=safe_join(self._images_dir, line[0]),
                         )
 
                     annotations = items[item_id].annotations
@@ -328,7 +329,7 @@ class LfwExporter(Exporter):
                         % (item.id + LfwPath.IMAGE_EXT, "\t".join(str(p) for p in landmark.points))
                     )
 
-            annotations_dir = osp.join(self._save_dir, subset_name, LfwPath.ANNOTATION_DIR)
+            annotations_dir = safe_join(self._save_dir, subset_name, LfwPath.ANNOTATION_DIR)
             pairs_file = osp.join(annotations_dir, LfwPath.PAIRS_FILE)
             os.makedirs(osp.dirname(pairs_file), exist_ok=True)
             with open(pairs_file, "w", encoding="utf-8") as f:

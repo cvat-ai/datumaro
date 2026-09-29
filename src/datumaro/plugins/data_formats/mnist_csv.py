@@ -15,6 +15,7 @@ from datumaro.components.format_detection import FormatDetectionConfidence
 from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class MnistCsvPath:
@@ -67,7 +68,7 @@ class MnistCsvBase(SubsetBase):
         with open(path, "r", encoding="utf-8") as f:
             annotation_table = f.readlines()
 
-        metafile = osp.join(self._dataset_dir, "meta_%s.csv" % self._subset)
+        metafile = safe_join(self._dataset_dir, "meta_%s.csv" % self._subset)
         meta = []
         if osp.isfile(metafile):
             with open(metafile, "r", encoding="utf-8") as f:
@@ -153,7 +154,7 @@ class MnistCsvExporter(Exporter):
                 if item.id != str(len(data) - 1):
                     item_ids[len(data) - 1] = item.id
 
-            anno_file = osp.join(self._save_dir, "mnist_%s.csv" % subset_name)
+            anno_file = safe_join(self._save_dir, f"mnist_{subset_name}.csv")
             self.save_in_csv(anno_file, data)
 
             # it is't in the original format,
@@ -178,7 +179,7 @@ class MnistCsvExporter(Exporter):
                     for i in range(len(data)):
                         meta.append(image_sizes.get(i, size))
 
-                metafile = osp.join(self._save_dir, "meta_%s.csv" % subset_name)
+                metafile = safe_join(self._save_dir, f"meta_{subset_name}.csv")
                 self.save_in_csv(metafile, meta)
 
         self.save_labels()

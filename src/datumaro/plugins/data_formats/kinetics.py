@@ -13,7 +13,7 @@ from datumaro.components.importer import Importer
 from datumaro.components.media import Video
 from datumaro.plugins.data_formats.video import VIDEO_EXTENSIONS
 from datumaro.util import parse_json, parse_json_file
-from datumaro.util.os_util import find_files
+from datumaro.util.os_util import find_files, safe_join
 
 
 class KineticsBase(DatasetBase):
@@ -53,7 +53,7 @@ class KineticsBase(DatasetBase):
         if subset in self._subsets:
             return self._subsets[subset]
 
-        subset_path = osp.join(self._path, subset)
+        subset_path = safe_join(self._path, subset)
         self._subsets[subset] = subset_path if osp.isdir(subset_path) else self._path
 
         return self._subsets[subset]

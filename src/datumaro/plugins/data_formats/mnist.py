@@ -15,6 +15,7 @@ from datumaro.components.exporter import Exporter
 from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class MnistPath:
@@ -75,7 +76,7 @@ class MnistBase(SubsetBase):
             labels = np.frombuffer(lbpath.read(), dtype=np.uint8, offset=8)
 
         meta = []
-        metafile = osp.join(self._dataset_dir, self._subset + "-meta.gz")
+        metafile = safe_join(self._dataset_dir, self._subset + "-meta.gz")
         if osp.isfile(metafile):
             with gzip.open(metafile, "rb") as f:
                 meta = np.frombuffer(f.read(), dtype="<U32")
@@ -172,14 +173,14 @@ class MnistExporter(Exporter):
             if subset_name == "test":
                 labels_file = osp.join(self._save_dir, MnistPath.TEST_LABELS_FILE)
             else:
-                labels_file = osp.join(self._save_dir, subset_name + MnistPath.LABELS_FILE)
+                labels_file = safe_join(self._save_dir, subset_name + MnistPath.LABELS_FILE)
             self.save_annotations(labels_file, labels)
 
             if 0 < len(images):
                 if subset_name == "test":
                     images_file = osp.join(self._save_dir, MnistPath.TEST_IMAGES_FILE)
                 else:
-                    images_file = osp.join(self._save_dir, subset_name + MnistPath.IMAGES_FILE)
+                    images_file = safe_join(self._save_dir, subset_name + MnistPath.IMAGES_FILE)
                 self.save_images(images_file, images)
 
             # it is't in the original format,
@@ -204,7 +205,7 @@ class MnistExporter(Exporter):
                     for i in range(len(labels)):
                         meta.append(image_sizes.get(i, size))
 
-                metafile = osp.join(self._save_dir, subset_name + "-meta.gz")
+                metafile = safe_join(self._save_dir, subset_name + "-meta.gz")
                 with gzip.open(metafile, "wb") as f:
                     f.write(np.array(meta, dtype="<U32").tobytes())
 

@@ -33,6 +33,7 @@ from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image
 from datumaro.util import cast, dump_json, dump_json_file, find, parse_json, str_to_bool
 from datumaro.util.image import save_image
+from datumaro.util.os_util import safe_join
 
 from .format import CocoPath, CocoTask
 
@@ -76,7 +77,7 @@ class TemporaryWriters:
         self._writers = tuple(
             _Writer(
                 fp=open(
-                    osp.join(self._ann_dir, f"__{self._task.name}_{self._subset}_{key}.tmp"), "wb"
+                    safe_join(self._ann_dir, f"__{self._task.name}_{self._subset}_{key}.tmp"), "wb"
                 ),
                 is_empty=True,
             )
@@ -715,7 +716,7 @@ class _PanopticExporter(_TaskExporter):
 
         pan_format = mask_tools.merge_masks((m.image, m.id) for m in masks)
         save_image(
-            osp.join(self._context._segmentation_dir, ann_filename),
+            safe_join(self._context._segmentation_dir, ann_filename),
             mask_tools.index2bgr(pan_format),
             create_dir=True,
         )
@@ -877,7 +878,7 @@ class CocoExporter(Exporter):
         os.makedirs(self._ann_dir, exist_ok=True)
 
     def _make_segmentation_dir(self, subset_name):
-        self._segmentation_dir = osp.join(
+        self._segmentation_dir = safe_join(
             self._save_dir, CocoPath.ANNOTATIONS_DIR, "panoptic_" + subset_name
         )
         os.makedirs(self._segmentation_dir, exist_ok=True)
@@ -933,9 +934,8 @@ class CocoExporter(Exporter):
                         if item.media:
                             self._save_image(
                                 item,
-                                subdir=osp.join(
-                                    self._images_dir, "" if self._merge_images else subset_name
-                                ),
+                                basedir=self._images_dir,
+                                subdir=None if self._merge_images else subset_name,
                             )
                         else:
                             log.debug("Item '%s' has no image info", item.id)
@@ -952,7 +952,7 @@ class CocoExporter(Exporter):
                     self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
             for task, task_conv in task_converters.items():
-                ann_file = osp.join(self._ann_dir, "%s_%s.json" % (task.name, subset_name))
+                ann_file = safe_join(self._ann_dir, f"{task.name}_{subset_name}.json")
 
                 if task_conv.is_empty() and (not self._tasks or self._patch):
                     if task == CocoTask.panoptic:
@@ -985,11 +985,11 @@ class CocoExporter(Exporter):
 
             # Exporter supports saving in separate dirs and common image dir
 
-            image_path = osp.join(images_dir, conv._make_image_filename(item))
+            image_path = safe_join(images_dir, conv._make_image_filename(item))
             if osp.isfile(image_path):
                 os.unlink(image_path)
 
-            image_path = osp.join(images_dir, subset, conv._make_image_filename(item))
+            image_path = safe_join(images_dir, subset, conv._make_image_filename(item))
             if osp.isfile(image_path):
                 os.unlink(image_path)
 

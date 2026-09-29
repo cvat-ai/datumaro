@@ -196,6 +196,11 @@ class JsonReader:
             image_info = item_desc.get("image")
             if image_info:
                 image_filename = image_info.get("path") or item_id + DatumaroPath.IMAGE_EXT
+                # These joins should really be `safe_join`s, but the exporter supports
+                # saving the media data with absolute paths, so we have to support loading
+                # it from absolute paths as well.
+                # This means that if the client requires the media data to be inside
+                # the dataset directory, it is responsible for checking this itself.
                 image_path = osp.join(self._images_dir, self._subset, image_filename)
                 if not osp.isfile(image_path):
                     # backward compatibility

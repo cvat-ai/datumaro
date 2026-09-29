@@ -15,6 +15,7 @@ from datumaro.components.media import Image, PointCloud
 from datumaro.util import cast
 from datumaro.util.image import find_images
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 from .format import KittiRawPath, OcclusionStates, TruncationStates
 
@@ -213,8 +214,7 @@ class KittiRawBase(SubsetBase):
                         continue
 
                     idx, path = line.split(maxsplit=1)
-                    path = osp.abspath(osp.join(rootdir, path))
-                    assert path.startswith(rootdir), path
+                    path = safe_join(rootdir, path)
                     path = osp.relpath(path, rootdir)
                     name_mapping[int(idx)] = path
 
@@ -242,7 +242,7 @@ class KittiRawBase(SubsetBase):
                 id=name,
                 subset=self._subset,
                 media=PointCloud.from_file(
-                    osp.join(self._rootdir, KittiRawPath.PCD_DIR, name + ".pcd"),
+                    safe_join(self._rootdir, KittiRawPath.PCD_DIR, name + ".pcd"),
                     extra_images=[
                         Image.from_file(path=image) for image in sorted(images.get(name, []))
                     ],
@@ -259,7 +259,7 @@ class KittiRawBase(SubsetBase):
                 id=name,
                 subset=self._subset,
                 media=PointCloud.from_file(
-                    osp.join(self._rootdir, KittiRawPath.PCD_DIR, name + ".pcd"),
+                    safe_join(self._rootdir, KittiRawPath.PCD_DIR, name + ".pcd"),
                     extra_images=[
                         Image.from_file(path=image) for image in sorted(images.get(name, []))
                     ],

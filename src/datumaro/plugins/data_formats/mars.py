@@ -14,6 +14,7 @@ from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.image import find_images
+from datumaro.util.os_util import safe_join
 
 
 class MarsPath:
@@ -70,7 +71,7 @@ class MarsBase(DatasetBase):
         for label_cat in self._categories[AnnotationType.label]:
             label = label_cat.name
             label_id = self._categories[AnnotationType.label].find(label)[0]
-            for image_path in find_images(osp.join(path, label)):
+            for image_path in find_images(safe_join(path, label)):
                 image_name = osp.basename(image_path)
                 item_id = osp.splitext(image_name)[0]
                 pedestrian_id = image_name[0:4]

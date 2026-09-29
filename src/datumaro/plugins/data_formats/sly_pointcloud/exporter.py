@@ -21,6 +21,7 @@ from datumaro.components.errors import MediaTypeError
 from datumaro.components.exporter import Exporter
 from datumaro.components.media import PointCloud
 from datumaro.util import cast, dump_json_file
+from datumaro.util.os_util import safe_join
 
 from .format import PointCloudPath
 
@@ -54,7 +55,7 @@ class _SuperviselyPointCloudDumper:
 
         for img in item.media.extra_images:
             name = osp.splitext(osp.basename(img.path))[0]
-            img_path = osp.join(img_dir, item.id + "_pcd", name + self._find_image_ext(img))
+            img_path = safe_join(img_dir, item.id + "_pcd", name + self._find_image_ext(img))
             if img.has_data:
                 img.save(img_path)
 
@@ -68,7 +69,7 @@ class _SuperviselyPointCloudDumper:
                 },
             }
 
-            dump_json_file(osp.join(img_dir, img_path + ".json"), img_data, indent=True)
+            dump_json_file(img_path + ".json", img_data, indent=True)
 
     def _write_pcd(self, item):
         self._context._save_point_cloud(item, basedir=self._point_cloud_dir)
@@ -118,7 +119,7 @@ class _SuperviselyPointCloudDumper:
         self._export_item_attributes(item, item_ann_data, item_user_info)
         self._export_item_annotations(item, item_ann_data, item_user_info)
 
-        ann_path = osp.join(self._ann_dir, item.id + ".pcd.json")
+        ann_path = safe_join(self._ann_dir, item.id + ".pcd.json")
         os.makedirs(osp.dirname(ann_path), exist_ok=True)
         dump_json_file(ann_path, item_ann_data, indent=True)
 
@@ -422,7 +423,7 @@ class SuperviselyPointCloudExporter(Exporter):
 
             pcd_name = conv._make_pcd_filename(item)
 
-            ann_path = osp.join(
+            ann_path = safe_join(
                 save_dir,
                 PointCloudPath.BASE_DIR,
                 PointCloudPath.ANNNOTATION_DIR,
@@ -431,13 +432,13 @@ class SuperviselyPointCloudExporter(Exporter):
             if osp.isfile(ann_path):
                 os.remove(ann_path)
 
-            pcd_path = osp.join(
+            pcd_path = safe_join(
                 save_dir, PointCloudPath.BASE_DIR, PointCloudPath.POINT_CLOUD_DIR, pcd_name
             )
             if osp.isfile(pcd_path):
                 os.remove(pcd_path)
 
-            images_dir = osp.join(
+            images_dir = safe_join(
                 save_dir,
                 PointCloudPath.BASE_DIR,
                 PointCloudPath.RELATED_IMAGES_DIR,

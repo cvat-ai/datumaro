@@ -45,7 +45,7 @@ from datumaro.util.image import (
     load_image_meta_file,
 )
 from datumaro.util.meta_file_util import get_meta_file, has_meta_file, parse_meta_file
-from datumaro.util.os_util import split_path
+from datumaro.util.os_util import safe_join, split_path
 
 from .exporter import bbox_annotation_as_polygon
 from .format import (
@@ -123,7 +123,7 @@ class _YoloBase(SubsetBase):
         if isinstance(item, str):
             try:
                 image_size = self._image_info.get(item_id)
-                image_path = osp.join(self._path, item)
+                image_path = safe_join(self._path, item)
 
                 image = Image.from_file(path=image_path, size=image_size)
 
@@ -208,7 +208,7 @@ class YoloBase(_YoloBase):
         }
 
     def _get_subset_image_paths(self, subset_name: str):
-        list_path = osp.join(self._path, self.localize_path(self._config[subset_name]))
+        list_path = safe_join(self._path, self.localize_path(self._config[subset_name]))
         if not osp.isfile(list_path):
             raise InvalidAnnotationError(f"Can't find '{subset_name}' subset list file")
 
@@ -339,7 +339,7 @@ class YoloBase(_YoloBase):
         if not names_path:
             raise InvalidAnnotationError("Failed to parse names file path from config")
 
-        names_path = osp.join(self._path, self.localize_path(names_path))
+        names_path = safe_join(self._path, self.localize_path(names_path))
 
         if has_meta_file(osp.dirname(names_path)):
             return {
@@ -446,7 +446,7 @@ class YoloUltralyticsDetectionBase(YoloBase):
         ] = YoloUltralyticsPath.LABELS_FOLDER_NAME
         split_rel_path[2] = osp.splitext(split_rel_path[2])[0] + YoloUltralyticsPath.LABELS_EXT
 
-        return osp.join(self._path, *split_rel_path)
+        return safe_join(self._path, *split_rel_path)
 
     @classmethod
     def name_from_path(cls, path: str) -> str:
@@ -469,7 +469,7 @@ class YoloUltralyticsDetectionBase(YoloBase):
             if subset_images_source.endswith(YoloPath.SUBSET_LIST_EXT):
                 yield from super()._get_subset_image_paths(subset_name)
             else:
-                path = osp.join(self._path, self.localize_path(subset_images_source))
+                path = safe_join(self._path, self.localize_path(subset_images_source))
                 if not osp.isdir(path):
                     raise InvalidAnnotationError(f"Can't find '{subset_name}' subset image folder")
 
@@ -844,7 +844,7 @@ class YoloUltralyticsClassificationBase(_YoloBase):
     def _get_image_paths_for_subset_and_label(
         self, subset_name: str, label_name: str
     ) -> Generator[list[str], None, None]:
-        category_folder = osp.join(self._path, subset_name, label_name)
+        category_folder = safe_join(self._path, subset_name, label_name)
         image_list_path = osp.join(category_folder, YoloUltralyticsClassificationFormat.LABELS_FILE)
         if osp.isfile(image_list_path):
             with open(image_list_path, "r", encoding="utf-8") as f:
@@ -856,7 +856,7 @@ class YoloUltralyticsClassificationBase(_YoloBase):
         )
 
     def _get_labels_file_path(self, subset_name: str) -> str:
-        subset_path = osp.join(self._path, subset_name)
+        subset_path = safe_join(self._path, subset_name)
         return osp.join(subset_path, YoloUltralyticsClassificationFormat.LABELS_FILE)
 
     def _get_lazy_subset_items(self, subset_name: str):
@@ -868,7 +868,7 @@ class YoloUltralyticsClassificationBase(_YoloBase):
                     for item_id, item_info in reader.items()
                 }
 
-        subset_path = osp.join(self._path, subset_name)
+        subset_path = safe_join(self._path, subset_name)
         return {
             self.name_from_path(image_path): image_path
             for category_name in os.listdir(subset_path)
@@ -906,7 +906,7 @@ class YoloUltralyticsClassificationBase(_YoloBase):
         if item_info := self._get_item_info_from_labels_file(subset_name, item_id):
             label_names = item_info["labels"]
         else:
-            subset_path = osp.join(self._path, subset_name)
+            subset_path = safe_join(self._path, subset_name)
             relative_image_path = osp.relpath(image.path, subset_path)
             label_names = [split_path(relative_image_path)[0]]
 

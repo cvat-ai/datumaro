@@ -237,7 +237,6 @@ class ImagenetExporter(Exporter):
                 'dataset.export("<path/to/output>", format="imagenet_with_subset_dirs").'
             )
 
-        root_dir = Path(self._save_dir)
         extractor = self._extractor
         labels = {}
         for item in self._extractor:
@@ -248,18 +247,18 @@ class ImagenetExporter(Exporter):
                 label_name = extractor.categories()[AnnotationType.label][label].name
                 self._save_image(
                     item,
-                    subdir=root_dir / item.subset / label_name
+                    subdir=Path(item.subset, label_name)
                     if self.USE_SUBSET_DIRS
-                    else root_dir / label_name,
+                    else label_name,
                     name=file_name,
                 )
 
             if not labels:
                 self._save_image(
                     item,
-                    subdir=root_dir / item.subset / ImagenetPath.IMAGE_DIR_NO_LABEL
+                    subdir=Path(item.subset, ImagenetPath.IMAGE_DIR_NO_LABEL)
                     if self.USE_SUBSET_DIRS
-                    else root_dir / ImagenetPath.IMAGE_DIR_NO_LABEL,
+                    else ImagenetPath.IMAGE_DIR_NO_LABEL,
                     name=file_name,
                 )
 

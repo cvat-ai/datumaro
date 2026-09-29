@@ -18,6 +18,7 @@ from datumaro.components.exporter import Exporter
 from datumaro.components.media import PointCloud
 from datumaro.util import cast
 from datumaro.util.image import find_images
+from datumaro.util.os_util import safe_join
 
 from .format import KittiRawPath, OcclusionStates, PoseStates, TruncationStates
 
@@ -445,7 +446,7 @@ class KittiRawExporter(Exporter):
             for i, image in enumerate(images):
                 if image.has_data:
                     image.save(
-                        osp.join(
+                        safe_join(
                             self._save_dir,
                             KittiRawPath.IMG_DIR_PREFIX + ("%02d" % i),
                             "data",
@@ -493,12 +494,12 @@ class KittiRawExporter(Exporter):
             if not (status == ItemStatus.removed or not item.media):
                 continue
 
-            pcd_path = osp.join(pcd_dir, conv._make_pcd_filename(item))
+            pcd_path = safe_join(pcd_dir, conv._make_pcd_filename(item))
             if osp.isfile(pcd_path):
                 os.unlink(pcd_path)
 
             for d in os.listdir(save_dir):
-                image_dir = osp.join(save_dir, d, "data", osp.dirname(item.id))
+                image_dir = safe_join(save_dir, d, "data", osp.dirname(item.id))
                 if d.startswith(KittiRawPath.IMG_DIR_PREFIX) and osp.isdir(image_dir):
                     for p in find_images(image_dir):
                         if osp.splitext(osp.basename(p))[0] == osp.basename(item.id):

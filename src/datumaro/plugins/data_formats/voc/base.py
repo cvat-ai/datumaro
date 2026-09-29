@@ -29,6 +29,7 @@ from datumaro.components.media import Image
 from datumaro.util.image import find_images
 from datumaro.util.mask_tools import invert_colormap, lazy_mask
 from datumaro.util.meta_file_util import has_meta_file
+from datumaro.util.os_util import safe_join
 
 from .format import VocInstColormap, VocLabelMap, VocPath, VocTask, make_voc_categories
 
@@ -139,7 +140,7 @@ class VocClassificationBase(_VocBase):
         annotations = {}
         task_dir = osp.dirname(self._path)
         for label_id, label in enumerate(self._categories[AnnotationType.label]):
-            ann_file = osp.join(task_dir, f"{label.name}_{self._subset}.txt")
+            ann_file = safe_join(task_dir, f"{label.name}_{self._subset}.txt")
             if not osp.isfile(ann_file):
                 continue
 
@@ -193,7 +194,7 @@ class _VocXmlBase(_VocBase):
                 anns = []
                 image = None
 
-                ann_file = osp.join(anno_dir, item_id + ".xml")
+                ann_file = safe_join(anno_dir, item_id + ".xml")
                 if osp.isfile(ann_file):
                     root_elem = ElementTree.parse(ann_file).getroot()
                     if root_elem.tag != "annotation":
@@ -206,7 +207,7 @@ class _VocXmlBase(_VocBase):
 
                     filename_elem = root_elem.find("filename")
                     if filename_elem is not None:
-                        image = osp.join(image_dir, filename_elem.text)
+                        image = safe_join(image_dir, filename_elem.text)
 
                     anns = self._parse_annotations(root_elem, item_id=(item_id, self._subset))
 
@@ -393,7 +394,7 @@ class VocSegmentationBase(_VocBase):
         item_annotations = []
 
         class_mask = None
-        segm_path = osp.join(
+        segm_path = safe_join(
             self._dataset_dir, VocPath.SEGMENTATION_DIR, item_id + VocPath.SEGM_EXT
         )
         if osp.isfile(segm_path):
@@ -401,7 +402,7 @@ class VocSegmentationBase(_VocBase):
             class_mask = lazy_mask(segm_path, inverse_cls_colormap)
 
         instances_mask = None
-        inst_path = osp.join(self._dataset_dir, VocPath.INSTANCES_DIR, item_id + VocPath.SEGM_EXT)
+        inst_path = safe_join(self._dataset_dir, VocPath.INSTANCES_DIR, item_id + VocPath.SEGM_EXT)
         if osp.isfile(inst_path):
             instances_mask = lazy_mask(inst_path, _inverse_inst_colormap)
 

@@ -32,7 +32,7 @@ from .definitions import DEFAULT_SUBSET_NAME
 SPECIAL_MACOS_FOLDERS = {"__MSOSX", "__MACOSX"}
 
 OS_PATH_SEPARATORS = {"/", "\\"}
-OS_PATH_SEPARATORS_RE = re.compile('|'.join(map(re.escape, OS_PATH_SEPARATORS)))
+OS_PATH_SEPARATORS_RE = re.compile("|".join(map(re.escape, OS_PATH_SEPARATORS)))
 
 DEFAULT_MAX_DEPTH = 10
 DEFAULT_MIN_DEPTH = 0
@@ -226,7 +226,8 @@ def safe_join(base: str, *paths: str) -> str:
     """
 
     for path in paths:
-        if not path: continue
+        if not path:
+            continue
         drive, rest = osp.splitdrive(path)
         parts = OS_PATH_SEPARATORS_RE.split(rest)
         if drive or not parts[0] or ".." in parts:

@@ -247,9 +247,7 @@ class ImagenetExporter(Exporter):
                 label_name = extractor.categories()[AnnotationType.label][label].name
                 self._save_image(
                     item,
-                    subdir=Path(item.subset, label_name)
-                    if self.USE_SUBSET_DIRS
-                    else label_name,
+                    subdir=Path(item.subset, label_name) if self.USE_SUBSET_DIRS else label_name,
                     name=file_name,
                 )
 

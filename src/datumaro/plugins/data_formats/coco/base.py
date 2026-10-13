@@ -390,9 +390,7 @@ class _CocoBase(SubsetBase):
             return img_id, DatasetItem(
                 id=osp.splitext(file_name)[0],
                 subset=self._subset,
-                media=Image.from_file(
-                    path=safe_join(self._images_dir, file_name), size=image_size
-                ),
+                media=Image.from_file(path=safe_join(self._images_dir, file_name), size=image_size),
                 annotations=[],
                 attributes={"id": img_id},
             )

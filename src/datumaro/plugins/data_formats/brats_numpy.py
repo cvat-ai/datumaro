@@ -58,9 +58,7 @@ class BratsNumpyBase(SubsetBase):
                 boxes = PickleLoader.restricted_load(f)
 
         for i, item_id in enumerate(ids):
-            image_path = safe_join(
-                self._root_dir, item_id + BratsNumpyPath.DATA_SUFFIX + ".npy"
-            )
+            image_path = safe_join(self._root_dir, item_id + BratsNumpyPath.DATA_SUFFIX + ".npy")
             media = None
             if osp.isfile(image_path):
                 data = np.load(image_path)[0].transpose()
@@ -71,9 +69,7 @@ class BratsNumpyBase(SubsetBase):
                 media = MultiframeImage(images, path=image_path)
 
             anno = []
-            mask_path = safe_join(
-                self._root_dir, item_id + BratsNumpyPath.LABEL_SUFFIX + ".npy"
-            )
+            mask_path = safe_join(self._root_dir, item_id + BratsNumpyPath.LABEL_SUFFIX + ".npy")
             if osp.isfile(mask_path):
                 mask = np.load(mask_path)[0].transpose()
                 for j in range(mask.shape[2]):

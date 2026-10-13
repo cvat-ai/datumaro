@@ -30,7 +30,9 @@ class IcdarWordRecognitionExporter(Exporter):
                 if self._save_media and item.media:
                     self._save_image(
                         item,
-                        safe_join(self._save_dir, subset_name, IcdarPath.IMAGES_DIR, image_filename),
+                        safe_join(
+                            self._save_dir, subset_name, IcdarPath.IMAGES_DIR, image_filename
+                        ),
                     )
 
                 annotation += "%s, " % image_filename

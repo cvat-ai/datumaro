@@ -164,9 +164,7 @@ class TfDetectionApiBase(SubsetBase):
                 else:
                     image = Image.from_bytes(data=frame_image, size=image_size)
             elif frame_filename:
-                image = Image.from_file(
-                    path=safe_join(images_dir, frame_filename), size=image_size
-                )
+                image = Image.from_file(path=safe_join(images_dir, frame_filename), size=image_size)
 
             dataset_items.append(
                 DatasetItem(

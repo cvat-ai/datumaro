@@ -93,9 +93,7 @@ class LabelMeBase(DatasetBase):
 
             image = Image.from_file(path=image_path, size=image_size)
 
-            annotations = self._parse_annotations(
-                root, safe_join(dataset_root, subset), categories
-            )
+            annotations = self._parse_annotations(root, safe_join(dataset_root, subset), categories)
 
             items.append(
                 DatasetItem(id=item_id, subset=subset, media=image, annotations=annotations)

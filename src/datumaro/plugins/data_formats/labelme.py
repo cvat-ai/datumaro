@@ -81,7 +81,7 @@ class LabelMeBase(DatasetBase):
             item_id = (
                 osp.join(root.find("folder").text or "", root.find("filename").text) or item_path
             )
-            image_path = osp.join(osp.dirname(xml_path), osp.basename(item_id))
+            image_path = safe_join(osp.dirname(xml_path), osp.basename(item_id))
             item_id = osp.splitext(item_id)[0]
 
             image_size = None

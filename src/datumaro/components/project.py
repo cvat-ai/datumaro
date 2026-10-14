@@ -1016,7 +1016,7 @@ class GitWrapper:
 
         repo = self.module().Repo.init(path=self._project_dir)
         repo.config_writer().set_value("user", "name", "User").set_value(
-            "user", "email", "<>"
+            "user", "email", ""
         ).release()
 
         # GitPython's init produces an incomplete repo, which becomes normal

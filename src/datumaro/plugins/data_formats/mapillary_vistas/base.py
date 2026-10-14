@@ -24,6 +24,7 @@ from datumaro.util import parse_json_file
 from datumaro.util.image import find_images, lazy_image, load_image
 from datumaro.util.mask_tools import bgr2index
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 from .format import (
     MapillaryVistasLabelMaps,
@@ -123,7 +124,7 @@ class _MapillaryVistasBase(SubsetBase):
 
         images_info = {
             img["id"]: {
-                "path": osp.join(self._images_dir, img["file_name"]),
+                "path": safe_join(self._images_dir, img["file_name"]),
                 "height": img.get("height"),
                 "width": img.get("width"),
             }
@@ -140,7 +141,7 @@ class _MapillaryVistasBase(SubsetBase):
                 )
 
             annotations = []
-            mask_path = osp.join(
+            mask_path = safe_join(
                 self._annotations_dir, MapillaryVistasPath.PANOPTIC_DIR, item_ann["file_name"]
             )
             mask = lazy_image(mask_path, loader=self._load_pan_mask)

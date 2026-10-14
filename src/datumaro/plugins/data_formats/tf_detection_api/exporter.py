@@ -16,6 +16,7 @@ from datumaro.components.media import Image, ImageFromBytes
 from datumaro.util.annotation_util import find_group_leader, find_instances, max_bbox
 from datumaro.util.image import encode_image
 from datumaro.util.mask_tools import merge_masks
+from datumaro.util.os_util import safe_join
 from datumaro.util.tf_util import import_tf as _import_tf
 
 from .format import DetectionApiPath
@@ -91,7 +92,7 @@ class TfDetectionApiExporter(Exporter):
                         "item {\n" + ("\tid: %s\n" % (idx)) + ("\tname: '%s'\n" % (label)) + "}\n\n"
                     )
 
-            anno_path = osp.join(self._save_dir, "%s.tfrecord" % (subset_name))
+            anno_path = safe_join(self._save_dir, f"{subset_name}.tfrecord")
             with tf.io.TFRecordWriter(anno_path) as writer:
                 for item in subset:
                     tf_example = self._make_tf_example(item)

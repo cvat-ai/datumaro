@@ -11,6 +11,7 @@ from datumaro.components.importer import Importer
 from datumaro.components.media import Image, PointCloud
 from datumaro.util import parse_json_file
 from datumaro.util.image import find_images
+from datumaro.util.os_util import safe_join
 
 from .format import PointCloudPath
 
@@ -148,12 +149,12 @@ class SuperviselyPointCloudBase(SubsetBase):
         for frame_id, frame_desc in parsed.items():
             pcd_name = frame_desc["name"]
             name = osp.splitext(pcd_name)[0]
-            pcd_path = osp.join(
+            pcd_path = safe_join(
                 self._rootdir, PointCloudPath.BASE_DIR, PointCloudPath.POINT_CLOUD_DIR, pcd_name
             )
             assert pcd_path.endswith(".pcd"), pcd_path
 
-            related_images_dir = osp.join(
+            related_images_dir = safe_join(
                 self._rootdir,
                 PointCloudPath.BASE_DIR,
                 PointCloudPath.RELATED_IMAGES_DIR,

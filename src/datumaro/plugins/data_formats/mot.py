@@ -25,6 +25,7 @@ from datumaro.components.media import Image
 from datumaro.util import cast
 from datumaro.util.image import find_images
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 MotLabel = Enum(
     "MotLabel",
@@ -89,7 +90,7 @@ class MotSeqBase(SubsetBase):
         seq_info = osp.join(seq_root, MotPath.SEQINFO_FILE)
         if osp.isfile(seq_info):
             seq_info = self._parse_seq_info(seq_info)
-            self._image_dir = osp.join(seq_root, seq_info["imdir"])
+            self._image_dir = safe_join(seq_root, seq_info["imdir"])
         else:
             seq_info = None
         self._seq_info = seq_info
@@ -146,7 +147,7 @@ class MotSeqBase(SubsetBase):
                     id=str(frame_id),
                     subset=self._subset,
                     media=Image.from_file(
-                        path=osp.join(
+                        path=safe_join(
                             self._image_dir, "%06d%s" % (frame_id, self._seq_info["imext"])
                         ),
                         size=(self._seq_info["imheight"], self._seq_info["imwidth"]),
@@ -307,7 +308,7 @@ class MotSeqGtExporter(Exporter):
 
                 if self._save_media:
                     if item.media and item.media.has_data:
-                        self._save_image(item, subdir=image_dir, name=item.id)
+                        self._save_image(item, basedir=image_dir, name=item.id)
                     else:
                         log.debug("Item '%s' has no image", item.id)
 

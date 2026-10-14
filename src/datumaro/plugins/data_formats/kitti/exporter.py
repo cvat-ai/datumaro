@@ -20,6 +20,7 @@ from datumaro.util.annotation_util import make_label_id_mapping
 from datumaro.util.image import save_image
 from datumaro.util.mask_tools import paint_mask
 from datumaro.util.meta_file_util import is_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 from .format import (
     KittiLabelMap,
@@ -121,7 +122,7 @@ class KittiExporter(Exporter):
         for subset_name, subset in self._extractor.subsets().items():
             if KittiTask.segmentation in self._tasks:
                 os.makedirs(
-                    osp.join(self._save_dir, subset_name, KittiPath.INSTANCES_DIR), exist_ok=True
+                    safe_join(self._save_dir, subset_name, KittiPath.INSTANCES_DIR), exist_ok=True
                 )
 
             for item in subset:
@@ -139,14 +140,14 @@ class KittiExporter(Exporter):
                         subset_name, KittiPath.SEMANTIC_RGB_DIR, item.id + KittiPath.MASK_EXT
                     )
                     self.save_mask(
-                        osp.join(self._save_dir, color_mask_path), compiled_class_mask.class_mask
+                        safe_join(self._save_dir, color_mask_path), compiled_class_mask.class_mask
                     )
 
                     labelids_mask_path = osp.join(
                         subset_name, KittiPath.SEMANTIC_DIR, item.id + KittiPath.MASK_EXT
                     )
                     self.save_mask(
-                        osp.join(self._save_dir, labelids_mask_path),
+                        safe_join(self._save_dir, labelids_mask_path),
                         compiled_class_mask.class_mask,
                         apply_colormap=False,
                         dtype=np.uint16,
@@ -164,7 +165,7 @@ class KittiExporter(Exporter):
                         subset_name, KittiPath.INSTANCES_DIR, item.id + KittiPath.MASK_EXT
                     )
                     self.save_mask(
-                        osp.join(self._save_dir, inst_path),
+                        safe_join(self._save_dir, inst_path),
                         compiled_instance_mask.class_mask,
                         apply_colormap=False,
                         dtype=np.uint16,
@@ -172,7 +173,7 @@ class KittiExporter(Exporter):
 
                 bboxes = [a for a in item.annotations if a.type == AnnotationType.bbox]
                 if bboxes and KittiTask.detection in self._tasks:
-                    labels_file = osp.join(
+                    labels_file = safe_join(
                         self._save_dir, subset_name, KittiPath.LABELS_DIR, "%s.txt" % item.id
                     )
                     os.makedirs(osp.dirname(labels_file), exist_ok=True)

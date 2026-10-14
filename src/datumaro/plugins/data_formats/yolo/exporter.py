@@ -32,7 +32,7 @@ from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image
 from datumaro.util import dump_json_file, str_to_bool
 from datumaro.util.definitions import DEFAULT_SUBSET_NAME
-from datumaro.util.os_util import split_path
+from datumaro.util.os_util import safe_join, split_path
 
 from .format import YoloPath, YoloUltralyticsClassificationFormat, YoloUltralyticsPath
 
@@ -186,7 +186,7 @@ class YoloExporter(Exporter):
 
     def _make_subset_list_file(self, subset_name, image_paths):
         subset_list_name = f"{subset_name}{YoloPath.SUBSET_LIST_EXT}"
-        subset_list_path = osp.join(self._save_dir, subset_list_name)
+        subset_list_path = safe_join(self._save_dir, subset_list_name)
         if self._patch and subset_name in self._patch.updated_subsets and not image_paths:
             if osp.isfile(subset_list_path):
                 os.remove(subset_list_path)
@@ -204,7 +204,7 @@ class YoloExporter(Exporter):
                 )
 
             image_name = self._make_image_filename(item)
-            image_fpath = osp.join(subset_img_dir, image_name)
+            image_fpath = safe_join(subset_img_dir, image_name)
 
             if self._save_media:
                 if item.media:
@@ -232,7 +232,7 @@ class YoloExporter(Exporter):
                 if annotation_line:
                     yolo_annotation += annotation_line
 
-            annotation_path = osp.join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
+            annotation_path = safe_join(subset_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             os.makedirs(osp.dirname(annotation_path), exist_ok=True)
 
             self._save_annotation_file(annotation_path, yolo_annotation)
@@ -273,11 +273,11 @@ class YoloExporter(Exporter):
 
     @staticmethod
     def _make_image_subset_folder(save_dir: str, subset: str) -> str:
-        return osp.join(save_dir, f"obj_{subset}_data")
+        return safe_join(save_dir, f"obj_{subset}_data")
 
     @staticmethod
     def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
-        return osp.join(save_dir, f"obj_{subset}_data")
+        return safe_join(save_dir, f"obj_{subset}_data")
 
     @classmethod
     def patch(cls, dataset: IDataset, patch: DatasetPatch, save_dir: str, **kwargs):
@@ -299,11 +299,11 @@ class YoloExporter(Exporter):
             subset_image_dir = cls._make_image_subset_folder(save_dir, subset)
             subset_anno_dir = cls._make_annotation_subset_folder(save_dir, subset)
 
-            image_path = osp.join(subset_image_dir, conv._make_image_filename(item))
+            image_path = safe_join(subset_image_dir, conv._make_image_filename(item))
             if osp.isfile(image_path):
                 os.remove(image_path)
 
-            ann_path = osp.join(subset_anno_dir, f"{item.id}{YoloPath.LABELS_EXT}")
+            ann_path = safe_join(subset_anno_dir, f"{item.id}{YoloPath.LABELS_EXT}")
             if osp.isfile(ann_path):
                 os.remove(ann_path)
 
@@ -353,7 +353,7 @@ class YoloUltralyticsDetectionExporter(YoloExporter):
     def _save_config_files(self, subset_lists: Dict[str, str], **extra_config_fields):
         extractor = self._extractor
         save_dir = self._save_dir
-        with open(osp.join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
+        with open(safe_join(save_dir, self._config_filename), "w", encoding="utf-8") as f:
             label_categories = extractor.categories()[AnnotationType.label]
             data = dict(
                 path=".",
@@ -368,11 +368,11 @@ class YoloUltralyticsDetectionExporter(YoloExporter):
 
     @staticmethod
     def _make_image_subset_folder(save_dir: str, subset: str) -> str:
-        return osp.join(save_dir, YoloUltralyticsPath.IMAGES_FOLDER_NAME, subset)
+        return safe_join(save_dir, YoloUltralyticsPath.IMAGES_FOLDER_NAME, subset)
 
     @staticmethod
     def _make_annotation_subset_folder(save_dir: str, subset: str) -> str:
-        return osp.join(save_dir, YoloUltralyticsPath.LABELS_FOLDER_NAME, subset)
+        return safe_join(save_dir, YoloUltralyticsPath.LABELS_FOLDER_NAME, subset)
 
     def _make_track_id_suffix(self, anno: Annotation) -> str:
         track_id = anno.attributes.get("track_id") if self._write_track_id else None
@@ -489,7 +489,7 @@ class YoloUltralyticsClassificationExporter(Exporter):
         subsets = _resolve_subsets(self._extractor.subsets())
         pbars = self._ctx.progress_reporter.split(len(subsets))
         for (subset_name, subset), pbar in zip(subsets.items(), pbars):
-            os.makedirs(osp.join(self._save_dir, subset_name), exist_ok=True)
+            os.makedirs(safe_join(self._save_dir, subset_name), exist_ok=True)
 
             items_info = defaultdict(dict)
 
@@ -510,38 +510,36 @@ class YoloUltralyticsClassificationExporter(Exporter):
                 except Exception as e:
                     self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 
-            labels_path = osp.join(
+            labels_path = safe_join(
                 self._save_dir,
                 subset_name,
                 YoloUltralyticsClassificationFormat.LABELS_FILE,
             )
             dump_json_file(labels_path, items_info)
 
-    def _generate_path_for_item(self, item: DatasetItem, label_folder_path: str) -> str:
+    def _generate_relpath_for_item(self, item: DatasetItem, label_subdir: str) -> str:
         item_name = base_item_name = split_path(item.id)[-1]
-        if item_name in self._used_paths[label_folder_path]:
+        if item_name in self._used_paths[label_subdir]:
             for index in itertools.count():
                 item_name = f"{base_item_name}.{index}"
-                if item_name not in self._used_paths[label_folder_path]:
+                if item_name not in self._used_paths[label_subdir]:
                     break
-        self._used_paths[label_folder_path].add(item_name)
-        return self._make_image_filename(item, name=item_name, subdir=label_folder_path)
+        self._used_paths[label_subdir].add(item_name)
+        return self._make_image_filename(item, name=item_name, subdir=label_subdir)
 
     def _export_media_for_label(self, item: DatasetItem, subset_name: str, label_name: str) -> str:
         try:
-            subset_path = osp.join(self._save_dir, subset_name)
-            label_folder_path = osp.join(subset_path, label_name)
+            label_subdir = osp.join(subset_name, label_name)
 
-            image_fpath = self._generate_path_for_item(item, label_folder_path)
+            image_relpath = self._generate_relpath_for_item(item, label_subdir)
 
             if self._save_media:
                 if item.media:
-                    os.makedirs(label_folder_path, exist_ok=True)
-                    self._save_image(item, image_fpath)
+                    self._save_image(item, safe_join(self._save_dir, image_relpath))
                 else:
                     log.warning("Item '%s' has no image" % item.id)
 
-            return osp.relpath(image_fpath, subset_path)
+            return osp.relpath(image_relpath, subset_name)
         except Exception as e:
             self._ctx.error_policy.report_item_error(e, item_id=(item.id, item.subset))
 

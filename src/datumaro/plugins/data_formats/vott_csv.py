@@ -11,6 +11,7 @@ from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class VottCsvPath:
@@ -46,7 +47,7 @@ class VottCsvBase(SubsetBase):
                     items[item_id] = DatasetItem(
                         id=item_id,
                         subset=self._subset,
-                        media=Image.from_file(path=osp.join(osp.dirname(path), row["image"])),
+                        media=Image.from_file(path=safe_join(osp.dirname(path), row["image"])),
                     )
 
                 annotations = items[item_id].annotations

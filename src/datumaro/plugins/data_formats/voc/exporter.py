@@ -34,6 +34,7 @@ from datumaro.util.annotation_util import make_label_id_mapping
 from datumaro.util.image import save_image
 from datumaro.util.mask_tools import paint_mask
 from datumaro.util.meta_file_util import has_meta_file
+from datumaro.util.os_util import safe_join
 
 from .format import VocInstColormap, VocLabelMap, VocPath, VocTask, make_voc_categories
 
@@ -219,7 +220,7 @@ class VocExporter(Exporter):
                     image_filename = self._make_image_filename(item)
                     if self._save_media:
                         if item.media:
-                            self._save_image(item, osp.join(self._images_dir, image_filename))
+                            self._save_image(item, safe_join(self._images_dir, image_filename))
                         else:
                             log.debug("Item '%s' has no image", item.id)
 
@@ -356,7 +357,7 @@ class VocExporter(Exporter):
                 VocTask.person_layout,
                 VocTask.action_classification,
             }:
-                ann_path = osp.join(self._ann_dir, item.id + ".xml")
+                ann_path = safe_join(self._ann_dir, item.id + ".xml")
                 os.makedirs(osp.dirname(ann_path), exist_ok=True)
                 with open(ann_path, "w", encoding="utf-8") as f:
                     f.write(ET.tostring(root_elem, encoding="unicode", pretty_print=True))
@@ -387,21 +388,21 @@ class VocExporter(Exporter):
             )
 
             self.save_segm(
-                osp.join(self._segm_dir, item.id + VocPath.SEGM_EXT), compiled_mask.class_mask
+                safe_join(self._segm_dir, item.id + VocPath.SEGM_EXT), compiled_mask.class_mask
             )
             self.save_segm(
-                osp.join(self._inst_dir, item.id + VocPath.SEGM_EXT),
+                safe_join(self._inst_dir, item.id + VocPath.SEGM_EXT),
                 compiled_mask.instance_mask,
                 colormap=VocInstColormap,
             )
 
             lists.segm_list[item.id] = True
         elif not masks and self._patch:
-            cls_mask_path = osp.join(self._segm_dir, item.id + VocPath.SEGM_EXT)
+            cls_mask_path = safe_join(self._segm_dir, item.id + VocPath.SEGM_EXT)
             if osp.isfile(cls_mask_path):
                 os.remove(cls_mask_path)
 
-            inst_mask_path = osp.join(self._inst_dir, item.id + VocPath.SEGM_EXT)
+            inst_mask_path = safe_join(self._inst_dir, item.id + VocPath.SEGM_EXT)
             if osp.isfile(inst_mask_path):
                 os.remove(inst_mask_path)
 
@@ -432,7 +433,7 @@ class VocExporter(Exporter):
     def save_action_lists(self, subset_name, action_list):
         os.makedirs(self._action_subsets_dir, exist_ok=True)
 
-        ann_file = osp.join(self._action_subsets_dir, subset_name + ".txt")
+        ann_file = safe_join(self._action_subsets_dir, subset_name + ".txt")
         items = {k: True for k in action_list}
         if self._patch and osp.isfile(ann_file):
             self._get_filtered_lines(ann_file, self._patch, subset_name, items)
@@ -455,7 +456,7 @@ class VocExporter(Exporter):
                 f.write("%s %s % d\n" % (item, 1 + obj_id, 1 if presented else -1))
 
         all_actions = {
-            act: osp.join(self._action_subsets_dir, "%s_%s.txt" % (act, subset_name))
+            act: safe_join(self._action_subsets_dir, f"{act}_{subset_name}.txt")
             for act in chain(*(self._get_actions(l) for l in self._label_map))
         }
         for action, ann_file in all_actions.items():
@@ -486,7 +487,7 @@ class VocExporter(Exporter):
         os.makedirs(self._cls_subsets_dir, exist_ok=True)
 
         for label in self._label_map:
-            ann_file = osp.join(self._cls_subsets_dir, "%s_%s.txt" % (label, subset_name))
+            ann_file = safe_join(self._cls_subsets_dir, f"{label}_{subset_name}.txt")
             items = {k: True for k in class_lists}
             lines = {}
             if self._patch and osp.isfile(ann_file):
@@ -507,7 +508,7 @@ class VocExporter(Exporter):
     def save_clsdet_lists(self, subset_name, clsdet_list):
         os.makedirs(self._cls_subsets_dir, exist_ok=True)
 
-        ann_file = osp.join(self._cls_subsets_dir, subset_name + ".txt")
+        ann_file = safe_join(self._cls_subsets_dir, subset_name + ".txt")
         items = {k: True for k in clsdet_list}
         if self._patch and osp.isfile(ann_file):
             self._get_filtered_lines(ann_file, self._patch, subset_name, items)
@@ -522,7 +523,7 @@ class VocExporter(Exporter):
     def save_segm_lists(self, subset_name, segm_list):
         os.makedirs(self._segm_subsets_dir, exist_ok=True)
 
-        ann_file = osp.join(self._segm_subsets_dir, subset_name + ".txt")
+        ann_file = safe_join(self._segm_subsets_dir, subset_name + ".txt")
         items = {k: True for k in segm_list}
         if self._patch and osp.isfile(ann_file):
             self._get_filtered_lines(ann_file, self._patch, subset_name, items)
@@ -546,7 +547,7 @@ class VocExporter(Exporter):
 
         os.makedirs(self._layout_subsets_dir, exist_ok=True)
 
-        ann_file = osp.join(self._layout_subsets_dir, subset_name + ".txt")
+        ann_file = safe_join(self._layout_subsets_dir, subset_name + ".txt")
         items = {k: True for k in layout_list}
         lines = {}
         if self._patch and osp.isfile(ann_file):
@@ -676,7 +677,7 @@ class VocExporter(Exporter):
 
             label, subset = osp.splitext(filename)[0].split("_", maxsplit=1)
             if label not in conv._label_map or subset not in dataset.subsets():
-                os.remove(osp.join(conv._cls_subsets_dir, filename))
+                os.remove(safe_join(conv._cls_subsets_dir, filename))
 
         # Find images that need to be removed
         # images from different subsets are stored in the common directory
@@ -705,20 +706,20 @@ class VocExporter(Exporter):
                 VocTask.action_classification,
                 VocTask.person_layout,
             }:
-                ann_path = osp.join(conv._ann_dir, item.id + ".xml")
+                ann_path = safe_join(conv._ann_dir, item.id + ".xml")
                 if osp.isfile(ann_path):
                     os.remove(ann_path)
 
-            image_path = osp.join(conv._images_dir, conv._make_image_filename(item))
+            image_path = safe_join(conv._images_dir, conv._make_image_filename(item))
             if osp.isfile(image_path):
                 os.unlink(image_path)
 
             if not [a for a in item.annotations if a.type is AnnotationType.mask]:
-                path = osp.join(save_dir, VocPath.SEGMENTATION_DIR, item.id + VocPath.SEGM_EXT)
+                path = safe_join(save_dir, VocPath.SEGMENTATION_DIR, item.id + VocPath.SEGM_EXT)
                 if osp.isfile(path):
                     os.unlink(path)
 
-                path = osp.join(save_dir, VocPath.INSTANCES_DIR, item.id + VocPath.SEGM_EXT)
+                path = safe_join(save_dir, VocPath.INSTANCES_DIR, item.id + VocPath.SEGM_EXT)
                 if osp.isfile(path):
                     os.unlink(path)
 

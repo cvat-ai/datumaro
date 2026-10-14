@@ -45,7 +45,7 @@ from datumaro.util.image import (
     save_image_meta_file,
 )
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
-from datumaro.util.os_util import make_file_name, split_path
+from datumaro.util.os_util import make_file_name, safe_join, split_path
 
 # A regex to check whether a string can be used as a "normal" path
 # component.
@@ -213,7 +213,7 @@ class OpenImagesBase(DatasetBase):
 
     @contextlib.contextmanager
     def _open_csv_annotation(self, file_name):
-        absolute_path = osp.join(self._annotation_dir, file_name)
+        absolute_path = safe_join(self._annotation_dir, file_name)
 
         with open(absolute_path, "r", encoding="utf-8", newline="") as f:
             yield csv.DictReader(f)
@@ -558,7 +558,7 @@ class OpenImagesBase(DatasetBase):
                     item.annotations.append(
                         Mask(
                             image=lazy_image(
-                                osp.join(
+                                safe_join(
                                     self._dataset_dir,
                                     OpenImagesPath.MASKS_DIR,
                                     item.subset,
@@ -662,7 +662,7 @@ class _AnnotationWriter:
     def open(self, file_name, newline=None):
         self._written_annotations.add(file_name)
 
-        file_path = osp.join(self._annotations_dir, file_name)
+        file_path = safe_join(self._annotations_dir, file_name)
 
         # Write to a temporary file first, to avoid data loss if we're patching
         # an existing dataset and the process is interrupted.
@@ -695,7 +695,7 @@ class _AnnotationWriter:
                 fnmatch.fnmatch(file_name, pattern)
                 for pattern in self._POSSIBLE_ANNOTATION_FILE_PATTERNS
             ):
-                os.unlink(osp.join(self._annotations_dir, file_name))
+                os.unlink(safe_join(self._annotations_dir, file_name))
 
 
 class OpenImagesExporter(Exporter):
@@ -721,7 +721,7 @@ class OpenImagesExporter(Exporter):
 
             item = DatasetItem(item_id, subset=subset)
 
-            image_path = osp.join(images_dir, converter._make_image_filename(item, subdir=subset))
+            image_path = safe_join(images_dir, converter._make_image_filename(item, subdir=subset))
 
             if osp.isfile(image_path):
                 os.unlink(image_path)
@@ -788,11 +788,7 @@ class OpenImagesExporter(Exporter):
             "Subcategory": [node for node in orphan_nodes if "Subcategory" in node],
         }
 
-        hierarchy_path = osp.join(
-            self._save_dir, OpenImagesPath.ANNOTATIONS_DIR, OpenImagesPath.HIERARCHY_FILE_NAME
-        )
-
-        with annotation_writer.open(hierarchy_path) as hierarchy_file:
+        with annotation_writer.open(OpenImagesPath.HIERARCHY_FILE_NAME) as hierarchy_file:
             json.dump(root_node, hierarchy_file, indent=4, ensure_ascii=False)
             hierarchy_file.write("\n")
 
@@ -915,7 +911,7 @@ class OpenImagesExporter(Exporter):
                         }
                     )
                 elif annotation.type is AnnotationType.mask:
-                    mask_dir = osp.join(self._save_dir, OpenImagesPath.MASKS_DIR, item.subset)
+                    mask_dir = safe_join(self._save_dir, OpenImagesPath.MASKS_DIR, item.subset)
 
                     box_id_str = annotation.attributes.get("box_id")
 
@@ -969,5 +965,5 @@ class OpenImagesExporter(Exporter):
                     )
 
                     save_image(
-                        osp.join(mask_dir, mask_file_name), annotation.image, create_dir=True
+                        safe_join(mask_dir, mask_file_name), annotation.image, create_dir=True
                     )

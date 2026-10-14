@@ -35,6 +35,7 @@ from datumaro.util.annotation_util import make_label_id_mapping
 from datumaro.util.image import save_image
 from datumaro.util.mask_tools import generate_colormap, lazy_mask, paint_mask
 from datumaro.util.meta_file_util import has_meta_file, is_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 CamvidLabelMap = OrderedDict(
     [
@@ -220,13 +221,13 @@ class CamvidBase(SubsetBase):
             for line in f:
                 image, gt = _parse_annotation_line(line)
                 item_id = osp.splitext(osp.join(*image.split("/")[2:]))[0]
-                image_path = osp.join(self._dataset_dir, image.lstrip("/"))
+                image_path = safe_join(self._dataset_dir, image.lstrip("/"))
 
                 def parse_annotations(mask_path: Optional[str]) -> list[Annotation]:
                     if mask_path is None:
                         return []
                     item_annotations = []
-                    gt_path = osp.join(self._dataset_dir, mask_path)
+                    gt_path = safe_join(self._dataset_dir, mask_path)
                     mask = lazy_mask(
                         gt_path, self._categories[AnnotationType.mask].inverse_colormap
                     )
@@ -364,7 +365,7 @@ class CamvidExporter(Exporter):
             for item in subset:
                 image_path = self._make_image_filename(item, subdir=subset_name)
                 if self._save_media and item.media:
-                    self._save_image(item, osp.join(self._save_dir, image_path))
+                    self._save_image(item, safe_join(self._save_dir, image_path))
 
                 masks = [a for a in item.annotations if a.type == AnnotationType.mask]
 
@@ -376,7 +377,7 @@ class CamvidExporter(Exporter):
                     mask_path = osp.join(
                         subset_name + CamvidPath.SEGM_DIR, item.id + CamvidPath.MASK_EXT
                     )
-                    self.save_segm(osp.join(self._save_dir, mask_path), compiled_mask.class_mask)
+                    self.save_segm(safe_join(self._save_dir, mask_path), compiled_mask.class_mask)
                     segm_list[item.id] = (image_path, mask_path)
                 else:
                     segm_list[item.id] = (image_path, "")
@@ -392,7 +393,7 @@ class CamvidExporter(Exporter):
         save_image(path, mask, create_dir=True)
 
     def save_segm_lists(self, subset_name, segm_list):
-        ann_file = osp.join(self._save_dir, subset_name + ".txt")
+        ann_file = safe_join(self._save_dir, subset_name + ".txt")
 
         if not segm_list:
             if self._patch and subset_name in self._patch.updated_subsets:
@@ -512,22 +513,22 @@ class CamvidExporter(Exporter):
             if not (status == ItemStatus.removed or not item.media):
                 continue
 
-            image_path = osp.join(save_dir, conv._make_image_filename(item, subdir=subset))
+            image_path = safe_join(save_dir, conv._make_image_filename(item, subdir=subset))
             if osp.isfile(image_path):
                 os.unlink(image_path)
 
-            mask_path = osp.join(
+            mask_path = safe_join(
                 save_dir, subset + CamvidPath.SEGM_DIR, item.id + CamvidPath.MASK_EXT
             )
             if osp.isfile(mask_path):
                 os.remove(mask_path)
 
         for subset in patch.updated_subsets:
-            ann_dir = osp.join(save_dir, subset + CamvidPath.SEGM_DIR)
+            ann_dir = safe_join(save_dir, subset + CamvidPath.SEGM_DIR)
             if osp.isdir(ann_dir) and not os.listdir(ann_dir):
                 os.rmdir(ann_dir)
 
-            img_dir = osp.join(save_dir, subset)
+            img_dir = safe_join(save_dir, subset)
             if osp.isdir(img_dir) and not os.listdir(img_dir):
                 os.rmdir(img_dir)
 

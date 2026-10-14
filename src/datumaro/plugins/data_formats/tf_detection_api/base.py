@@ -13,6 +13,7 @@ from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.image import decode_image, lazy_image
+from datumaro.util.os_util import safe_join
 from datumaro.util.tf_util import import_tf as _import_tf
 
 from .format import DetectionApiPath
@@ -163,7 +164,7 @@ class TfDetectionApiBase(SubsetBase):
                 else:
                     image = Image.from_bytes(data=frame_image, size=image_size)
             elif frame_filename:
-                image = Image.from_file(path=osp.join(images_dir, frame_filename), size=image_size)
+                image = Image.from_file(path=safe_join(images_dir, frame_filename), size=image_size)
 
             dataset_items.append(
                 DatasetItem(

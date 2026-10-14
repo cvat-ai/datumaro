@@ -21,6 +21,7 @@ from datumaro.components.importer import ImportContext, Importer
 from datumaro.components.media import Image
 from datumaro.util import cast
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 from datumaro.util.pickle_util import PickleLoader
 
 
@@ -308,7 +309,7 @@ class CifarExporter(Exporter):
             if batch_label:
                 annotation_dict["batch_label"] = batch_label
 
-            annotation_file = osp.join(self._save_dir, subset_name)
+            annotation_file = safe_join(self._save_dir, subset_name)
 
             if (
                 self._patch
@@ -334,6 +335,6 @@ class CifarExporter(Exporter):
             if status != ItemStatus.removed:
                 continue
 
-            subset_file = osp.join(save_dir, subset)
+            subset_file = safe_join(save_dir, subset)
             if osp.isfile(subset_file):
                 os.remove(subset_file)

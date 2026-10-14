@@ -44,7 +44,7 @@ from datumaro.components.errors import PathSeparatorInSubsetNameError
 from datumaro.components.exporter import ExportContextComponent, Exporter
 from datumaro.components.media import Image, MediaElement, PointCloud, Video, VideoFrame
 from datumaro.util import cast, dump_json_file
-from datumaro.util.os_util import OS_PATH_SEPARATORS
+from datumaro.util.os_util import OS_PATH_SEPARATORS, safe_join
 
 from .format import DatumaroPath
 
@@ -234,7 +234,7 @@ class _SubsetWriter:
                     return f"image_{i}{context.find_image_ext(image)}"
 
                 def make_extra_image_full_path(i, image) -> str:
-                    return osp.join(
+                    return safe_join(
                         context._save_dir,
                         DatumaroPath.LEGACY_RELATED_IMAGES_DIR,
                         item.subset,
@@ -567,7 +567,7 @@ class DatumaroExporter(Exporter):
             _SubsetWriter(
                 context=self,
                 subset=subset,
-                ann_file=osp.join(
+                ann_file=safe_join(
                     self._annotations_dir,
                     subset + self.PATH_CLS.ANNOTATION_EXT,
                 ),
@@ -577,7 +577,7 @@ class DatumaroExporter(Exporter):
             else _StreamSubsetWriter(
                 context=self,
                 subset=subset,
-                ann_file=osp.join(
+                ann_file=safe_join(
                     self._annotations_dir,
                     subset + self.PATH_CLS.ANNOTATION_EXT,
                 ),
@@ -648,19 +648,19 @@ class DatumaroExporter(Exporter):
             if not (status == ItemStatus.removed or not item.media):
                 continue
 
-            image_path = osp.join(
+            image_path = safe_join(
                 save_dir, cls.PATH_CLS.IMAGES_DIR, item.subset, conv._make_image_filename(item)
             )
             if osp.isfile(image_path):
                 os.unlink(image_path)
 
-            pcd_path = osp.join(
+            pcd_path = safe_join(
                 save_dir, cls.PATH_CLS.PCD_DIR, item.subset, conv._make_pcd_filename(item)
             )
             if osp.isfile(pcd_path):
                 os.unlink(pcd_path)
 
-            related_images_path = osp.join(
+            related_images_path = safe_join(
                 save_dir, DatumaroPath.LEGACY_RELATED_IMAGES_DIR, item.subset, item.id
             )
             if osp.isdir(related_images_path):

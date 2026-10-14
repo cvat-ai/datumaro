@@ -15,6 +15,7 @@ from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class WiderFacePath:
@@ -57,7 +58,7 @@ class WiderFaceBase(SubsetBase):
                     label_cat.add(line.strip())
         else:
             label_cat.add(WiderFacePath.DEFAULT_LABEL)
-            subset_path = osp.join(
+            subset_path = safe_join(
                 self._dataset_dir, WiderFacePath.SUBSET_DIR + self._subset, WiderFacePath.IMAGES_DIR
             )
             if osp.isdir(subset_path):
@@ -92,7 +93,7 @@ class WiderFaceBase(SubsetBase):
             item_id = osp.splitext(image_path)[0]
             item_id = item_id.replace("\\", "/")
 
-            image_path = osp.join(
+            image_path = safe_join(
                 self._dataset_dir,
                 WiderFacePath.SUBSET_DIR + self._subset,
                 WiderFacePath.IMAGES_DIR,
@@ -193,7 +194,7 @@ class WiderFaceExporter(Exporter):
                 f.write("\n".join(label.name for label in label_categories))
 
         for subset_name, subset in self._extractor.subsets().items():
-            subset_dir = osp.join(save_dir, WiderFacePath.SUBSET_DIR + subset_name)
+            subset_dir = WiderFacePath.SUBSET_DIR + subset_name
 
             wider_annotation = ""
             for item in subset:
@@ -209,7 +210,7 @@ class WiderFaceExporter(Exporter):
                 wider_annotation += image_path + "\n"
                 if item.media and self._save_media:
                     self._save_image(
-                        item, osp.join(save_dir, subset_dir, WiderFacePath.IMAGES_DIR, image_path)
+                        item, safe_join(save_dir, subset_dir, WiderFacePath.IMAGES_DIR, image_path)
                     )
 
                 bboxes = [a for a in item.annotations if a.type == AnnotationType.bbox]
@@ -236,7 +237,7 @@ class WiderFaceExporter(Exporter):
                         wider_annotation += "%s" % label_categories[bbox.label].name
                     wider_annotation += "\n"
 
-            annotation_path = osp.join(
+            annotation_path = safe_join(
                 save_dir, WiderFacePath.ANNOTATIONS_DIR, "wider_face_" + subset_name + "_bbx_gt.txt"
             )
             os.makedirs(osp.dirname(annotation_path), exist_ok=True)

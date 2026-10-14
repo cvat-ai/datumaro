@@ -12,6 +12,7 @@ from datumaro.components.format_detection import FormatDetectionContext
 from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util import parse_json_file
+from datumaro.util.os_util import safe_join
 
 from .format import MPII_POINTS_JOINTS, MPII_POINTS_LABELS
 
@@ -144,7 +145,7 @@ class MpiiJsonBase(SubsetBase):
             items[item_id] = DatasetItem(
                 id=item_id,
                 subset=self._subset,
-                media=Image.from_file(path=osp.join(root_dir, ann.get("img_paths", ""))),
+                media=Image.from_file(path=safe_join(root_dir, ann.get("img_paths", ""))),
                 annotations=annotations,
             )
 

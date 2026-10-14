@@ -41,6 +41,7 @@ from datumaro.util.meta_file_util import (
     parse_meta_file,
     save_meta_file,
 )
+from datumaro.util.os_util import safe_join
 
 TRAIN_CITYSCAPES_LABEL_MAP = OrderedDict(
     [
@@ -246,13 +247,13 @@ class CityscapesBase(SubsetBase):
         if osp.basename(osp.dirname(path)) == CityscapesPath.GT_FINE_DIR:
             self._path = osp.dirname(osp.dirname(path))
             annotations_dir = path
-            images_dir = osp.join(
+            images_dir = safe_join(
                 self._path, CityscapesPath.IMGS_FINE_DIR, CityscapesPath.ORIGINAL_IMAGE_DIR, subset
             )
         else:
             self._path = osp.dirname(osp.dirname(osp.dirname(path)))
             images_dir = path
-            annotations_dir = osp.join(self._path, CityscapesPath.GT_FINE_DIR, subset)
+            annotations_dir = safe_join(self._path, CityscapesPath.GT_FINE_DIR, subset)
 
         self._subset = subset
         self._images_dir = images_dir
@@ -468,7 +469,7 @@ class CityscapesExporter(Exporter):
         os.makedirs(self._save_dir, exist_ok=True)
 
         for subset_name, subset in self._extractor.subsets().items():
-            media_dir = osp.join(
+            media_dir = safe_join(
                 self._save_dir,
                 CityscapesPath.IMGS_FINE_DIR,
                 CityscapesPath.ORIGINAL_IMAGE_DIR,
@@ -476,16 +477,16 @@ class CityscapesExporter(Exporter):
             )
             os.makedirs(media_dir, exist_ok=True)
 
-            mask_dir = osp.join(self._save_dir, CityscapesPath.GT_FINE_DIR, subset_name)
+            mask_dir = safe_join(self._save_dir, CityscapesPath.GT_FINE_DIR, subset_name)
             os.makedirs(mask_dir, exist_ok=True)
 
             for item in subset:
-                image_path = osp.join(
+                image_path = safe_join(
                     media_dir,
                     item.id + CityscapesPath.ORIGINAL_IMAGE + self._find_image_ext(item),
                 )
                 if self._save_media:
-                    self._save_image(item, osp.join(self._save_dir, image_path))
+                    self._save_image(item, image_path)
 
                 masks = [a for a in item.annotations if a.type == AnnotationType.mask]
                 if not masks:
@@ -509,15 +510,15 @@ class CityscapesExporter(Exporter):
 
                 mask_name = item.id + "_" + CityscapesPath.GT_FINE_DIR
 
-                color_mask_path = osp.join(mask_dir, mask_name + CityscapesPath.COLOR_IMAGE)
+                color_mask_path = safe_join(mask_dir, mask_name + CityscapesPath.COLOR_IMAGE)
                 self.save_mask(color_mask_path, compiled_mask.class_mask)
 
-                cls_mask_path = osp.join(mask_dir, mask_name + CityscapesPath.LABELIDS_IMAGE)
+                cls_mask_path = safe_join(mask_dir, mask_name + CityscapesPath.LABELIDS_IMAGE)
                 self.save_mask(
                     cls_mask_path, compiled_mask.class_mask, apply_colormap=False, dtype=np.uint8
                 )
 
-                inst_mask_path = osp.join(mask_dir, mask_name + CityscapesPath.INSTANCES_IMAGE)
+                inst_mask_path = safe_join(mask_dir, mask_name + CityscapesPath.INSTANCES_IMAGE)
                 self.save_mask(
                     inst_mask_path,
                     compiled_mask.instance_mask,
@@ -649,7 +650,7 @@ class CityscapesExporter(Exporter):
             if not (status == ItemStatus.removed or not item.media):
                 continue
 
-            image_path = osp.join(
+            image_path = safe_join(
                 save_dir,
                 CityscapesPath.IMGS_FINE_DIR,
                 CityscapesPath.ORIGINAL_IMAGE_DIR,
@@ -657,22 +658,22 @@ class CityscapesExporter(Exporter):
                 item.id + CityscapesPath.ORIGINAL_IMAGE + conv._find_image_ext(item),
             )
 
-            mask_dir = osp.join(save_dir, CityscapesPath.GT_FINE_DIR, subset)
+            mask_dir = safe_join(save_dir, CityscapesPath.GT_FINE_DIR, subset)
             mask_name = item.id + "_" + CityscapesPath.GT_FINE_DIR
-            color_mask_path = osp.join(mask_dir, mask_name + CityscapesPath.COLOR_IMAGE)
-            labelids_mask_path = osp.join(mask_dir, mask_name + CityscapesPath.LABELIDS_IMAGE)
-            inst_mask_path = osp.join(mask_dir, mask_name + CityscapesPath.INSTANCES_IMAGE)
+            color_mask_path = safe_join(mask_dir, mask_name + CityscapesPath.COLOR_IMAGE)
+            labelids_mask_path = safe_join(mask_dir, mask_name + CityscapesPath.LABELIDS_IMAGE)
+            inst_mask_path = safe_join(mask_dir, mask_name + CityscapesPath.INSTANCES_IMAGE)
 
             for path in [image_path, color_mask_path, labelids_mask_path, inst_mask_path]:
                 if osp.isfile(path):
                     os.unlink(path)
 
         for subset in patch.updated_subsets:
-            mask_dir = osp.join(save_dir, CityscapesPath.GT_FINE_DIR, subset)
+            mask_dir = safe_join(save_dir, CityscapesPath.GT_FINE_DIR, subset)
             if osp.isdir(mask_dir) and not os.listdir(mask_dir):
                 os.rmdir(mask_dir)
 
-            img_dir = osp.join(
+            img_dir = safe_join(
                 save_dir, CityscapesPath.IMGS_FINE_DIR, CityscapesPath.ORIGINAL_IMAGE_DIR, subset
             )
             if osp.isdir(img_dir) and not os.listdir(img_dir):

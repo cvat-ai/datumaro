@@ -16,6 +16,7 @@ from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util.image import find_images
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class VggFace2Path:
@@ -87,7 +88,7 @@ class VggFace2Base(DatasetBase):
                 label_cat.add(label)
         else:
             for subset in self._subsets:
-                subset_path = osp.join(self._dataset_dir, subset)
+                subset_path = safe_join(self._dataset_dir, subset)
                 if osp.isdir(subset_path):
                     for images_dir in sorted(os.listdir(subset_path)):
                         if (
@@ -107,7 +108,7 @@ class VggFace2Base(DatasetBase):
 
         items = {}
 
-        image_dir = osp.join(self._dataset_dir, subset)
+        image_dir = safe_join(self._dataset_dir, subset)
         if osp.isdir(image_dir):
             images = {
                 osp.splitext(osp.relpath(p, image_dir))[0].replace("\\", "/"): p
@@ -116,7 +117,7 @@ class VggFace2Base(DatasetBase):
         else:
             images = {}
 
-        landmarks_path = osp.join(
+        landmarks_path = safe_join(
             self._dataset_dir,
             VggFace2Path.ANNOTATION_DIR,
             VggFace2Path.LANDMARKS_FILE + subset + ".csv",
@@ -149,7 +150,7 @@ class VggFace2Base(DatasetBase):
                 elif label is not None:
                     annotations.append(Label(label=label))
 
-        bboxes_path = osp.join(
+        bboxes_path = safe_join(
             self._dataset_dir,
             VggFace2Path.ANNOTATION_DIR,
             VggFace2Path.BBOXES_FILE + subset + ".csv",
@@ -337,7 +338,7 @@ class VggFace2Exporter(Exporter):
                         {"NAME_ID": _get_name_id(item_parts, VggFace2Path.IMAGES_DIR_NO_LABEL)}
                     )
 
-            landmarks_path = osp.join(
+            landmarks_path = safe_join(
                 save_dir,
                 VggFace2Path.ANNOTATION_DIR,
                 VggFace2Path.LANDMARKS_FILE + subset_name + ".csv",
@@ -362,7 +363,7 @@ class VggFace2Exporter(Exporter):
                 writer.writerows(landmarks_table)
 
             if bboxes_table:
-                bboxes_path = osp.join(
+                bboxes_path = safe_join(
                     save_dir,
                     VggFace2Path.ANNOTATION_DIR,
                     VggFace2Path.BBOXES_FILE + subset_name + ".csv",

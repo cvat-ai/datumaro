@@ -11,6 +11,7 @@ from datumaro.components.exporter import Exporter
 from datumaro.components.media import Image
 from datumaro.util.image import save_image
 from datumaro.util.mask_tools import generate_colormap, paint_mask
+from datumaro.util.os_util import safe_join
 
 from .format import IcdarPath
 
@@ -29,7 +30,9 @@ class IcdarWordRecognitionExporter(Exporter):
                 if self._save_media and item.media:
                     self._save_image(
                         item,
-                        osp.join(self._save_dir, subset_name, IcdarPath.IMAGES_DIR, image_filename),
+                        safe_join(
+                            self._save_dir, subset_name, IcdarPath.IMAGES_DIR, image_filename
+                        ),
                     )
 
                 annotation += "%s, " % image_filename
@@ -40,7 +43,7 @@ class IcdarWordRecognitionExporter(Exporter):
                 annotation += "\n"
 
             if len(annotation):
-                anno_file = osp.join(self._save_dir, subset_name, "gt.txt")
+                anno_file = safe_join(self._save_dir, subset_name, "gt.txt")
                 os.makedirs(osp.dirname(anno_file), exist_ok=True)
                 with open(anno_file, "w", encoding="utf-8") as f:
                     f.write(annotation)
@@ -70,7 +73,7 @@ class IcdarTextLocalizationExporter(Exporter):
                             annotation += ',"%s"' % ann.attributes["text"]
                     annotation += "\n"
 
-                anno_file = osp.join(
+                anno_file = safe_join(
                     self._save_dir,
                     subset_name,
                     osp.dirname(item.id),
@@ -158,12 +161,12 @@ class IcdarTextSegmentationExporter(Exporter):
             )
             mask = paint_mask(mask.class_mask, {i: colormap[i] for i in range(len(colormap))})
             save_image(
-                osp.join(self._save_dir, subset_name, item.id + "_GT" + IcdarPath.GT_EXT),
+                safe_join(self._save_dir, subset_name, item.id + "_GT" + IcdarPath.GT_EXT),
                 mask,
                 create_dir=True,
             )
 
-        anno_file = osp.join(self._save_dir, subset_name, item.id + "_GT" + ".txt")
+        anno_file = safe_join(self._save_dir, subset_name, item.id + "_GT" + ".txt")
         os.makedirs(osp.dirname(anno_file), exist_ok=True)
         with open(anno_file, "w", encoding="utf-8") as f:
             f.write(annotation)

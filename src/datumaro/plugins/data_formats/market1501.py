@@ -13,6 +13,7 @@ from datumaro.components.importer import Importer
 from datumaro.components.media import Image
 from datumaro.util import str_to_bool
 from datumaro.util.image import find_images
+from datumaro.util.os_util import safe_join
 
 
 class Market1501Path:
@@ -64,7 +65,7 @@ class Market1501Base(DatasetBase):
         if osp.isfile(subset_path):
             with open(subset_path, encoding="utf-8") as f:
                 for line in f:
-                    paths.append(osp.join(self._path, line.strip()))
+                    paths.append(safe_join(self._path, line.strip()))
         else:
             paths = list(find_images(subset_path, recursive=True))
 
@@ -155,7 +156,7 @@ class Market1501Exporter(Exporter):
 
                 image_path = self._make_image_filename(item, name=image_name, subdir=dirname)
                 if self._save_media and item.media:
-                    self._save_image(item, osp.join(self._save_dir, image_path))
+                    self._save_image(item, safe_join(self._save_dir, image_path))
 
                 attrs = Market1501Path.PATTERN.search(image_name)
                 if attrs:
@@ -163,7 +164,7 @@ class Market1501Exporter(Exporter):
                     used_frames.setdefault(attrs[0:2], []).append(int(attrs[3]))
                 annotation += "%s\n" % image_path
 
-            annotation_file = osp.join(
+            annotation_file = safe_join(
                 self._save_dir, Market1501Path.LIST_PREFIX + subset_name + ".txt"
             )
             with open(annotation_file, "w", encoding="utf-8") as f:

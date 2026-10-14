@@ -21,6 +21,7 @@ from datumaro.components.media import Image
 from datumaro.util.image import find_images, load_image, save_image
 from datumaro.util.mask_tools import merge_masks
 from datumaro.util.meta_file_util import has_meta_file, parse_meta_file
+from datumaro.util.os_util import safe_join
 
 
 class MotsPath:
@@ -156,7 +157,7 @@ class MotsPngExporter(Exporter):
             self._save_meta_file(self._save_dir)
 
         for subset_name, subset in self._extractor.subsets().items():
-            subset_dir = osp.join(self._save_dir, subset_name)
+            subset_dir = safe_join(self._save_dir, subset_name)
             image_dir = osp.join(subset_dir, MotsPath.IMAGE_DIR)
             anno_dir = osp.join(subset_dir, MotsPath.MASKS_DIR)
             os.makedirs(anno_dir, exist_ok=True)
@@ -166,7 +167,7 @@ class MotsPngExporter(Exporter):
 
                 if self._save_media:
                     if item.media and item.media.has_data:
-                        self._save_image(item, subdir=image_dir)
+                        self._save_image(item, basedir=image_dir)
                     else:
                         log.debug("Item '%s' has no image", item.id)
 
@@ -185,4 +186,4 @@ class MotsPngExporter(Exporter):
         mask = merge_masks(
             (m.image, np.uint16(MotsPath.MAX_INSTANCES * (1 + m.label) + id)) for m, id in masks
         )
-        save_image(osp.join(anno_dir, item.id + ".png"), mask, create_dir=True, dtype=np.uint16)
+        save_image(safe_join(anno_dir, item.id + ".png"), mask, create_dir=True, dtype=np.uint16)

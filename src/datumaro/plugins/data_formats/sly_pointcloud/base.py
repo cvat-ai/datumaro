@@ -54,12 +54,8 @@ def _parse_calibration_matrix(
     return tuple(values)
 
 
-def _get_calibration_sidecar_path(image_path: str) -> str:
-    return image_path + ".json"
-
-
 def _load_camera_calibration(image_path: str) -> tuple[CameraCalibration | None, str]:
-    sidecar_path = _get_calibration_sidecar_path(image_path)
+    sidecar_path = image_path + ".json"
     if not osp.isfile(sidecar_path):
         return None, sidecar_path
 

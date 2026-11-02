@@ -58,10 +58,10 @@ def _get_calibration_sidecar_path(image_path: str) -> str:
     return image_path + ".json"
 
 
-def _load_camera_calibration(image_path: str) -> CameraCalibration | None:
+def _load_camera_calibration(image_path: str) -> tuple[CameraCalibration | None, str]:
     sidecar_path = _get_calibration_sidecar_path(image_path)
     if not osp.isfile(sidecar_path):
-        return None
+        return None, sidecar_path
 
     sidecar = parse_json_file(sidecar_path)
     if not isinstance(sidecar, dict):
@@ -69,13 +69,13 @@ def _load_camera_calibration(image_path: str) -> CameraCalibration | None:
 
     meta = sidecar.get("meta")
     if meta is None:
-        return None
+        return None, sidecar_path
     if not isinstance(meta, dict):
         raise ValueError(f"Invalid calibration in {sidecar_path}: 'meta' must be an object")
 
     sensors_data = meta.get("sensorsData")
     if sensors_data is None:
-        return None
+        return None, sidecar_path
     if not isinstance(sensors_data, dict):
         raise ValueError(
             f"Invalid calibration in {sidecar_path}: 'meta.sensorsData' must be an object"
@@ -114,9 +114,12 @@ def _load_camera_calibration(image_path: str) -> CameraCalibration | None:
             "'meta.sensorsData.extrinsicMatrix' must contain a rigid rotation and translation"
         )
 
-    return CameraCalibration(
-        intrinsic_matrix=intrinsic_matrix,
-        extrinsic_matrix=extrinsic_matrix,
+    return (
+        CameraCalibration(
+            intrinsic_matrix=intrinsic_matrix,
+            extrinsic_matrix=extrinsic_matrix,
+        ),
+        sidecar_path,
     )
 
 
@@ -268,8 +271,7 @@ class SuperviselyPointCloudBase(SubsetBase):
             if osp.isdir(related_images_dir):
                 related_images = []
                 for image_path in find_images(related_images_dir):
-                    camera_calibration = _load_camera_calibration(image_path)
-                    sidecar_path = _get_calibration_sidecar_path(image_path)
+                    camera_calibration, sidecar_path = _load_camera_calibration(image_path)
                     related_images.append(
                         Image.from_file(
                             path=image_path,

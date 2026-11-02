@@ -54,8 +54,12 @@ def _parse_calibration_matrix(
     return tuple(values)
 
 
+def _get_calibration_sidecar_path(image_path: str) -> str:
+    return image_path + ".json"
+
+
 def _load_camera_calibration(image_path: str) -> CameraCalibration | None:
-    sidecar_path = image_path + ".json"
+    sidecar_path = _get_calibration_sidecar_path(image_path)
     if not osp.isfile(sidecar_path):
         return None
 
@@ -265,7 +269,7 @@ class SuperviselyPointCloudBase(SubsetBase):
                 related_images = []
                 for image_path in find_images(related_images_dir):
                     camera_calibration = _load_camera_calibration(image_path)
-                    sidecar_path = f"{image_path}.json"
+                    sidecar_path = _get_calibration_sidecar_path(image_path)
                     related_images.append(
                         Image.from_file(
                             path=image_path,

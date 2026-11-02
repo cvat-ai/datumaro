@@ -154,6 +154,10 @@ class PointCloudExporterTest(TestCase):
         src_label_cat = LabelCategories(attributes={"occluded"})
         src_label_cat.add("car", attributes=["x"])
         src_label_cat.add("bus")
+        calibration = CameraCalibration(
+            intrinsic_matrix=(700, 0, 620, 0, 700, 180, 0, 0, 1),
+            extrinsic_matrix=(1, 0, 0, -0.5, 0, 1, 0, 0, 0, 0, 1, 1.6),
+        )
 
         source_dataset = Dataset.from_iterable(
             [
@@ -186,7 +190,12 @@ class PointCloudExporterTest(TestCase):
                             attributes={"occluded": False, "track_id": 2},
                         )
                     ],
-                    media=PointCloud.from_file(self.pcd2, extra_images=[self.image2]),
+                    media=PointCloud.from_file(
+                        self.pcd2,
+                        extra_images=[
+                            Image.from_file(self.image2.path, camera_calibration=calibration)
+                        ],
+                    ),
                     attributes={"frame": 1},
                 ),
             ],
@@ -238,7 +247,8 @@ class PointCloudExporterTest(TestCase):
                                 Image.from_file(
                                     path=osp.join(
                                         test_dir, "ds0", "related_images", "frm2_pcd", "img1.png"
-                                    )
+                                    ),
+                                    camera_calibration=calibration,
                                 )
                             ],
                         ),

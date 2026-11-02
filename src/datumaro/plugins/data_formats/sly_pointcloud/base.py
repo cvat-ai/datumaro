@@ -73,7 +73,9 @@ def _load_camera_calibration(image_path: str) -> CameraCalibration | None:
     if sensors_data is None:
         return None
     if not isinstance(sensors_data, dict):
-        raise ValueError(f"Invalid calibration in {sidecar_path}: 'meta.sensorsData' must be an object")
+        raise ValueError(
+            f"Invalid calibration in {sidecar_path}: 'meta.sensorsData' must be an object"
+        )
 
     intrinsic_matrix = _parse_calibration_matrix(
         sensors_data.get("intrinsicMatrix"),
@@ -99,15 +101,9 @@ def _load_camera_calibration(image_path: str) -> CameraCalibration | None:
     rotation = np.asarray(extrinsic_matrix).reshape(3, 4)[:, :3]
     # check orthogonality
     if not np.allclose(
-        rotation.T @ rotation,
-        np.identity(3),
-        atol=1e-5,
-        rtol=0
-    ) or not np.isclose( # exclude mirror/reflection matrices
-        np.linalg.det(rotation),
-        1,
-        atol=1e-5,
-        rtol=0
+        rotation.T @ rotation, np.identity(3), atol=1e-5, rtol=0
+    ) or not np.isclose(  # exclude mirror/reflection matrices
+        np.linalg.det(rotation), 1, atol=1e-5, rtol=0
     ):
         raise ValueError(
             f"Invalid calibration in {sidecar_path}: "

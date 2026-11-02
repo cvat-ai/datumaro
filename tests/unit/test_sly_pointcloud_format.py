@@ -98,10 +98,7 @@ class SuperviselyPointcloudImporterTest(TestCase):
         compare_datasets_3d(self, expected_dataset, parsed_dataset, require_point_cloud=True)
 
         self.assertEqual(
-            {
-                item.id: item.media.extra_images[0].auxiliary_files
-                for item in parsed_dataset
-            },
+            {item.id: item.media.extra_images[0].auxiliary_files for item in parsed_dataset},
             {
                 "frame1": [
                     osp.join(

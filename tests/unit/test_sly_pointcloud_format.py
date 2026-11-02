@@ -6,7 +6,7 @@ from unittest import TestCase
 from datumaro.components.annotation import AnnotationType, Cuboid3d, LabelCategories
 from datumaro.components.dataset_base import DatasetItem
 from datumaro.components.environment import Environment
-from datumaro.components.media import Image, PointCloud
+from datumaro.components.media import CameraCalibration, Image, PointCloud
 from datumaro.components.project import Dataset
 from datumaro.plugins.data_formats.sly_pointcloud.base import SuperviselyPointCloudImporter
 from datumaro.plugins.data_formats.sly_pointcloud.exporter import SuperviselyPointCloudExporter
@@ -28,12 +28,24 @@ class SuperviselyPointcloudImporterTest(TestCase):
     def test_can_load(self):
         pcd1 = osp.join(DUMMY_DATASET_DIR, "ds0", "pointcloud", "frame1.pcd")
         pcd2 = osp.join(DUMMY_DATASET_DIR, "ds0", "pointcloud", "frame2.pcd")
+        calibrations = {
+            "frame1": CameraCalibration(
+                intrinsic_matrix=(721.5, 0, 609.6, 0, 721.5, 172.9, 0, 0, 1),
+                extrinsic_matrix=(1, 0, 0, 0.2, 0, 1, 0, 0, 0, 0, 1, 1.7),
+            ),
+            "frame2": CameraCalibration(
+                intrinsic_matrix=(700, 0, 620, 0, 700, 180, 0, 0, 1),
+                extrinsic_matrix=(1, 0, 0, -0.5, 0, 1, 0, 0, 0, 0, 1, 1.6),
+            ),
+        }
 
         image1 = Image.from_file(
-            path=osp.join(DUMMY_DATASET_DIR, "ds0", "related_images", "frame1_pcd", "img2.png")
+            path=osp.join(DUMMY_DATASET_DIR, "ds0", "related_images", "frame1_pcd", "img2.png"),
+            camera_calibration=calibrations["frame1"],
         )
         image2 = Image.from_file(
-            path=osp.join(DUMMY_DATASET_DIR, "ds0", "related_images", "frame2_pcd", "img1.png")
+            path=osp.join(DUMMY_DATASET_DIR, "ds0", "related_images", "frame2_pcd", "img1.png"),
+            camera_calibration=calibrations["frame2"],
         )
 
         label_cat = LabelCategories(attributes={"tag1", "tag3"})
@@ -85,6 +97,30 @@ class SuperviselyPointcloudImporterTest(TestCase):
 
         compare_datasets_3d(self, expected_dataset, parsed_dataset, require_point_cloud=True)
 
+        self.assertEqual(
+            {item.id: item.media.extra_images[0].auxiliary_files for item in parsed_dataset},
+            {
+                "frame1": [
+                    osp.join(
+                        DUMMY_DATASET_DIR,
+                        "ds0",
+                        "related_images",
+                        "frame1_pcd",
+                        "img2.png.json",
+                    )
+                ],
+                "frame2": [
+                    osp.join(
+                        DUMMY_DATASET_DIR,
+                        "ds0",
+                        "related_images",
+                        "frame2_pcd",
+                        "img1.png.json",
+                    )
+                ],
+            },
+        )
+
 
 class PointCloudExporterTest(TestCase):
     pcd1 = osp.join(DUMMY_DATASET_DIR, "ds0", "pointcloud", "frame1.pcd")
@@ -118,6 +154,10 @@ class PointCloudExporterTest(TestCase):
         src_label_cat = LabelCategories(attributes={"occluded"})
         src_label_cat.add("car", attributes=["x"])
         src_label_cat.add("bus")
+        calibration = CameraCalibration(
+            intrinsic_matrix=(700, 0, 620, 0, 700, 180, 0, 0, 1),
+            extrinsic_matrix=(1, 0, 0, -0.5, 0, 1, 0, 0, 0, 0, 1, 1.6),
+        )
 
         source_dataset = Dataset.from_iterable(
             [
@@ -150,7 +190,12 @@ class PointCloudExporterTest(TestCase):
                             attributes={"occluded": False, "track_id": 2},
                         )
                     ],
-                    media=PointCloud.from_file(self.pcd2, extra_images=[self.image2]),
+                    media=PointCloud.from_file(
+                        self.pcd2,
+                        extra_images=[
+                            Image.from_file(self.image2.path, camera_calibration=calibration)
+                        ],
+                    ),
                     attributes={"frame": 1},
                 ),
             ],
@@ -202,7 +247,8 @@ class PointCloudExporterTest(TestCase):
                                 Image.from_file(
                                     path=osp.join(
                                         test_dir, "ds0", "related_images", "frm2_pcd", "img1.png"
-                                    )
+                                    ),
+                                    camera_calibration=calibration,
                                 )
                             ],
                         ),

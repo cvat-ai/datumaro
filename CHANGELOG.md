@@ -52,6 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (<https://github.com/cvat-ai/datumaro/pull/71>)
 - Support for tracks in Ultralytics YOLO formats
   (<https://github.com/cvat-ai/datumaro/pull/70>)
+- Support camera calibration for Supervisely Point Cloud dataset format
+  (https://github.com/cvat-ai/datumaro/pull/147)
 - \[API\] `ImageFromBytes.save()` now preserves image extension if no output extension is specified
   (<https://github.com/cvat-ai/datumaro/pull/91>)
 - \[API\] `ImageFromBytes.save()` now guarantees there will be no extra image encoding/decoding

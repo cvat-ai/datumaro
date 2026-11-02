@@ -11,6 +11,7 @@ import os.path as osp
 import shutil
 import weakref
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import IntEnum
 from functools import partial
 from typing import (
@@ -53,6 +54,25 @@ else:
 
 
 AnyData = TypeVar("AnyData", bytes, np.ndarray)
+
+
+@dataclass(frozen=True)
+class CameraCalibration:
+    """Calibration data for a camera image.
+
+    Matrix values are flattened in row-major order. When an image is used as a
+    point cloud's related image, ``extrinsic_matrix`` maps the point cloud
+    coordinates to the camera coordinates.
+    """
+
+    intrinsic_matrix: Tuple[float, ...]
+    extrinsic_matrix: Tuple[float, ...]
+
+    def __post_init__(self) -> None:
+        if len(self.intrinsic_matrix) != 9:
+            raise ValueError("'intrinsic_matrix' must contain 9 values")
+        if len(self.extrinsic_matrix) != 12:
+            raise ValueError("'extrinsic_matrix' must contain 12 values")
 
 
 class MediaType(IntEnum):
@@ -217,6 +237,8 @@ class Image(MediaElement[np.ndarray]):
         self,
         size: Optional[Tuple[int, int]] = None,
         ext: Optional[str] = None,
+        camera_calibration: Optional[CameraCalibration] = None,
+        auxiliary_files: Optional[List[str]] = None,
         *args,
         **kwargs,
     ) -> None:
@@ -240,6 +262,8 @@ class Image(MediaElement[np.ndarray]):
             ), f"Invalid image size info '{size}'"
             size = tuple(map(int, size))
         self._size = size  # (H, W)
+        self._camera_calibration = camera_calibration
+        self._auxiliary_files = auxiliary_files or []
 
     @classmethod
     def from_file(cls, path: str, *args, **kwargs):
@@ -286,6 +310,16 @@ class Image(MediaElement[np.ndarray]):
         """Media file extension (with the leading dot)"""
         return self._ext
 
+    @property
+    def camera_calibration(self) -> Optional[CameraCalibration]:
+        """Optional calibration data for the camera that produced the image."""
+        return self._camera_calibration
+
+    @property
+    def auxiliary_files(self) -> List[str]:
+        """Auxiliary source files associated with this image."""
+        return self._auxiliary_files
+
     def _get_ext_to_save(self, fp: Union[str, io.IOBase], ext: Optional[str] = None):
         if isinstance(fp, str):
             assert ext is None, "'ext' must be empty if string is given."
@@ -299,7 +333,11 @@ class Image(MediaElement[np.ndarray]):
         # since Image is subclass of RoIImage and MosaicImage
         if not isinstance(other, __class__):
             return False
-        return (np.array_equal(self.size, other.size)) and (np.array_equal(self.data, other.data))
+        return (
+            np.array_equal(self.size, other.size)
+            and np.array_equal(self.data, other.data)
+            and self.camera_calibration == other.camera_calibration
+        )
 
     def set_crypter(self, crypter: Crypter):
         super().set_crypter(crypter)

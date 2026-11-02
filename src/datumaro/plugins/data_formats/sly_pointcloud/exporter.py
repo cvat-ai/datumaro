@@ -59,15 +59,14 @@ class _SuperviselyPointCloudDumper:
             if img.has_data:
                 img.save(img_path)
 
-            img_data = {
-                "name": osp.basename(img_path),
-                "meta": {
+            img_data = {"name": osp.basename(img_path)}
+            if calibration := img.camera_calibration:
+                img_data["meta"] = {
                     "sensorsData": {
-                        "extrinsicMatrix": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        "intrinsicMatrix": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        "extrinsicMatrix": list(calibration.extrinsic_matrix),
+                        "intrinsicMatrix": list(calibration.intrinsic_matrix),
                     }
-                },
-            }
+                }
 
             dump_json_file(img_path + ".json", img_data, indent=True)
 

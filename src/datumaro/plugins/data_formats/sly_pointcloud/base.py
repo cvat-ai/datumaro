@@ -2,18 +2,122 @@
 #
 # SPDX-License-Identifier: MIT
 
+import math
 import os.path as osp
 from glob import iglob
+
+import numpy as np
 
 from datumaro.components.annotation import AnnotationType, Cuboid3d, LabelCategories
 from datumaro.components.dataset_base import DatasetItem, SubsetBase
 from datumaro.components.importer import Importer
-from datumaro.components.media import Image, PointCloud
+from datumaro.components.media import CameraCalibration, Image, PointCloud
 from datumaro.util import parse_json_file
 from datumaro.util.image import find_images
 from datumaro.util.os_util import safe_join
 
 from .format import PointCloudPath
+
+
+def _parse_calibration_matrix(
+    matrix, *, name: str, expected_length: int, sidecar_path: str
+) -> tuple[float, ...]:
+    if not isinstance(matrix, list) or len(matrix) != expected_length:
+        raise ValueError(
+            f"Invalid calibration in {sidecar_path}: "
+            f"'{name}' must contain {expected_length} values"
+        )
+
+    values = []
+    for value in matrix:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(
+                f"Invalid calibration in {sidecar_path}: "
+                f"'{name}' must contain only finite numbers"
+            )
+
+        try:
+            value = float(value)
+        except OverflowError:
+            raise ValueError(
+                f"Invalid calibration in {sidecar_path}: "
+                f"'{name}' must contain only finite numbers"
+            )
+
+        if not math.isfinite(value):
+            raise ValueError(
+                f"Invalid calibration in {sidecar_path}: "
+                f"'{name}' must contain only finite numbers"
+            )
+        values.append(value)
+
+    return tuple(values)
+
+
+def _load_camera_calibration(image_path: str) -> CameraCalibration | None:
+    sidecar_path = image_path + ".json"
+    if not osp.isfile(sidecar_path):
+        return None
+
+    sidecar = parse_json_file(sidecar_path)
+    if not isinstance(sidecar, dict):
+        raise ValueError(f"Invalid calibration in {sidecar_path}: the root value must be an object")
+
+    meta = sidecar.get("meta")
+    if meta is None:
+        return None
+    if not isinstance(meta, dict):
+        raise ValueError(f"Invalid calibration in {sidecar_path}: 'meta' must be an object")
+
+    sensors_data = meta.get("sensorsData")
+    if sensors_data is None:
+        return None
+    if not isinstance(sensors_data, dict):
+        raise ValueError(f"Invalid calibration in {sidecar_path}: 'meta.sensorsData' must be an object")
+
+    intrinsic_matrix = _parse_calibration_matrix(
+        sensors_data.get("intrinsicMatrix"),
+        name="meta.sensorsData.intrinsicMatrix",
+        expected_length=9,
+        sidecar_path=sidecar_path,
+    )
+    extrinsic_matrix = _parse_calibration_matrix(
+        sensors_data.get("extrinsicMatrix"),
+        name="meta.sensorsData.extrinsicMatrix",
+        expected_length=12,
+        sidecar_path=sidecar_path,
+    )
+
+    try:
+        np.linalg.inv(np.asarray(intrinsic_matrix).reshape(3, 3))
+    except np.linalg.LinAlgError:
+        raise ValueError(
+            f"Invalid calibration in {sidecar_path}: "
+            "'meta.sensorsData.intrinsicMatrix' must be invertible"
+        )
+
+    rotation = np.asarray(extrinsic_matrix).reshape(3, 4)[:, :3]
+    # check orthogonality
+    if not np.allclose(
+        rotation.T @ rotation,
+        np.identity(3),
+        atol=1e-5,
+        rtol=0
+    ) or not np.isclose( # exclude mirror/reflection matrices
+        np.linalg.det(rotation),
+        1,
+        atol=1e-5,
+        rtol=0
+    ):
+        raise ValueError(
+            f"Invalid calibration in {sidecar_path}: "
+            "'meta.sensorsData.extrinsicMatrix' must contain a rigid rotation and translation"
+        )
+
+    return CameraCalibration(
+        intrinsic_matrix=intrinsic_matrix,
+        extrinsic_matrix=extrinsic_matrix,
+    )
 
 
 class SuperviselyPointCloudBase(SubsetBase):
@@ -162,9 +266,17 @@ class SuperviselyPointCloudBase(SubsetBase):
             )
             related_images = None
             if osp.isdir(related_images_dir):
-                related_images = [
-                    Image.from_file(path=image) for image in find_images(related_images_dir)
-                ]
+                related_images = []
+                for image_path in find_images(related_images_dir):
+                    camera_calibration = _load_camera_calibration(image_path)
+                    sidecar_path = f"{image_path}.json"
+                    related_images.append(
+                        Image.from_file(
+                            path=image_path,
+                            camera_calibration=camera_calibration,
+                            auxiliary_files=[sidecar_path] if osp.isfile(sidecar_path) else [],
+                        )
+                    )
 
             parsed[frame_id] = DatasetItem(
                 id=name,

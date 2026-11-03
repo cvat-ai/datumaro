@@ -165,15 +165,18 @@ class YoloExporter(Exporter):
         self._save_config_files(subset_lists)
 
     def _save_config_files(self, subset_lists: Dict[str, str]):
-        extractor = self._extractor
+        # Build obj.names from the same remapped label list used in annotation
+        # lines. Using raw category indices / unique names collapses skeleton
+        # sublabels that share names (e.g. HPE keypoints) and desyncs class ids.
         save_dir = self._save_dir
-        label_categories = extractor.categories()[AnnotationType.label]
-        label_ids = {label.name: idx for idx, label in enumerate(label_categories.items)}
+        label_categories = self._extractor.categories()[AnnotationType.label]
+        names = [label_categories[label_id].name for label_id in self._labels_to_save]
+
         with open(osp.join(save_dir, "obj.names"), "w", encoding="utf-8") as f:
-            f.writelines("%s\n" % l[0] for l in sorted(label_ids.items(), key=lambda x: x[1]))
+            f.writelines("%s\n" % name for name in names)
 
         with open(osp.join(save_dir, "obj.data"), "w", encoding="utf-8") as f:
-            f.write(f"classes = {len(label_ids)}\n")
+            f.write(f"classes = {len(names)}\n")
 
             for subset_name, subset_list_name in subset_lists.items():
                 f.write(

@@ -141,6 +141,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Annotation equality now compares base class fields for subclasses that
   override `__eq__`, including `Mask` vs `RleMask` and two `RleMask`s
   (<https://github.com/cvat-ai/datumaro/issues/133>)
+- Subset names with underscores in the WIDER Face format
+  (<https://github.com/cvat-ai/datumaro/pull/150>)
 
 ### Security
 - TBD

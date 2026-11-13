@@ -1187,6 +1187,39 @@ class KittiExporterTest(TestCase):
                 test_dir,
             )
 
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_save_and_load_detection_in_several_subsets(self):
+        source_dataset = Dataset.from_iterable(
+            [
+                DatasetItem(
+                    id=f"{subset}_1",
+                    subset=subset,
+                    media=Image.from_numpy(data=np.ones((10, 10, 3))),
+                    annotations=[
+                        Bbox(
+                            0,
+                            1,
+                            2,
+                            2,
+                            label=0,
+                            id=0,
+                            attributes={"truncated": False, "occluded": False, "score": 1.0},
+                        ),
+                    ],
+                )
+                for subset in ["train", "val", "test"]
+            ],
+            categories=["label_0"],
+        )
+
+        with TestDir() as test_dir:
+            # both task directories are written for every subset
+            self._test_save_and_load(
+                source_dataset,
+                partial(KittiExporter.convert, save_media=True),
+                test_dir,
+            )
+
     @mark_requirement(Requirements.DATUM_280)
     def test_can_save_detection_with_meta_file(self):
         source_dataset = Dataset.from_iterable(

@@ -141,6 +141,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Annotation equality now compares base class fields for subclasses that
   override `__eq__`, including `Mask` vs `RleMask` and two `RleMask`s
   (<https://github.com/cvat-ai/datumaro/issues/133>)
+- Labels of landmarks in the LFW format, which were taken from the last parsed pair
+  (<https://github.com/cvat-ai/datumaro/pull/151>)
 
 ### Security
 - TBD

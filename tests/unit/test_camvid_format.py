@@ -33,6 +33,20 @@ class CamvidFormatTest(TestCase):
             self.assertEqual(src_label_map, dst_label_map)
 
     @mark_requirement(Requirements.DATUM_GENERAL_REQ)
+    def test_can_write_and_parse_labelmap_with_spaces_in_names(self):
+        src_label_map = OrderedDict(
+            [("background", (0, 0, 0)), ("traffic light", (250, 170, 30)), ("traffic sign", None)]
+        )
+
+        with TestDir() as test_dir:
+            file_path = osp.join(test_dir, "label_colors.txt")
+
+            Camvid.write_label_map(file_path, src_label_map)
+            dst_label_map = Camvid.parse_label_map(file_path)
+
+            self.assertEqual(src_label_map, dst_label_map)
+
+    @mark_requirement(Requirements.DATUM_GENERAL_REQ)
     def test_can_write_and_parse_meta_file(self):
         src_label_map = Camvid.CamvidLabelMap
 

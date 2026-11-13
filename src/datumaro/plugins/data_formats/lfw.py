@@ -183,6 +183,7 @@ class LfwBase(SubsetBase):
                 for line in f:
                     line = line.split("\t")
 
+                    label = None
                     item_id = osp.splitext(line[0])[0]
                     objects = item_id.split("/")
                     if 1 < len(objects):
@@ -198,6 +199,11 @@ class LfwBase(SubsetBase):
                         )
 
                     annotations = items[item_id].annotations
+                    if label is None:
+                        # the landmarks belong to the person on the image
+                        label = next(
+                            (a.label for a in annotations if a.type == AnnotationType.label), None
+                        )
                     annotations.append(Points([float(p) for p in line[1:]], label=label))
 
         return items
